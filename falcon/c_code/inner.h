@@ -141,18 +141,18 @@ typedef struct {
 	uint64_t dptr;
 } inner_shake256_context;
 
-#define inner_shake256_init      Zf(i_shake256_init)
-#define inner_shake256_inject    Zf(i_shake256_inject)
-#define inner_shake256_flip      Zf(i_shake256_flip)
-#define inner_shake256_extract   Zf(i_shake256_extract)
+#define inner_shake256_init      i_shake256_init
+#define inner_shake256_inject    i_shake256_inject
+#define inner_shake256_flip      i_shake256_flip
+#define inner_shake256_extract   i_shake256_extract
 
-void Zf(i_shake256_init)(
+void i_shake256_init(
 	inner_shake256_context *sc);
-void Zf(i_shake256_inject)(
+void i_shake256_inject(
 	inner_shake256_context *sc, const uint8_t *in, size_t len);
-void Zf(i_shake256_flip)(
+void i_shake256_flip(
 	inner_shake256_context *sc);
-void Zf(i_shake256_extract)(
+void i_shake256_extract(
 	inner_shake256_context *sc, uint8_t *out, size_t len);
 
 /*
@@ -513,7 +513,7 @@ typedef struct {
  * Instantiate a PRNG. That PRNG will feed over the provided SHAKE256
  * context (in "flipped" state) to obtain its initial state.
  */
-void Zf(prng_init)(prng *p, inner_shake256_context *src);
+void prng_init(prng *p, inner_shake256_context *src);
 
 /*
  * Refill the PRNG buffer. This is normally invoked automatically, and
@@ -594,7 +594,7 @@ prng_get_u8(prng *p)
  *
  * 'logn' MUST lie between 1 and 10 (inclusive).
  */
-void Zf(FFT)(fpr *f, unsigned logn);
+void FFT(fpr *f, unsigned logn);
 
 /*
  * Compute the inverse FFT in-place: the source array should contain the
@@ -604,61 +604,61 @@ void Zf(FFT)(fpr *f, unsigned logn);
  *
  * 'logn' MUST lie between 1 and 10 (inclusive).
  */
-void Zf(iFFT)(fpr *f, unsigned logn);
+void iFFT(fpr *f, unsigned logn);
 
 /*
  * Add polynomial b to polynomial a. a and b MUST NOT overlap. This
  * function works in both normal and FFT representations.
  */
-void Zf(poly_add)(fpr *restrict a, const fpr *restrict b, unsigned logn);
+void poly_add(fpr *restrict a, const fpr *restrict b, unsigned logn);
 
 /*
  * Subtract polynomial b from polynomial a. a and b MUST NOT overlap. This
  * function works in both normal and FFT representations.
  */
-void Zf(poly_sub)(fpr *restrict a, const fpr *restrict b, unsigned logn);
+void poly_sub(fpr *restrict a, const fpr *restrict b, unsigned logn);
 
 /*
  * Negate polynomial a. This function works in both normal and FFT
  * representations.
  */
-void Zf(poly_neg)(fpr *a, unsigned logn);
+void poly_neg(fpr *a, unsigned logn);
 
 /*
  * Compute adjoint of polynomial a. This function works only in FFT
  * representation.
  */
-void Zf(poly_adj_fft)(fpr *a, unsigned logn);
+void poly_adj_fft(fpr *a, unsigned logn);
 
 /*
  * Multiply polynomial a with polynomial b. a and b MUST NOT overlap.
  * This function works only in FFT representation.
  */
-void Zf(poly_mul_fft)(fpr *restrict a, const fpr *restrict b, unsigned logn);
+void poly_mul_fft(fpr *restrict a, const fpr *restrict b, unsigned logn);
 
 /*
  * Multiply polynomial a with the adjoint of polynomial b. a and b MUST NOT
  * overlap. This function works only in FFT representation.
  */
-void Zf(poly_muladj_fft)(fpr *restrict a, const fpr *restrict b, unsigned logn);
+void poly_muladj_fft(fpr *restrict a, const fpr *restrict b, unsigned logn);
 
 /*
  * Multiply polynomial with its own adjoint. This function works only in FFT
  * representation.
  */
-void Zf(poly_mulselfadj_fft)(fpr *a, unsigned logn);
+void poly_mulselfadj_fft(fpr *a, unsigned logn);
 
 /*
  * Multiply polynomial with a real constant. This function works in both
  * normal and FFT representations.
  */
-void Zf(poly_mulconst)(fpr *a, fpr x, unsigned logn);
+void poly_mulconst(fpr *a, fpr x, unsigned logn);
 
 /*
  * Divide polynomial a by polynomial b, modulo X^N+1 (FFT representation).
  * a and b MUST NOT overlap.
  */
-void Zf(poly_div_fft)(fpr *restrict a, const fpr *restrict b, unsigned logn);
+void poly_div_fft(fpr *restrict a, const fpr *restrict b, unsigned logn);
 
 /*
  * Given f and g (in FFT representation), compute 1/(f*adj(f)+g*adj(g))
@@ -668,7 +668,7 @@ void Zf(poly_div_fft)(fpr *restrict a, const fpr *restrict b, unsigned logn);
  *
  * Array d MUST NOT overlap with either a or b.
  */
-void Zf(poly_invnorm2_fft)(fpr *restrict d,
+void poly_invnorm2_fft(fpr *restrict d,
 	const fpr *restrict a, const fpr *restrict b, unsigned logn);
 
 /*
@@ -676,7 +676,7 @@ void Zf(poly_invnorm2_fft)(fpr *restrict d,
  * (also in FFT representation). Destination d MUST NOT overlap with
  * any of the source arrays.
  */
-void Zf(poly_add_muladj_fft)(fpr *restrict d,
+void poly_add_muladj_fft(fpr *restrict d,
 	const fpr *restrict F, const fpr *restrict G,
 	const fpr *restrict f, const fpr *restrict g, unsigned logn);
 
@@ -686,7 +686,7 @@ void Zf(poly_add_muladj_fft)(fpr *restrict d,
  * FFT coefficients are real, and the array b contains only N/2 elements.
  * a and b MUST NOT overlap.
  */
-void Zf(poly_mul_autoadj_fft)(fpr *restrict a,
+void poly_mul_autoadj_fft(fpr *restrict a,
 	const fpr *restrict b, unsigned logn);
 
 /*
@@ -695,7 +695,7 @@ void Zf(poly_mul_autoadj_fft)(fpr *restrict a,
  * FFT coefficients are real, and the array b contains only N/2 elements.
  * a and b MUST NOT overlap.
  */
-void Zf(poly_div_autoadj_fft)(fpr *restrict a,
+void poly_div_autoadj_fft(fpr *restrict a,
 	const fpr *restrict b, unsigned logn);
 
 /*
@@ -706,7 +706,7 @@ void Zf(poly_div_autoadj_fft)(fpr *restrict a,
  * (with D = [[d00, 0], [0, d11]] and L = [[1, 0], [l10, 1]]).
  * (In fact, d00 = g00, so the g00 operand is left unmodified.)
  */
-void Zf(poly_LDL_fft)(const fpr *restrict g00,
+void poly_LDL_fft(const fpr *restrict g00,
 	fpr *restrict g01, fpr *restrict g11, unsigned logn);
 
 /*
@@ -715,7 +715,7 @@ void Zf(poly_LDL_fft)(const fpr *restrict g00,
  * g00, g01 and g11 are unmodified; the outputs d11 and l10 are written
  * in two other separate buffers provided as extra parameters.
  */
-void Zf(poly_LDLmv_fft)(fpr *restrict d11, fpr *restrict l10,
+void poly_LDLmv_fft(fpr *restrict d11, fpr *restrict l10,
 	const fpr *restrict g00, const fpr *restrict g01,
 	const fpr *restrict g11, unsigned logn);
 
@@ -724,7 +724,7 @@ void Zf(poly_LDLmv_fft)(fpr *restrict d11, fpr *restrict l10,
  * f = f0(x^2) + x*f1(x^2), for half-size polynomials f0 and f1
  * (polynomials modulo X^(N/2)+1). f0, f1 and f MUST NOT overlap.
  */
-void Zf(poly_split_fft)(fpr *restrict f0, fpr *restrict f1,
+void poly_split_fft(fpr *restrict f0, fpr *restrict f1,
 	const fpr *restrict f, unsigned logn);
 
 /*
@@ -733,7 +733,7 @@ void Zf(poly_split_fft)(fpr *restrict f0, fpr *restrict f1,
  * f = f0(x^2) + x*f1(x^2), in FFT representation modulo X^N+1.
  * f MUST NOT overlap with either f0 or f1.
  */
-void Zf(poly_merge_fft)(fpr *restrict f,
+void poly_merge_fft(fpr *restrict f,
 	const fpr *restrict f0, const fpr *restrict f1, unsigned logn);
 
 /* ==================================================================== */

@@ -78,6 +78,12 @@
 
 
 fpr
+fpr_scaled_func(int64_t i, int sc)
+{
+  return fpr_scaled(i, sc);
+}
+
+fpr
 fpr_scaled(int64_t i, int sc)
 {
 	/*
@@ -133,7 +139,11 @@ fpr_scaled(int64_t i, int sc)
 	return FPR(s, e, m);
 }
 
-
+fpr
+fpr_add_func(fpr x, fpr y)
+{
+  return fpr_add(x, y);
+}
 
 fpr
 fpr_add(fpr x, fpr y)
@@ -243,7 +253,9 @@ fpr_add(fpr x, fpr y)
 	return FPR(sx, ex, xu);
 }
 
-
+fpr fpr_mul_func(fpr x, fpr y) {
+    return fpr_mul(x, y);
+}
 
 fpr
 fpr_mul(fpr x, fpr y)
@@ -341,6 +353,10 @@ fpr_mul(fpr x, fpr y)
 	return FPR(s, e, zu);
 }
 
+fpr
+fpr_div_func(fpr x, fpr y) {
+    return fpr_div(x, y);
+}
 
 
 fpr
@@ -430,7 +446,10 @@ fpr_div(fpr x, fpr y)
 	return FPR(s, e, q);
 }
 
-
+fpr
+fpr_sqrt_func(fpr x) {
+return fpr_sqrt(x);
+}
 
 fpr
 fpr_sqrt(fpr x)
@@ -509,6 +528,10 @@ fpr_sqrt(fpr x)
 	return FPR(0, e, q);
 }
 
+uint64_t
+fpr_expm_p63_func(fpr x, fpr ccs) {
+  return fpr_expm_p63(x, ccs);
+}
 
 uint64_t
 fpr_expm_p63(fpr x, fpr ccs)

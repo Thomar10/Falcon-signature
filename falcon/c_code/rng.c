@@ -36,7 +36,7 @@
 
 /* see inner.h */
 void
-Zf(prng_init)(prng *p, inner_shake256_context *src)
+prng_init(prng *p, inner_shake256_context *src)
 {
 	/*
 	 * To ensure reproducibility for a given seed, we

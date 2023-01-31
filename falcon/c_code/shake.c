@@ -55,7 +55,7 @@ static const uint64_t RC[] = {
 /*
  * Process the provided state.
  */
-static void
+void
 process_block(uint64_t *A)
 {
 	uint64_t t0, t1, t2, t3, t4;
@@ -486,20 +486,20 @@ process_block(uint64_t *A)
 
 /* see inner.h */
 void
-Zf(i_shake256_init)(inner_shake256_context *sc)
+i_shake256_init(inner_shake256_context *sc)
 {
 	sc->dptr = 0;
 
-	/*
-	 * Representation of an all-ones uint64_t is the same regardless
-	 * of local endianness.
-	 */
-	memset(sc->st.A, 0, sizeof sc->st.A);
+//	/*
+//	 * Representation of an all-ones uint64_t is the same regardless
+//	 * of local endianness.
+//	 */
+//	memset(sc->st.A, 0, sizeof sc->st.A);
 }
 
 /* see inner.h */
 void
-Zf(i_shake256_inject)(inner_shake256_context *sc, const uint8_t *in, size_t len)
+i_shake256_inject(inner_shake256_context *sc, const uint8_t *in, size_t len)
 {
 	size_t dptr;
 
@@ -530,7 +530,7 @@ Zf(i_shake256_inject)(inner_shake256_context *sc, const uint8_t *in, size_t len)
 
 /* see falcon.h */
 void
-Zf(i_shake256_flip)(inner_shake256_context *sc)
+i_shake256_flip(inner_shake256_context *sc)
 {
 	/*
 	 * We apply padding and pre-XOR the value into the state. We
@@ -547,7 +547,7 @@ Zf(i_shake256_flip)(inner_shake256_context *sc)
 
 /* see falcon.h */
 void
-Zf(i_shake256_extract)(inner_shake256_context *sc, uint8_t *out, size_t len)
+i_shake256_extract(inner_shake256_context *sc, uint8_t *out, size_t len)
 {
 	size_t dptr;
 
