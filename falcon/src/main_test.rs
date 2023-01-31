@@ -1,9 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::add;
+    use crate::addd;
+    use crate::falcon_c::nist_c::add;
 
     #[test]
     fn test_add() {
-        assert_eq!(add(1, 2), 3);
+        let i = 3;
+        assert_eq!(addd(1, 2), i);
     }
 }
