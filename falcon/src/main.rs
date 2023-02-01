@@ -1,5 +1,7 @@
 
 mod main_test;
+mod fft;
+
 mod falcon_c {
     pub mod codec_c;
     pub mod nist_c;
@@ -10,6 +12,10 @@ mod falcon_c {
     pub mod common_c;
     pub mod vrfy_c;
     pub mod keygen_c;
+}
+
+mod test {
+    pub mod fft_test;
 }
 
 
