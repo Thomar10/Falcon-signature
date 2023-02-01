@@ -36,7 +36,7 @@
 
 /* see inner.h */
 void
-prng_init(prng *p, inner_shake256_context *src)
+Zf(prng_init)(prng *p, inner_shake256_context *src)
 {
 	/*
 	 * To ensure reproducibility for a given seed, we
@@ -60,7 +60,7 @@ prng_init(prng *p, inner_shake256_context *src)
 	tl = *(uint32_t *)(p->state.d + 48);
 	th = *(uint32_t *)(p->state.d + 52);
 	*(uint64_t *)(p->state.d + 48) = tl + (th << 32);
-	prng_refill(p);
+	Zf(prng_refill)(p);
 }
 
 /*
@@ -78,7 +78,7 @@ prng_init(prng *p, inner_shake256_context *src)
  * The block counter is XORed into the first 8 bytes of the IV.
  */
 void
-prng_refill(prng *p)
+Zf(prng_refill)(prng *p)
 {
 
 	static const uint32_t CW[] = {
@@ -167,7 +167,7 @@ prng_refill(prng *p)
 
 /* see inner.h */
 void
-prng_get_bytes(prng *p, void *dst, size_t len)
+Zf(prng_get_bytes)(prng *p, void *dst, size_t len)
 {
 	uint8_t *buf;
 
@@ -184,7 +184,7 @@ prng_get_bytes(prng *p, void *dst, size_t len)
 		len -= clen;
 		p->ptr += clen;
 		if (p->ptr == sizeof p->buf.d) {
-			prng_refill(p);
+			Zf(prng_refill)(p);
 		}
 	}
 }

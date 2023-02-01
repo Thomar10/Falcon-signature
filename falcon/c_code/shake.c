@@ -55,7 +55,7 @@ static const uint64_t RC[] = {
 /*
  * Process the provided state.
  */
-void
+static void
 process_block(uint64_t *A)
 {
 	uint64_t t0, t1, t2, t3, t4;
@@ -486,7 +486,7 @@ process_block(uint64_t *A)
 
 /* see inner.h */
 void
-i_shake256_init(inner_shake256_context *sc)
+Zf(i_shake256_init)(inner_shake256_context *sc)
 {
 	sc->dptr = 0;
 
@@ -499,9 +499,10 @@ i_shake256_init(inner_shake256_context *sc)
 
 /* see inner.h */
 void
-i_shake256_inject(inner_shake256_context *sc, const uint8_t *in, size_t len)
+Zf(i_shake256_inject)(inner_shake256_context *sc, const uint8_t *in, size_t len)
 {
 	size_t dptr;
+
 	dptr = (size_t)sc->dptr;
 	while (len > 0) {
 		size_t clen, u;
@@ -529,7 +530,7 @@ i_shake256_inject(inner_shake256_context *sc, const uint8_t *in, size_t len)
 
 /* see falcon.h */
 void
-i_shake256_flip(inner_shake256_context *sc)
+Zf(i_shake256_flip)(inner_shake256_context *sc)
 {
 	/*
 	 * We apply padding and pre-XOR the value into the state. We
@@ -546,7 +547,7 @@ i_shake256_flip(inner_shake256_context *sc)
 
 /* see falcon.h */
 void
-i_shake256_extract(inner_shake256_context *sc, uint8_t *out, size_t len)
+Zf(i_shake256_extract)(inner_shake256_context *sc, uint8_t *out, size_t len)
 {
 	size_t dptr;
 

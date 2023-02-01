@@ -72,7 +72,6 @@ Zf(modq_encode)(
 	return out_len;
 }
 
-
 /* see inner.h */
 size_t
 Zf(modq_decode)(

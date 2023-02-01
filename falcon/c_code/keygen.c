@@ -627,7 +627,7 @@ static const small_prime PRIMES[] = {
  * Reduce a small signed integer modulo a small prime. The source
  * value x MUST be such that -p < x < p.
  */
-inline uint32_t
+static inline uint32_t
 modp_set(int32_t x, uint32_t p)
 {
 	uint32_t w;
@@ -640,7 +640,7 @@ modp_set(int32_t x, uint32_t p)
 /*
  * Normalize a modular integer around 0.
  */
-inline int32_t
+static inline int32_t
 modp_norm(uint32_t x, uint32_t p)
 {
 	return (int32_t)(x - (p & (((x - ((p + 1) >> 1)) >> 31) - 1)));
@@ -650,7 +650,7 @@ modp_norm(uint32_t x, uint32_t p)
  * Compute -1/p mod 2^31. This works for all odd integers p that fit
  * on 31 bits.
  */
-uint32_t
+static uint32_t
 modp_ninv31(uint32_t p)
 {
 	uint32_t y;
@@ -666,7 +666,7 @@ modp_ninv31(uint32_t p)
 /*
  * Compute R = 2^31 mod p.
  */
-inline uint32_t
+static inline uint32_t
 modp_R(uint32_t p)
 {
 	/*
@@ -679,7 +679,7 @@ modp_R(uint32_t p)
 /*
  * Addition modulo p.
  */
-inline uint32_t
+static inline uint32_t
 modp_add(uint32_t a, uint32_t b, uint32_t p)
 {
 	uint32_t d;
@@ -692,7 +692,7 @@ modp_add(uint32_t a, uint32_t b, uint32_t p)
 /*
  * Subtraction modulo p.
  */
-inline uint32_t
+static inline uint32_t
 modp_sub(uint32_t a, uint32_t b, uint32_t p)
 {
 	uint32_t d;
@@ -718,7 +718,7 @@ modp_half(uint32_t a, uint32_t p)
  * Montgomery multiplication modulo p. The 'p0i' value is -1/p mod 2^31.
  * It is required that p is an odd integer.
  */
-inline uint32_t
+static inline uint32_t
 modp_montymul(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i)
 {
 	uint64_t z, w;
@@ -734,7 +734,7 @@ modp_montymul(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i)
 /*
  * Compute R2 = 2^62 mod p.
  */
-uint32_t
+static uint32_t
 modp_R2(uint32_t p, uint32_t p0i)
 {
 	uint32_t z;
@@ -768,7 +768,7 @@ modp_R2(uint32_t p, uint32_t p0i)
  * p must be prime such that 2^30 < p < 2^31; p0i must be equal to
  * -1/p mod 2^31; R2 must be equal to 2^62 mod p.
  */
-inline uint32_t
+static inline uint32_t
 modp_Rx(unsigned x, uint32_t p, uint32_t p0i, uint32_t R2)
 {
 	int i;
@@ -801,7 +801,7 @@ modp_Rx(unsigned x, uint32_t p, uint32_t p0i, uint32_t R2)
  *   p0i   -1/p mod 2^31
  *   R     2^31 mod R
  */
-uint32_t
+static uint32_t
 modp_div(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i, uint32_t R)
 {
 	uint32_t z, e;
@@ -937,7 +937,7 @@ static const uint16_t REV10[] = {
  *
  * p must be a prime such that p = 1 mod 2048.
  */
- void
+static void
 modp_mkgm2(uint32_t *restrict gm, uint32_t *restrict igm, unsigned logn,
 	uint32_t g, uint32_t p, uint32_t p0i)
 {
@@ -975,7 +975,7 @@ modp_mkgm2(uint32_t *restrict gm, uint32_t *restrict igm, unsigned logn,
  * Compute the NTT over a polynomial (binary case). Polynomial elements
  * are a[0], a[stride], a[2 * stride]...
  */
-void
+static void
 modp_NTT2_ext(uint32_t *a, size_t stride, const uint32_t *gm, unsigned logn,
 	uint32_t p, uint32_t p0i)
 {
@@ -1014,7 +1014,7 @@ modp_NTT2_ext(uint32_t *a, size_t stride, const uint32_t *gm, unsigned logn,
 /*
  * Compute the inverse NTT over a polynomial (binary case).
  */
-void
+static void
 modp_iNTT2_ext(uint32_t *a, size_t stride, const uint32_t *igm, unsigned logn,
 	uint32_t p, uint32_t p0i)
 {
@@ -1085,7 +1085,7 @@ modp_iNTT2_ext(uint32_t *a, size_t stride, const uint32_t *igm, unsigned logn,
  * This function applies only to the binary case; it is invoked from
  * solve_NTRU_binary_depth1().
  */
-void
+static void
 modp_poly_rec_res(uint32_t *f, unsigned logn,
 	uint32_t p, uint32_t p0i, uint32_t R2)
 {
@@ -1142,7 +1142,7 @@ modp_poly_rec_res(uint32_t *f, unsigned logn,
  * ctl = 0, the value a[] is unmodified, but all memory accesses are
  * still performed, and the carry is computed and returned.
  */
-uint32_t
+static uint32_t
 zint_sub(uint32_t *restrict a, const uint32_t *restrict b, size_t len,
 	uint32_t ctl)
 {
@@ -1167,7 +1167,7 @@ zint_sub(uint32_t *restrict a, const uint32_t *restrict b, size_t len,
  * Mutiply the provided big integer m with a small value x.
  * This function assumes that x < 2^31. The carry word is returned.
  */
-uint32_t
+static uint32_t
 zint_mul_small(uint32_t *m, size_t mlen, uint32_t x)
 {
 	size_t u;
@@ -1193,7 +1193,7 @@ zint_mul_small(uint32_t *m, size_t mlen, uint32_t x)
  *  p0i = -(1/p) mod 2^31
  *  R2 = 2^62 mod p
  */
-uint32_t
+static uint32_t
 zint_mod_small_unsigned(const uint32_t *d, size_t dlen,
 	uint32_t p, uint32_t p0i, uint32_t R2)
 {
@@ -1223,7 +1223,7 @@ zint_mod_small_unsigned(const uint32_t *d, size_t dlen,
  * Similar to zint_mod_small_unsigned(), except that d may be signed.
  * Extra parameter is Rx = 2^(31*dlen) mod p.
  */
-uint32_t
+static uint32_t
 zint_mod_small_signed(const uint32_t *d, size_t dlen,
 	uint32_t p, uint32_t p0i, uint32_t R2, uint32_t Rx)
 {
@@ -1242,7 +1242,7 @@ zint_mod_small_signed(const uint32_t *d, size_t dlen,
  * has length 'len+1' words. 's' must fit on 31 bits. x[] and y[] must
  * not overlap.
  */
-void
+static void
 zint_add_mul_small(uint32_t *restrict x,
 	const uint32_t *restrict y, size_t len, uint32_t s)
 {
@@ -1268,7 +1268,7 @@ zint_add_mul_small(uint32_t *restrict x,
  * with x - p (signed encoding with two's complement); otherwise, x is
  * untouched. The two integers x and p are encoded over the same length.
  */
-void
+static void
 zint_norm_zero(uint32_t *restrict x, const uint32_t *restrict p, size_t len)
 {
 	size_t u;
@@ -1329,7 +1329,7 @@ zint_norm_zero(uint32_t *restrict x, const uint32_t *restrict p, size_t len)
  * normalized to the -m/2..m/2 interval (where m is the product of all
  * small prime moduli); two's complement is used for negative values.
  */
-void
+static void
 zint_rebuild_CRT(uint32_t *restrict xx, size_t xlen, size_t xstride,
 	size_t num, const small_prime *primes, int normalize_signed,
 	uint32_t *restrict tmp)
@@ -1393,7 +1393,7 @@ zint_rebuild_CRT(uint32_t *restrict xx, size_t xlen, size_t xstride,
  * Negate a big integer conditionally: value a is replaced with -a if
  * and only if ctl = 1. Control value ctl must be 0 or 1.
  */
-void
+static void
 zint_negate(uint32_t *a, size_t len, uint32_t ctl)
 {
 	size_t u;
@@ -1430,7 +1430,7 @@ zint_negate(uint32_t *a, size_t len, uint32_t ctl)
  *
  * Coefficients xa, xb, ya and yb may use the full signed 32-bit range.
  */
-uint32_t
+static uint32_t
 zint_co_reduce(uint32_t *a, uint32_t *b, size_t len,
 	int64_t xa, int64_t xb, int64_t ya, int64_t yb)
 {
@@ -1475,7 +1475,7 @@ zint_co_reduce(uint32_t *a, uint32_t *b, size_t len,
  *
  * Modulus m must be odd.
  */
-void
+static void
 zint_finish_mod(uint32_t *a, size_t len, const uint32_t *m, uint32_t neg)
 {
 	size_t u;
@@ -1518,7 +1518,7 @@ zint_finish_mod(uint32_t *a, size_t len, const uint32_t *m, uint32_t neg)
  * Replace a with (a*xa+b*xb)/(2^31) mod m, and b with
  * (a*ya+b*yb)/(2^31) mod m. Modulus m must be odd; m0i = -1/m[0] mod 2^31.
  */
-void
+static void
 zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
 	uint32_t m0i, int64_t xa, int64_t xb, int64_t ya, int64_t yb)
 {
@@ -1578,7 +1578,7 @@ zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
  * extra values of that length. Arrays u, v and tmp may not overlap with
  * each other, or with either x or y.
  */
-int
+static int
 zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	const uint32_t *restrict x, const uint32_t *restrict y,
 	size_t len, uint32_t *restrict tmp)
@@ -1904,7 +1904,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
  * x[] and y[] are both signed integers, using two's complement for
  * negative values.
  */
-void
+static void
 zint_add_scaled_mul_small(uint32_t *restrict x, size_t xlen,
 	const uint32_t *restrict y, size_t ylen, int32_t k,
 	uint32_t sch, uint32_t scl)
@@ -1965,7 +1965,7 @@ zint_add_scaled_mul_small(uint32_t *restrict x, size_t xlen,
  * x[] and y[] are both signed integers, using two's complement for
  * negative values.
  */
-void
+static void
 zint_sub_scaled(uint32_t *restrict x, size_t xlen,
 	const uint32_t *restrict y, size_t ylen, uint32_t sch, uint32_t scl)
 {
@@ -2001,7 +2001,7 @@ zint_sub_scaled(uint32_t *restrict x, size_t xlen,
 /*
  * Convert a one-word signed big integer into a signed value.
  */
-inline int32_t
+static inline int32_t
 zint_one_to_plain(const uint32_t *x)
 {
 	uint32_t w;
@@ -2024,7 +2024,7 @@ zint_one_to_plain(const uint32_t *x)
  * they should be "trimmed" by pointing not to the lowest word of each,
  * but upper.
  */
-void
+static void
 poly_big_to_fp(fpr *d, const uint32_t *f, size_t flen, size_t fstride,
 	unsigned logn)
 {
@@ -2075,7 +2075,7 @@ poly_big_to_fp(fpr *d, const uint32_t *f, size_t flen, size_t fstride,
  * any failure, the NTRU-solving process will be deemed to have failed
  * and the (f,g) polynomials will be discarded.
  */
- int
+static int
 poly_big_to_small(int8_t *d, const uint32_t *s, int lim, unsigned logn)
 {
 	size_t n, u;
@@ -2103,7 +2103,7 @@ poly_big_to_small(int8_t *d, const uint32_t *s, int lim, unsigned logn)
  * which is efficient in space (no extra buffer needed) but slow at
  * high degree.
  */
-void
+static void
 poly_sub_scaled(uint32_t *restrict F, size_t Flen, size_t Fstride,
 	const uint32_t *restrict f, size_t flen, size_t fstride,
 	const int32_t *restrict k, uint32_t sch, uint32_t scl, unsigned logn)
@@ -2140,7 +2140,7 @@ poly_sub_scaled(uint32_t *restrict F, size_t Flen, size_t Fstride,
  * assumes that the degree is large, and integers relatively small.
  * The value sc is provided as sch = sc / 31 and scl = sc % 31.
  */
-void
+static void
 poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
 	const uint32_t *restrict f, size_t flen, size_t fstride,
 	const int32_t *restrict k, uint32_t sch, uint32_t scl, unsigned logn,
@@ -2214,7 +2214,7 @@ poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
  * the same values will be obtained over different platforms, in case
  * a known seed is used.
  */
-inline uint64_t
+static inline uint64_t
 get_rng_u64(inner_shake256_context *rng)
 {
 	/*
@@ -2265,7 +2265,7 @@ static const uint64_t gauss_1024_12289[] = {
  * sigma*sqrt(2), then we can just generate more values and add them
  * together for lower dimensions.
  */
-int
+static int
 mkgauss(RNG_CONTEXT *rng, unsigned logn)
 {
 	unsigned u, g;
@@ -2431,7 +2431,7 @@ static const struct {
  * Compute squared norm of a short vector. Returned value is saturated to
  * 2^32-1 if it is not lower than 2^31.
  */
-uint32_t
+static uint32_t
 poly_small_sqnorm(const int8_t *f, unsigned logn)
 {
 	size_t n, u;
@@ -2454,7 +2454,7 @@ poly_small_sqnorm(const int8_t *f, unsigned logn)
  * Align (upwards) the provided 'data' pointer with regards to 'base'
  * so that the offset is a multiple of the size of 'fpr'.
  */
-fpr *
+static fpr *
 align_fpr(void *base, void *data)
 {
 	uint8_t *cb, *cd;
@@ -2474,7 +2474,7 @@ align_fpr(void *base, void *data)
  * Align (upwards) the provided 'data' pointer with regards to 'base'
  * so that the offset is a multiple of the size of 'uint32_t'.
  */
-uint32_t *
+static uint32_t *
 align_u32(void *base, void *data)
 {
 	uint8_t *cb, *cd;
@@ -2493,7 +2493,7 @@ align_u32(void *base, void *data)
 /*
  * Convert a small vector to floating point.
  */
-void
+static void
 poly_small_to_fp(fpr *x, const int8_t *f, unsigned logn)
 {
 	size_t n, u;
@@ -2512,7 +2512,7 @@ poly_small_to_fp(fpr *x, const int8_t *f, unsigned logn)
  *
  * Values are in RNS; input and/or output may also be in NTT.
  */
-void
+static void
 make_fg_step(uint32_t *data, unsigned logn, unsigned depth,
 	int in_ntt, int out_ntt)
 {
@@ -2658,7 +2658,7 @@ make_fg_step(uint32_t *data, unsigned logn, unsigned depth,
  * Space use in data[]: enough room for any two successive values (f', g',
  * f and g).
  */
-void
+static void
 make_fg(uint32_t *data, const int8_t *f, const int8_t *g,
 	unsigned logn, unsigned depth, int out_ntt)
 {
@@ -2704,7 +2704,7 @@ make_fg(uint32_t *data, const int8_t *f, const int8_t *g,
  *
  * Returned value: 1 on success, 0 on error.
  */
-int
+static int
 solve_NTRU_deepest(unsigned logn_top,
 	const int8_t *f, const int8_t *g, uint32_t *tmp)
 {
@@ -2766,7 +2766,7 @@ solve_NTRU_deepest(unsigned logn_top,
  *
  * Returned value: 1 on success, 0 on error.
  */
-int
+static int
 solve_NTRU_intermediate(unsigned logn_top,
 	const int8_t *f, const int8_t *g, unsigned depth, uint32_t *tmp)
 {
@@ -3101,11 +3101,11 @@ solve_NTRU_intermediate(unsigned logn_top,
 	 * Compute 1/(f*adj(f)+g*adj(g)) in rt5. We also keep adj(f)
 	 * and adj(g) in rt3 and rt4, respectively.
 	 */
-	FFT(rt3, logn);
-	FFT(rt4, logn);
-	poly_invnorm2_fft(rt5, rt3, rt4, logn);
-	poly_adj_fft(rt3, logn);
-	poly_adj_fft(rt4, logn);
+	Zf(FFT)(rt3, logn);
+	Zf(FFT)(rt4, logn);
+	Zf(poly_invnorm2_fft)(rt5, rt3, rt4, logn);
+	Zf(poly_adj_fft)(rt3, logn);
+	Zf(poly_adj_fft)(rt4, logn);
 
 	/*
 	 * Reduce F and G repeatedly.
@@ -3161,13 +3161,13 @@ solve_NTRU_intermediate(unsigned logn_top,
 		/*
 		 * Compute (F*adj(f)+G*adj(g))/(f*adj(f)+g*adj(g)) in rt2.
 		 */
-		FFT(rt1, logn);
-		FFT(rt2, logn);
-		poly_mul_fft(rt1, rt3, logn);
-		poly_mul_fft(rt2, rt4, logn);
-		poly_add(rt2, rt1, logn);
-		poly_mul_autoadj_fft(rt2, rt5, logn);
-		iFFT(rt2, logn);
+		Zf(FFT)(rt1, logn);
+		Zf(FFT)(rt2, logn);
+		Zf(poly_mul_fft)(rt1, rt3, logn);
+		Zf(poly_mul_fft)(rt2, rt4, logn);
+		Zf(poly_add)(rt2, rt1, logn);
+		Zf(poly_mul_autoadj_fft)(rt2, rt5, logn);
+		Zf(iFFT)(rt2, logn);
 
 		/*
 		 * (f,g) are scaled by 'scale_fg', meaning that the
@@ -3316,7 +3316,7 @@ solve_NTRU_intermediate(unsigned logn_top,
  *
  * Returned value: 1 on success, 0 on error.
  */
-int
+static int
 solve_NTRU_binary_depth1(unsigned logn_top,
 	const int8_t *f, const int8_t *g, uint32_t *tmp)
 {
@@ -3622,10 +3622,10 @@ solve_NTRU_binary_depth1(unsigned logn_top,
 	 *   rt4 = g
 	 * in that order in RAM. We convert all of them to FFT.
 	 */
-	FFT(rt1, logn);
-	FFT(rt2, logn);
-	FFT(rt3, logn);
-	FFT(rt4, logn);
+	Zf(FFT)(rt1, logn);
+	Zf(FFT)(rt2, logn);
+	Zf(FFT)(rt3, logn);
+	Zf(FFT)(rt4, logn);
 
 	/*
 	 * Compute:
@@ -3635,14 +3635,14 @@ solve_NTRU_binary_depth1(unsigned logn_top,
 	 */
 	rt5 = rt4 + n;
 	rt6 = rt5 + n;
-	poly_add_muladj_fft(rt5, rt1, rt2, rt3, rt4, logn);
-	poly_invnorm2_fft(rt6, rt3, rt4, logn);
+	Zf(poly_add_muladj_fft)(rt5, rt1, rt2, rt3, rt4, logn);
+	Zf(poly_invnorm2_fft)(rt6, rt3, rt4, logn);
 
 	/*
 	 * Compute:
 	 *   rt5 = (F*adj(f)+G*adj(g)) / (f*adj(f)+g*adj(g))
 	 */
-	poly_mul_autoadj_fft(rt5, rt6, logn);
+	Zf(poly_mul_autoadj_fft)(rt5, rt6, logn);
 
 	/*
 	 * Compute k as the rounded version of rt5. Check that none of
@@ -3651,7 +3651,7 @@ solve_NTRU_binary_depth1(unsigned logn_top,
 	 * note that any out-of-bounds value here implies a failure and
 	 * (f,g) will be discarded, so we can make a simple test.
 	 */
-	iFFT(rt5, logn);
+	Zf(iFFT)(rt5, logn);
 	for (u = 0; u < n; u ++) {
 		fpr z;
 
@@ -3661,17 +3661,17 @@ solve_NTRU_binary_depth1(unsigned logn_top,
 		}
 		rt5[u] = fpr_of(fpr_rint(z));
 	}
-	FFT(rt5, logn);
+	Zf(FFT)(rt5, logn);
 
 	/*
 	 * Subtract k*f from F, and k*g from G.
 	 */
-	poly_mul_fft(rt3, rt5, logn);
-	poly_mul_fft(rt4, rt5, logn);
-	poly_sub(rt1, rt3, logn);
-	poly_sub(rt2, rt4, logn);
-	iFFT(rt1, logn);
-	iFFT(rt2, logn);
+	Zf(poly_mul_fft)(rt3, rt5, logn);
+	Zf(poly_mul_fft)(rt4, rt5, logn);
+	Zf(poly_sub)(rt1, rt3, logn);
+	Zf(poly_sub)(rt2, rt4, logn);
+	Zf(iFFT)(rt1, logn);
+	Zf(iFFT)(rt2, logn);
 
 	/*
 	 * Convert back F and G to integers, and return.
@@ -3696,7 +3696,7 @@ solve_NTRU_binary_depth1(unsigned logn_top,
  *
  * Returned value: 1 on success, 0 on error.
  */
-int
+static int
 solve_NTRU_binary_depth0(unsigned logn,
 	const int8_t *f, const int8_t *g, uint32_t *tmp)
 {
@@ -3891,7 +3891,7 @@ solve_NTRU_binary_depth0(unsigned logn,
 	for (u = 0; u < n; u ++) {
 		rt3[u] = fpr_of(((int32_t *)t2)[u]);
 	}
-	FFT(rt3, logn);
+	Zf(FFT)(rt3, logn);
 	rt2 = align_fpr(tmp, t2);
 	memmove(rt2, rt3, hn * sizeof *rt3);
 
@@ -3902,14 +3902,14 @@ solve_NTRU_binary_depth0(unsigned logn,
 	for (u = 0; u < n; u ++) {
 		rt3[u] = fpr_of(((int32_t *)t1)[u]);
 	}
-	FFT(rt3, logn);
+	Zf(FFT)(rt3, logn);
 
 	/*
 	 * Compute (F*adj(f)+G*adj(g))/(f*adj(f)+g*adj(g)) and get
 	 * its rounded normal representation in t1.
 	 */
-	poly_div_autoadj_fft(rt3, rt2, logn);
-	iFFT(rt3, logn);
+	Zf(poly_div_autoadj_fft)(rt3, rt2, logn);
+	Zf(iFFT)(rt3, logn);
 	for (u = 0; u < n; u ++) {
 		t1[u] = modp_set((int32_t)fpr_rint(rt3[u]), p);
 	}
@@ -3960,7 +3960,7 @@ solve_NTRU_binary_depth0(unsigned logn,
  * If any of the coefficients of F and G exceeds lim (in absolute value),
  * then 0 is returned.
  */
-int
+static int
 solve_NTRU(unsigned logn, int8_t *F, int8_t *G,
 	const int8_t *f, const int8_t *g, int lim, uint32_t *tmp)
 {
@@ -4071,7 +4071,7 @@ solve_NTRU(unsigned logn, int8_t *F, int8_t *G,
  * Generate a random polynomial with a Gaussian distribution. This function
  * also makes sure that the resultant of the polynomial with phi is odd.
  */
-void
+static void
 poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 {
 	size_t n, u;
@@ -4113,7 +4113,7 @@ poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 
 /* see falcon.h */
 void
-keygen(inner_shake256_context *rng,
+Zf(keygen)(inner_shake256_context *rng,
 	int8_t *f, int8_t *g, int8_t *F, int8_t *G, uint16_t *h,
 	unsigned logn, uint8_t *tmp)
 {
@@ -4222,17 +4222,17 @@ keygen(inner_shake256_context *rng,
 		rt3 = rt2 + n;
 		poly_small_to_fp(rt1, f, logn);
 		poly_small_to_fp(rt2, g, logn);
-		FFT(rt1, logn);
-		FFT(rt2, logn);
-		poly_invnorm2_fft(rt3, rt1, rt2, logn);
-		poly_adj_fft(rt1, logn);
-		poly_adj_fft(rt2, logn);
-		poly_mulconst(rt1, fpr_q, logn);
-		poly_mulconst(rt2, fpr_q, logn);
-		poly_mul_autoadj_fft(rt1, rt3, logn);
-		poly_mul_autoadj_fft(rt2, rt3, logn);
-		iFFT(rt1, logn);
-		iFFT(rt2, logn);
+		Zf(FFT)(rt1, logn);
+		Zf(FFT)(rt2, logn);
+		Zf(poly_invnorm2_fft)(rt3, rt1, rt2, logn);
+		Zf(poly_adj_fft)(rt1, logn);
+		Zf(poly_adj_fft)(rt2, logn);
+		Zf(poly_mulconst)(rt1, fpr_q, logn);
+		Zf(poly_mulconst)(rt2, fpr_q, logn);
+		Zf(poly_mul_autoadj_fft)(rt1, rt3, logn);
+		Zf(poly_mul_autoadj_fft)(rt2, rt3, logn);
+		Zf(iFFT)(rt1, logn);
+		Zf(iFFT)(rt2, logn);
 		bnorm = fpr_zero;
 		for (u = 0; u < n; u ++) {
 			bnorm = fpr_add(bnorm, fpr_sqr(rt1[u]));
@@ -4253,7 +4253,7 @@ keygen(inner_shake256_context *rng,
 			h2 = h;
 			tmp2 = (uint16_t *)tmp;
 		}
-		if (!compute_public(h2, f, g, logn, (uint8_t *)tmp2)) {
+		if (!Zf(compute_public)(h2, f, g, logn, (uint8_t *)tmp2)) {
 			continue;
 		}
 

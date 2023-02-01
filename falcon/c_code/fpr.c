@@ -34,6 +34,7 @@
 
 #include "inner.h"
 
+
 /*
  * Normalize a provided unsigned integer to the 2^63..2^64-1 range by
  * left-shifting it if necessary. The exponent e is adjusted accordingly
@@ -76,12 +77,6 @@
 		(e) += (int)(nt); \
 	} while (0)
 
-
-fpr
-fpr_scaled_func(int64_t i, int sc)
-{
-  return fpr_scaled(i, sc);
-}
 
 fpr
 fpr_scaled(int64_t i, int sc)
@@ -139,11 +134,7 @@ fpr_scaled(int64_t i, int sc)
 	return FPR(s, e, m);
 }
 
-fpr
-fpr_add_func(fpr x, fpr y)
-{
-  return fpr_add(x, y);
-}
+
 
 fpr
 fpr_add(fpr x, fpr y)
@@ -358,7 +349,6 @@ fpr_div_func(fpr x, fpr y) {
     return fpr_div(x, y);
 }
 
-
 fpr
 fpr_div(fpr x, fpr y)
 {
@@ -446,10 +436,7 @@ fpr_div(fpr x, fpr y)
 	return FPR(s, e, q);
 }
 
-fpr
-fpr_sqrt_func(fpr x) {
-return fpr_sqrt(x);
-}
+
 
 fpr
 fpr_sqrt(fpr x)
@@ -528,10 +515,6 @@ fpr_sqrt(fpr x)
 	return FPR(0, e, q);
 }
 
-uint64_t
-fpr_expm_p63_func(fpr x, fpr ccs) {
-  return fpr_expm_p63(x, ccs);
-}
 
 uint64_t
 fpr_expm_p63(fpr x, fpr ccs)

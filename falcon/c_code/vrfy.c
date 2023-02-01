@@ -341,7 +341,7 @@ mq_conv_small(int x)
 /*
  * Addition modulo q. Operands must be in the 0..q-1 range.
  */
-inline uint32_t
+static inline uint32_t
 mq_add(uint32_t x, uint32_t y)
 {
 	/*
@@ -361,7 +361,7 @@ mq_add(uint32_t x, uint32_t y)
 /*
  * Subtraction modulo q. Operands must be in the 0..q-1 range.
  */
-inline uint32_t
+static inline uint32_t
 mq_sub(uint32_t x, uint32_t y)
 {
 	/*
@@ -378,7 +378,7 @@ mq_sub(uint32_t x, uint32_t y)
 /*
  * Division by 2 modulo q. Operand must be in the 0..q-1 range.
  */
-inline uint32_t
+static inline uint32_t
 mq_rshift1(uint32_t x)
 {
 	x += Q & -(x & 1);
@@ -390,7 +390,7 @@ mq_rshift1(uint32_t x)
  * this function computes: x * y / R mod q
  * Operands must be in the 0..q-1 range.
  */
-inline uint32_t
+static inline uint32_t
 mq_montymul(uint32_t x, uint32_t y)
 {
 	uint32_t z, w;
@@ -426,7 +426,7 @@ mq_montymul(uint32_t x, uint32_t y)
 /*
  * Montgomery squaring (computes (x^2)/R).
  */
-inline uint32_t
+static inline uint32_t
 mq_montysqr(uint32_t x)
 {
 	return mq_montymul(x, x);
@@ -435,7 +435,7 @@ mq_montysqr(uint32_t x)
 /*
  * Divide x by y modulo q = 12289.
  */
-inline uint32_t
+static inline uint32_t
 mq_div_12289(uint32_t x, uint32_t y)
 {
 	/*
@@ -501,7 +501,7 @@ mq_div_12289(uint32_t x, uint32_t y)
 /*
  * Compute NTT on a ring element.
  */
-void
+static void
 mq_NTT(uint16_t *a, unsigned logn)
 {
 	size_t n, t, m;
@@ -534,7 +534,7 @@ mq_NTT(uint16_t *a, unsigned logn)
 /*
  * Compute the inverse NTT on a ring element, binary case.
  */
-void
+static void
 mq_iNTT(uint16_t *a, unsigned logn)
 {
 	size_t n, t, m;
@@ -590,7 +590,7 @@ mq_iNTT(uint16_t *a, unsigned logn)
 /*
  * Convert a polynomial (mod q) to Montgomery representation.
  */
-void
+static void
 mq_poly_tomonty(uint16_t *f, unsigned logn)
 {
 	size_t u, n;
@@ -605,7 +605,7 @@ mq_poly_tomonty(uint16_t *f, unsigned logn)
  * Multiply two polynomials together (NTT representation, and using
  * a Montgomery multiplication). Result f*g is written over f.
  */
-void
+static void
 mq_poly_montymul_ntt(uint16_t *f, const uint16_t *g, unsigned logn)
 {
 	size_t u, n;
@@ -619,7 +619,7 @@ mq_poly_montymul_ntt(uint16_t *f, const uint16_t *g, unsigned logn)
 /*
  * Subtract polynomial g from polynomial f.
  */
-void
+static void
 mq_poly_sub(uint16_t *f, const uint16_t *g, unsigned logn)
 {
 	size_t u, n;
@@ -634,7 +634,7 @@ mq_poly_sub(uint16_t *f, const uint16_t *g, unsigned logn)
 
 /* see inner.h */
 void
-to_ntt_monty(uint16_t *h, unsigned logn)
+Zf(to_ntt_monty)(uint16_t *h, unsigned logn)
 {
 	mq_NTT(h, logn);
 	mq_poly_tomonty(h, logn);
@@ -642,7 +642,7 @@ to_ntt_monty(uint16_t *h, unsigned logn)
 
 /* see inner.h */
 int
-verify_raw(const uint16_t *c0, const int16_t *s2,
+Zf(verify_raw)(const uint16_t *c0, const int16_t *s2,
 	const uint16_t *h, unsigned logn, uint8_t *tmp)
 {
 	size_t u, n;
@@ -685,12 +685,12 @@ verify_raw(const uint16_t *c0, const int16_t *s2,
 	 * Signature is valid if and only if the aggregate (-s1,s2) vector
 	 * is short enough.
 	 */
-	return is_short((int16_t *)tt, s2, logn);
+	return Zf(is_short)((int16_t *)tt, s2, logn);
 }
 
 /* see inner.h */
 int
-compute_public(uint16_t *h,
+Zf(compute_public)(uint16_t *h,
 	const int8_t *f, const int8_t *g, unsigned logn, uint8_t *tmp)
 {
 	size_t u, n;
@@ -716,7 +716,7 @@ compute_public(uint16_t *h,
 
 /* see inner.h */
 int
-complete_private(int8_t *G,
+Zf(complete_private)(int8_t *G,
 	const int8_t *f, const int8_t *g, const int8_t *F,
 	unsigned logn, uint8_t *tmp)
 {
@@ -762,7 +762,7 @@ complete_private(int8_t *G,
 
 /* see inner.h */
 int
-is_invertible(
+Zf(is_invertible)(
 	const int16_t *s2, unsigned logn, uint8_t *tmp)
 {
 	size_t u, n;
@@ -788,7 +788,7 @@ is_invertible(
 
 /* see inner.h */
 int
-verify_recover(uint16_t *h,
+Zf(verify_recover)(uint16_t *h,
 	const uint16_t *c0, const int16_t *s1, const int16_t *s2,
 	unsigned logn, uint8_t *tmp)
 {
@@ -838,13 +838,13 @@ verify_recover(uint16_t *h,
 	 * check that the rebuilt public key matches the expected
 	 * value (e.g. through a hash).
 	 */
-	r = ~r & (uint32_t)-is_short(s1, s2, logn);
+	r = ~r & (uint32_t)-Zf(is_short)(s1, s2, logn);
 	return (int)(r >> 31);
 }
 
 /* see inner.h */
 int
-count_nttzero(const int16_t *sig, unsigned logn, uint8_t *tmp)
+Zf(count_nttzero)(const int16_t *sig, unsigned logn, uint8_t *tmp)
 {
 	uint16_t *s2;
 	size_t u, n;
