@@ -72,6 +72,7 @@ falcon_inner_modq_encode(
 	return out_len;
 }
 
+
 /* see inner.h */
 size_t
 falcon_inner_modq_decode(

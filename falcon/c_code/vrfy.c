@@ -634,7 +634,7 @@ mq_poly_sub(uint16_t *f, const uint16_t *g, unsigned logn)
 
 /* see inner.h */
 void
-Zf(to_ntt_monty)(uint16_t *h, unsigned logn)
+falcon_inner_to_ntt_monty(uint16_t *h, unsigned logn)
 {
 	mq_NTT(h, logn);
 	mq_poly_tomonty(h, logn);
@@ -642,7 +642,7 @@ Zf(to_ntt_monty)(uint16_t *h, unsigned logn)
 
 /* see inner.h */
 int
-Zf(verify_raw)(const uint16_t *c0, const int16_t *s2,
+falcon_inner_verify_raw(const uint16_t *c0, const int16_t *s2,
 	const uint16_t *h, unsigned logn, uint8_t *tmp)
 {
 	size_t u, n;
@@ -685,12 +685,12 @@ Zf(verify_raw)(const uint16_t *c0, const int16_t *s2,
 	 * Signature is valid if and only if the aggregate (-s1,s2) vector
 	 * is short enough.
 	 */
-	return Zf(is_short)((int16_t *)tt, s2, logn);
+	return is_short((int16_t *)tt, s2, logn);
 }
 
 /* see inner.h */
 int
-Zf(compute_public)(uint16_t *h,
+falcon_inner_compute_public(uint16_t *h,
 	const int8_t *f, const int8_t *g, unsigned logn, uint8_t *tmp)
 {
 	size_t u, n;
@@ -716,7 +716,7 @@ Zf(compute_public)(uint16_t *h,
 
 /* see inner.h */
 int
-Zf(complete_private)(int8_t *G,
+falcon_inner_complete_private(int8_t *G,
 	const int8_t *f, const int8_t *g, const int8_t *F,
 	unsigned logn, uint8_t *tmp)
 {
@@ -762,7 +762,7 @@ Zf(complete_private)(int8_t *G,
 
 /* see inner.h */
 int
-Zf(is_invertible)(
+falcon_inner_is_invertible(
 	const int16_t *s2, unsigned logn, uint8_t *tmp)
 {
 	size_t u, n;
@@ -788,7 +788,7 @@ Zf(is_invertible)(
 
 /* see inner.h */
 int
-Zf(verify_recover)(uint16_t *h,
+falcon_inner_verify_recover(uint16_t *h,
 	const uint16_t *c0, const int16_t *s1, const int16_t *s2,
 	unsigned logn, uint8_t *tmp)
 {
@@ -838,13 +838,13 @@ Zf(verify_recover)(uint16_t *h,
 	 * check that the rebuilt public key matches the expected
 	 * value (e.g. through a hash).
 	 */
-	r = ~r & (uint32_t)-Zf(is_short)(s1, s2, logn);
+	r = ~r & (uint32_t)-is_short(s1, s2, logn);
 	return (int)(r >> 31);
 }
 
 /* see inner.h */
 int
-Zf(count_nttzero)(const int16_t *sig, unsigned logn, uint8_t *tmp)
+falcon_inner_count_nttzero(const int16_t *sig, unsigned logn, uint8_t *tmp)
 {
 	uint16_t *s2;
 	size_t u, n;

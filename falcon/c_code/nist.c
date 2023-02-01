@@ -48,7 +48,7 @@ crypto_sign_keypair(unsigned char *pk, unsigned char *sk)
 	inner_shake256_init(&rng);
 	inner_shake256_inject(&rng, seed, sizeof seed);
 	inner_shake256_flip(&rng);
-	keygen(&rng, f, g, F, NULL, h, 9, tmp.b);
+	falcon_inner_keygen(&rng, f, g, F, NULL, h, 9, tmp.b);
 
 
 	/*

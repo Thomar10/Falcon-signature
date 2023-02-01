@@ -4113,7 +4113,7 @@ poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 
 /* see falcon.h */
 void
-Zf(keygen)(inner_shake256_context *rng,
+falcon_inner_keygen(inner_shake256_context *rng,
 	int8_t *f, int8_t *g, int8_t *F, int8_t *G, uint16_t *h,
 	unsigned logn, uint8_t *tmp)
 {

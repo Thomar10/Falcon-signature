@@ -3,8 +3,11 @@ use crate::falcon_c::shake_c::inner_shake256_context;
 
 #[link(name = "rng", kind = "static")]
 extern "C" {
+    #[allow(dead_code)]
     pub fn prng_init(p: *const prng, src: *const inner_shake256_context);
+    #[allow(dead_code)]
     pub fn prng_refill(p: *const prng);
+    #[allow(dead_code)]
     pub fn prng_get_bytes(p: *const prng, dst: *const c_void, len: u64);
 }
 
