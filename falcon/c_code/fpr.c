@@ -168,6 +168,7 @@ fpr_add(fpr x, fpr y)
 	za = (x & m) - (y & m);
 	cs = (uint32_t)(za >> 63)
 		| ((1U - (uint32_t)(-za >> 63)) & (uint32_t)(x >> 63));
+	printf("value of cs= %d\n", cs);
 	m = (x ^ y) & -(uint64_t)cs;
 	x ^= m;
 	y ^= m;

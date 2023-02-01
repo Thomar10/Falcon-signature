@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2"
+rand = "0.8.4"
 
 [build-dependencies]
 cmake="0.1.31"
