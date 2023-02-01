@@ -1,6 +1,7 @@
 
 mod main_test;
 mod fft;
+mod shake;
 
 mod falcon_c {
     pub mod codec_c;
@@ -16,6 +17,7 @@ mod falcon_c {
 
 mod test {
     pub mod fft_test;
+    pub mod shake_test;
 }
 
 

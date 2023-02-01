@@ -2,7 +2,7 @@
 
 extern "C" {
     #[allow(dead_code)]
-    pub fn falcon_inner_process_block(a: *const u64);
+    pub fn process_block(a: *const u64);
     #[allow(dead_code)]
     pub fn falcon_inner_i_shake256_init(sc: *const inner_shake256_context);
     #[allow(dead_code)]
