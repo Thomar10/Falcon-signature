@@ -519,12 +519,12 @@ void prng_init(prng *p, inner_shake256_context *src);
  * Refill the PRNG buffer. This is normally invoked automatically, and
  * is declared here only so that prng_get_u64() may be inlined.
  */
-void Zf(prng_refill)(prng *p);
+void prng_refill(prng *p);
 
 /*
  * Get some bytes from a PRNG.
  */
-void Zf(prng_get_bytes)(prng *p, void *dst, size_t len);
+void prng_get_bytes(prng *p, void *dst, size_t len);
 
 /*
  * Get a 64-bit random value from a PRNG.
@@ -542,7 +542,7 @@ prng_get_u64(prng *p)
 	 */
 	u = p->ptr;
 	if (u >= (sizeof p->buf.d) - 9) {
-		Zf(prng_refill)(p);
+		prng_refill(p);
 		u = 0;
 	}
 	p->ptr = u + 8;
@@ -571,7 +571,7 @@ prng_get_u8(prng *p)
 
 	v = p->buf.d[p->ptr ++];
 	if (p->ptr == sizeof p->buf.d) {
-		Zf(prng_refill)(p);
+		prng_refill(p);
 	}
 	return v;
 }

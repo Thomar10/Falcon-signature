@@ -5,3 +5,7 @@ edition = "2021"
 
 
 [dependencies]
+libc = "0.2"
+
+[build-dependencies]
+cmake="0.1.31"
