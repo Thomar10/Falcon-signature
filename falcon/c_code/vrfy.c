@@ -685,7 +685,7 @@ Zf(verify_raw)(const uint16_t *c0, const int16_t *s2,
 	 * Signature is valid if and only if the aggregate (-s1,s2) vector
 	 * is short enough.
 	 */
-	return Zf(is_short)((int16_t *)tt, s2, logn);
+	return is_short((int16_t *)tt, s2, logn);
 }
 
 /* see inner.h */
@@ -838,7 +838,7 @@ Zf(verify_recover)(uint16_t *h,
 	 * check that the rebuilt public key matches the expected
 	 * value (e.g. through a hash).
 	 */
-	r = ~r & (uint32_t)-Zf(is_short)(s1, s2, logn);
+	r = ~r & (uint32_t)-is_short(s1, s2, logn);
 	return (int)(r >> 31);
 }
 

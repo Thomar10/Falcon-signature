@@ -33,7 +33,7 @@
 
 /* see inner.h */
 void
-Zf(hash_to_point_vartime)(
+hash_to_point_vartime(
 	inner_shake256_context *sc,
 	uint16_t *x, unsigned logn)
 {
@@ -68,7 +68,7 @@ Zf(hash_to_point_vartime)(
 
 /* see inner.h */
 void
-Zf(hash_to_point_ct)(
+hash_to_point_ct(
 	inner_shake256_context *sc,
 	uint16_t *x, unsigned logn, uint8_t *tmp)
 {
@@ -254,7 +254,7 @@ static const uint32_t l2bound[] = {
 
 /* see inner.h */
 int
-Zf(is_short)(
+is_short(
 	const int16_t *s1, const int16_t *s2, unsigned logn)
 {
 	/*
@@ -285,7 +285,7 @@ Zf(is_short)(
 
 /* see inner.h */
 int
-Zf(is_short_half)(
+is_short_half(
 	uint32_t sqn, const int16_t *s2, unsigned logn)
 {
 	size_t n, u;

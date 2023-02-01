@@ -154,7 +154,7 @@ crypto_sign(unsigned char *sm, unsigned long long *smlen,
 	inner_shake256_inject(&sc, nonce, sizeof nonce);
 	inner_shake256_inject(&sc, m, mlen);
 	inner_shake256_flip(&sc);
-	Zf(hash_to_point_vartime)(&sc, r.hm, 9);
+	hash_to_point_vartime(&sc, r.hm, 9);
 
 	/*
 	 * Initialize a RNG.
@@ -253,7 +253,7 @@ crypto_sign_open(unsigned char *m, unsigned long long *mlen,
 	inner_shake256_init(&sc);
 	inner_shake256_inject(&sc, sm + 2, NONCELEN + msg_len);
 	inner_shake256_flip(&sc);
-	Zf(hash_to_point_vartime)(&sc, hm, 9);
+	hash_to_point_vartime(&sc, hm, 9);
 
 	/*
 	 * Verify signature.

@@ -7,6 +7,7 @@ mod falcon_c {
     pub mod fft_c;
     pub mod shake_c;
     pub mod rng_c;
+    pub mod common_c;
 }
 
 

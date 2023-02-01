@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod tests {
     use crate::addd;
+    use crate::falcon_c::common_c::hash_to_point_vartime;
     use crate::falcon_c::fpr_c::fpr_mul_func;
     use crate::falcon_c::rng_c::{Buf, prng, prng_init, prng_refill, State};
-    use crate::falcon_c::shake_c::{i_shake256_flip, i_shake256_init, i_shake256_inject, inner_shake256_context, MyUnion, process_block};
+    use crate::falcon_c::shake_c::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, inner_shake256_context, MyUnion, process_block};
 
     #[test]
     fn test_add() {
@@ -44,24 +45,67 @@ mod tests {
 
     #[test]
     fn shake_i_shake256_inject() {
-        // let myStruct = inner_shake256_context {
-        //     st: MyUnion {
-        //         a: [0; 25],
-        //     },
-        //     dptr: 0,
-        // };
-        //
-        // const inn: u8 = 12;
-        // let len: u64 = 256;
-        //
-        // unsafe { i_shake256_inject(&myStruct, *inn, 256) }
+        let myStruct = inner_shake256_context {
+            st: MyUnion {
+                a: [0; 25],
+            },
+            dptr: 0,
+        };
+
+        const inn: u8 = 12;
+        let len: u64 = 256;
+
+        unsafe { i_shake256_inject(&myStruct, &inn, 256) }
     }
 
     #[test]
-    fn shake_i_shake256_flip() {}
+    fn shake_i_shake256_flip() {
+        let myStruct = inner_shake256_context {
+            st: MyUnion {
+                a: [0; 25],
+            },
+            dptr: 0,
+        };
 
-    #[test]
-    fn shake_i_shake256_extract() {}
+        unsafe { i_shake256_flip(&myStruct) }
+    }
+
+    // #[test]
+    // fn common_hash_to_point_vartime() {
+    //     let myStruct = inner_shake256_context {
+    //         st: MyUnion {
+    //             a: [0; 25],
+    //         },
+    //         dptr: 0,
+    //     };
+    //
+    //     let x: u16 = 32;
+    //     let logn: u32 = 16;
+    //
+    //     unsafe { hash_to_point_vartime(&myStruct, &x, logn) }
+    // }
+
+    // #[test]
+    // fn shake_i_shake256_extract() {
+    //     let myStruct = inner_shake256_context {
+    //         st: MyUnion {
+    //             a: [0; 25],
+    //         },
+    //         dptr: 0,
+    //     };
+    //
+    //     unsafe { i_shake256_init(&myStruct) }
+    //
+    //     const inn: u8 = 12;
+    //     let len: u64 = 256;
+    //
+    //     unsafe { i_shake256_inject(&myStruct, &inn, 256) }
+    //
+    //     let out: u8 = 12;
+    //     let len: u64 = 256;
+    //
+    //     unsafe { i_shake256_extract(&myStruct, &out, len) }
+    // }
 
     #[test]
     fn prng_init_test() {

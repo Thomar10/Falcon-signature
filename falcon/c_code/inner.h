@@ -242,18 +242,18 @@ extern const uint8_t Zf(max_sig_bits)[];
  * information to serve as a stop condition on a brute force attack on
  * the hashed message (provided that the nonce value is known).
  */
-void Zf(hash_to_point_vartime)(inner_shake256_context *sc,
+void hash_to_point_vartime(inner_shake256_context *sc,
 	uint16_t *x, unsigned logn);
 
 /*
  * From a SHAKE256 context (must be already flipped), produce a new
  * point. The temporary buffer (tmp) must have room for 2*2^logn bytes.
  * This function is constant-time but is typically more expensive than
- * Zf(hash_to_point_vartime)().
+ * hash_to_point_vartime().
  *
  * tmp[] must have 16-bit alignment.
  */
-void Zf(hash_to_point_ct)(inner_shake256_context *sc,
+void hash_to_point_ct(inner_shake256_context *sc,
 	uint16_t *x, unsigned logn, uint8_t *tmp);
 
 /*
@@ -262,7 +262,7 @@ void Zf(hash_to_point_ct)(inner_shake256_context *sc,
  * vector with the acceptance bound. Returned value is 1 on success
  * (vector is short enough to be acceptable), 0 otherwise.
  */
-int Zf(is_short)(const int16_t *s1, const int16_t *s2, unsigned logn);
+int is_short(const int16_t *s1, const int16_t *s2, unsigned logn);
 
 /*
  * Tell whether a given vector (2N coordinates, in two halves) is
@@ -274,7 +274,7 @@ int Zf(is_short)(const int16_t *s1, const int16_t *s2, unsigned logn);
  * Returned value is 1 on success (vector is short enough to be
  * acceptable), 0 otherwise.
  */
-int Zf(is_short_half)(uint32_t sqn, const int16_t *s2, unsigned logn);
+int is_short_half(uint32_t sqn, const int16_t *s2, unsigned logn);
 
 /* ==================================================================== */
 /*

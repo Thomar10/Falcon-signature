@@ -502,7 +502,6 @@ void
 i_shake256_inject(inner_shake256_context *sc, const uint8_t *in, size_t len)
 {
 	size_t dptr;
-  printf("HEJ");
 	dptr = (size_t)sc->dptr;
 	while (len > 0) {
 		size_t clen, u;
