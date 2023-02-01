@@ -33,7 +33,7 @@
 
 /* see inner.h */
 size_t
-Zf(modq_encode)(
+falcon_inner_modq_encode(
 	void *out, size_t max_out_len,
 	const uint16_t *x, unsigned logn)
 {
@@ -74,7 +74,7 @@ Zf(modq_encode)(
 
 /* see inner.h */
 size_t
-Zf(modq_decode)(
+falcon_inner_modq_decode(
 	uint16_t *x, unsigned logn,
 	const void *in, size_t max_in_len)
 {
@@ -114,7 +114,7 @@ Zf(modq_decode)(
 
 /* see inner.h */
 size_t
-Zf(trim_i16_encode)(
+falcon_inner_trim_i16_encode(
 	void *out, size_t max_out_len,
 	const int16_t *x, unsigned logn, unsigned bits)
 {
@@ -159,7 +159,7 @@ Zf(trim_i16_encode)(
 
 /* see inner.h */
 size_t
-Zf(trim_i16_decode)(
+falcon_inner_trim_i16_decode(
 	int16_t *x, unsigned logn, unsigned bits,
 	const void *in, size_t max_in_len)
 {
@@ -210,7 +210,7 @@ Zf(trim_i16_decode)(
 
 /* see inner.h */
 size_t
-Zf(trim_i8_encode)(
+falcon_inner_trim_i8_encode(
 	void *out, size_t max_out_len,
 	const int8_t *x, unsigned logn, unsigned bits)
 {
@@ -255,7 +255,7 @@ Zf(trim_i8_encode)(
 
 /* see inner.h */
 size_t
-Zf(trim_i8_decode)(
+falcon_inner_trim_i8_decode(
 	int8_t *x, unsigned logn, unsigned bits,
 	const void *in, size_t max_in_len)
 {
@@ -305,7 +305,7 @@ Zf(trim_i8_decode)(
 
 /* see inner.h */
 size_t
-Zf(comp_encode)(
+falcon_inner_comp_encode(
 	void *out, size_t max_out_len,
 	const int16_t *x, unsigned logn)
 {
@@ -402,7 +402,7 @@ Zf(comp_encode)(
 
 /* see inner.h */
 size_t
-Zf(comp_decode)(
+falcon_inner_comp_decode(
 	int16_t *x, unsigned logn,
 	const void *in, size_t max_in_len)
 {
