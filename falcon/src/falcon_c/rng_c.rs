@@ -5,7 +5,7 @@ use crate::falcon_c::shake_c::inner_shake256_context;
 extern "C" {
     pub fn prng_init(p: *const prng, src: *const inner_shake256_context);
     pub fn prng_refill(p: *const prng);
-    pub fn prng_get_bytes(p: *const prng, dst: *c_void, len: u64);
+    pub fn prng_get_bytes(p: *const prng, dst: *const c_void, len: u64);
 }
 
 #[repr(C)]
