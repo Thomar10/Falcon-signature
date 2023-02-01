@@ -42,7 +42,7 @@
  *
  *
  *  - All public functions (i.e. the non-static ones) must be referenced
- *    with the Zf() macro (e.g. Zf(verify_raw) for the verify_raw()
+ *    with the Zf() macro (e.g. verify_raw for the verify_raw()
  *    function). That macro adds a prefix to the name, which is
  *    configurable with the FALCON_PREFIX macro. This allows compiling
  *    the code into a specific "namespace" and potentially including
@@ -285,7 +285,7 @@ int is_short_half(uint32_t sqn, const int16_t *s2, unsigned logn);
  * Convert a public key to NTT + Montgomery format. Conversion is done
  * in place.
  */
-void Zf(to_ntt_monty)(uint16_t *h, unsigned logn);
+void to_ntt_monty(uint16_t *h, unsigned logn);
 
 /*
  * Internal signature verification code:
@@ -298,7 +298,7 @@ void Zf(to_ntt_monty)(uint16_t *h, unsigned logn);
  *
  * tmp[] must have 16-bit alignment.
  */
-int Zf(verify_raw)(const uint16_t *c0, const int16_t *s2,
+int verify_raw(const uint16_t *c0, const int16_t *s2,
 	const uint16_t *h, unsigned logn, uint8_t *tmp);
 
 /*
@@ -310,7 +310,7 @@ int Zf(verify_raw)(const uint16_t *c0, const int16_t *s2,
  * The tmp[] array must have room for at least 2*2^logn elements.
  * tmp[] must have 16-bit alignment.
  */
-int Zf(compute_public)(uint16_t *h,
+int compute_public(uint16_t *h,
 	const int8_t *f, const int8_t *g, unsigned logn, uint8_t *tmp);
 
 /*
@@ -324,7 +324,7 @@ int Zf(compute_public)(uint16_t *h,
  * Returned value is 1 in success, 0 on error (f not invertible).
  * tmp[] must have 16-bit alignment.
  */
-int Zf(complete_private)(int8_t *G,
+int complete_private(int8_t *G,
 	const int8_t *f, const int8_t *g, const int8_t *F,
 	unsigned logn, uint8_t *tmp);
 
@@ -334,7 +334,7 @@ int Zf(complete_private)(int8_t *G,
  *
  * tmp[] must have 16-bit alignment.
  */
-int Zf(is_invertible)(
+int is_invertible(
 	const int16_t *s2, unsigned logn, uint8_t *tmp);
 
 /*
@@ -345,7 +345,7 @@ int Zf(is_invertible)(
  *
  * tmp[] must have 16-bit alignment.
  */
-int Zf(count_nttzero)(const int16_t *sig, unsigned logn, uint8_t *tmp);
+int count_nttzero(const int16_t *sig, unsigned logn, uint8_t *tmp);
 
 /*
  * Internal signature verification with public key recovery:
@@ -365,7 +365,7 @@ int Zf(count_nttzero)(const int16_t *sig, unsigned logn, uint8_t *tmp);
  *
  * tmp[] must have 16-bit alignment.
  */
-int Zf(verify_recover)(uint16_t *h,
+int verify_recover(uint16_t *h,
 	const uint16_t *c0, const int16_t *s1, const int16_t *s2,
 	unsigned logn, uint8_t *tmp);
 
@@ -772,7 +772,7 @@ void poly_merge_fft(fpr *restrict f,
  * tmp[] must have 64-bit alignment.
  * This function uses floating-point rounding (see set_fpu_cw()).
  */
-void Zf(keygen)(inner_shake256_context *rng,
+void keygen(inner_shake256_context *rng,
 	int8_t *f, int8_t *g, int8_t *F, int8_t *G, uint16_t *h,
 	unsigned logn, uint8_t *tmp);
 

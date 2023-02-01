@@ -48,7 +48,7 @@ crypto_sign_keypair(unsigned char *pk, unsigned char *sk)
 	inner_shake256_init(&rng);
 	inner_shake256_inject(&rng, seed, sizeof seed);
 	inner_shake256_flip(&rng);
-	Zf(keygen)(&rng, f, g, F, NULL, h, 9, tmp.b);
+	keygen(&rng, f, g, F, NULL, h, 9, tmp.b);
 
 
 	/*
@@ -138,7 +138,7 @@ crypto_sign(unsigned char *sm, unsigned long long *smlen,
 	if (u != CRYPTO_SECRETKEYBYTES) {
 		return -1;
 	}
-	if (!Zf(complete_private)(G, f, g, F, 9, tmp.b)) {
+	if (!complete_private(G, f, g, F, 9, tmp.b)) {
 		return -1;
 	}
 
@@ -220,7 +220,7 @@ crypto_sign_open(unsigned char *m, unsigned long long *mlen,
 	{
 		return -1;
 	}
-	Zf(to_ntt_monty)(h, 9);
+	to_ntt_monty(h, 9);
 
 	/*
 	 * Find nonce, signature, message length.
@@ -258,7 +258,7 @@ crypto_sign_open(unsigned char *m, unsigned long long *mlen,
 	/*
 	 * Verify signature.
 	 */
-	if (!Zf(verify_raw)(hm, sig, h, 9, tmp.b)) {
+	if (!verify_raw(hm, sig, h, 9, tmp.b)) {
 		return -1;
 	}
 
