@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::borrow::Borrow;
     use crate::addd;
     use crate::falcon_c::fpr_c::fpr_mul_func;
     use crate::falcon_c::shake_c::{i_shake256_init, inner_shake256_context, MyUnion, process_block};
@@ -26,13 +25,19 @@ mod tests {
 
     #[test]
     fn shake_i_shake256_init() {
-        let mut myStruct = inner_shake256_context {
-            st: MyUnion{
-                dbuf: [0; 200],
+        let myStruct = inner_shake256_context {
+            st: MyUnion {
+                a: [2; 25],
             },
-            dptr: 0,
+            dptr: 10,
         };
 
-        unsafe { i_shake256_init(**myStruct.borrow()) };
+
+        unsafe { i_shake256_init(&myStruct) };
+
+        assert_ne!(myStruct.dptr, 10);
+        assert_eq!(myStruct.dptr, 0);
+        unsafe { assert_eq!(myStruct.st.a, [0; 25]) };
+        unsafe { assert_ne!(myStruct.st.a, [2; 25]) };
     }
 }

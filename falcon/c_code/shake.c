@@ -490,11 +490,11 @@ i_shake256_init(inner_shake256_context *sc)
 {
 	sc->dptr = 0;
 
-//	/*
-//	 * Representation of an all-ones uint64_t is the same regardless
-//	 * of local endianness.
-//	 */
-//	memset(sc->st.A, 0, sizeof sc->st.A);
+	/*
+	 * Representation of an all-ones uint64_t is the same regardless
+	 * of local endianness.
+	 */
+	memset(sc->st.A, 0, sizeof sc->st.A);
 }
 
 /* see inner.h */
@@ -502,7 +502,7 @@ void
 i_shake256_inject(inner_shake256_context *sc, const uint8_t *in, size_t len)
 {
 	size_t dptr;
-
+  printf("HEJ");
 	dptr = (size_t)sc->dptr;
 	while (len > 0) {
 		size_t clen, u;
