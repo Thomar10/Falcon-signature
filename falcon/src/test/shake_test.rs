@@ -1,6 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, process_block as process_block_c};
+    use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init,
+                                   process_block as process_block_c,
+                                   InnerShake256Context as InnerShake256ContextC,
+                                   St as StC
+    };
     use crate::shake::{i_shake256_init, InnerShake256Context, process_block, St};
 
     #[test]
@@ -24,14 +28,28 @@ mod tests {
 
         let st = St {a: random_state};
 
-        let sc_rust = InnerShake256Context {st, dptr: random_dptr};
-        
-        let sc_c = sc_rust.clone();
+        let mut sc_rust = InnerShake256Context {st, dptr: random_dptr};
 
-        i_shake256_init(sc_rust);
-        assert_ne!(sc_rust, sc_c);
+        let sc_c = InnerShake256ContextC {st: StC {a: random_state.clone()}, dptr: random_dptr};
 
-        unsafe { falcon_inner_i_shake256_init(sc_c) };
-        assert_eq!(sc_rust, sc_c);
+        i_shake256_init(&mut sc_rust);
+        unsafe {
+            assert!(!test_shake_context_equality(&sc_rust, &sc_c));
+
+            falcon_inner_i_shake256_init(&sc_c as *const InnerShake256ContextC);
+            assert!(test_shake_context_equality(&sc_rust, &sc_c));
+        };
+    }
+
+    unsafe fn test_shake_context_equality(sc_rust: &InnerShake256Context, sc_c: &InnerShake256ContextC) -> bool {
+        if sc_rust.dptr != sc_c.dptr {
+            return false;
+        }
+
+        if sc_rust.st.a != sc_c.st.a {
+            return false;
+        }
+
+        return true;
     }
 }

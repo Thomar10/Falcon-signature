@@ -3,7 +3,6 @@ pub union St {
     dbuf: [u8; 200],
 }
 
-#[derive(PartialEq, Eq, Debug)]
 pub struct InnerShake256Context {
     pub(crate) st: St,
     pub(crate) dptr: u64,
@@ -454,7 +453,7 @@ pub fn process_block(a: &mut [u64]) -> () {
     a[20] = !a[20];
 }
 
-pub fn i_shake256_init(mut sc: InnerShake256Context){
+pub fn i_shake256_init(sc: &mut InnerShake256Context) -> () {
     sc.dptr = 0;
 
     sc.st = St {a: [0; 25]};
