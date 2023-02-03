@@ -5,7 +5,7 @@ mod tests {
     // use crate::falcon_c::fpr_c::fpr_mul_func;
     // use crate::falcon_c::nist_c::crypto_sign_keypair;
     // use crate::falcon_c::rng_c::{Buf, prng, prng_init, prng_refill, State};
-    // use crate::falcon_c::shake_c::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, inner_shake256_context, MyUnion, process_block};
+    // use crate::falcon_c::shake_c::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, MyUnion, process_block};
     //
     // #[test]
     // fn test_add() {
@@ -28,7 +28,7 @@ mod tests {
     //
     // #[test]
     // fn shake_i_shake256_init() {
-    //     let myStruct = inner_shake256_context {
+    //     let myStruct = InnerShake256Context {
     //         st: MyUnion {
     //             a: [2; 25],
     //         },
@@ -46,7 +46,7 @@ mod tests {
     //
     // #[test]
     // fn shake_i_shake256_inject() {
-    //     let myStruct = inner_shake256_context {
+    //     let myStruct = InnerShake256Context {
     //         st: MyUnion {
     //             a: [0; 25],
     //         },
@@ -61,7 +61,7 @@ mod tests {
     //
     // #[test]
     // fn shake_i_shake256_flip() {
-    //     let myStruct = inner_shake256_context {
+    //     let myStruct = InnerShake256Context {
     //         st: MyUnion {
     //             a: [0; 25],
     //         },
@@ -73,7 +73,7 @@ mod tests {
     //
     // // #[test]
     // // fn common_hash_to_point_vartime() {
-    // //     let myStruct = inner_shake256_context {
+    // //     let myStruct = InnerShake256Context {
     // //         st: MyUnion {
     // //             a: [0; 25],
     // //         },
@@ -88,7 +88,7 @@ mod tests {
     //
     // // #[test]
     // // fn shake_i_shake256_extract() {
-    // //     let myStruct = inner_shake256_context {
+    // //     let myStruct = InnerShake256Context {
     // //         st: MyUnion {
     // //             a: [0; 25],
     // //         },
@@ -110,7 +110,7 @@ mod tests {
     //
     // #[test]
     // fn prng_init_test() {
-    //     let shake = inner_shake256_context {
+    //     let shake = InnerShake256Context {
     //         st: MyUnion {
     //             a: [0; 25],
     //         },

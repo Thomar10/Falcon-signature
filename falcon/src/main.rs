@@ -1,7 +1,9 @@
+use rand::Rng;
 
 mod main_test;
 mod fft;
 mod fpr;
+mod shake;
 
 mod falcon_c {
     pub mod codec_c;
@@ -18,14 +20,18 @@ mod falcon_c {
 mod test {
     pub mod fft_test;
     pub mod fpr_test;
+    pub mod shake_test;
 }
 
 
 
 fn main() {
 
-    println!("{} tissemand", 2);
     println!("Hello, world falcon!");
+
+    let mut rng = rand::thread_rng();
+    let _array: [u8; 10] = core::array::from_fn(|_| rng.gen::<u8>());
+
 }
 
 pub fn addd(a: i32, b: i32) -> i32  {
