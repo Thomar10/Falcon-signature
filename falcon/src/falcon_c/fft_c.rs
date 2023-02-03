@@ -1,7 +1,7 @@
 #[link(name = "fft", kind = "static")]
 extern "C" {
     #[allow(dead_code)]
-    pub fn falcon_inner_FFT(f: *mut u64, logn: u32);
+    pub fn falcon_inner_FFT(f: *const u64, logn: u32);
     #[allow(dead_code)]
     pub fn falcon_inner_iFFT(f: *mut u64, logn: u32);
     #[allow(dead_code)]

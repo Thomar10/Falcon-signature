@@ -95,7 +95,7 @@ pub fn fpr_add(mut x: u64, mut y: u64) -> u64 {
 
     m = (1 << 63) - 1;
     za = (x & m).wrapping_sub(y & m);
-    cs = (za >> 63) as u32 | ((1u32 - ((!za + 1) >> 63) as u32) & (x >> 63) as u32);
+    cs = (za >> 63) as u32 | ((1u32 - ((!za).wrapping_add(1) >> 63) as u32) & (x >> 63) as u32);
     m = (x ^ y) & (!(cs as u64)).wrapping_add(1);
     x ^= m;
     y ^= m;
