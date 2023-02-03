@@ -57,33 +57,33 @@ fn fpr_norm64(mut m: u64, mut e: i32) -> (u64, i32) {
     e -= 63;
 
     nt = (m >> 32) as u32;
-    nt = (nt | (!nt + 1)) >> 31;
-    m ^= (m ^ (m << 32)) & ((nt as u64) - 1);
+    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    m ^= (m ^ (m << 32)) & (nt as u64).wrapping_sub(1);
     e += (nt << 5) as i32;
 
     nt = (m >> 48) as u32;
-    nt = (nt | (!nt + 1)) >> 31;
-    m ^= (m ^ (m << 16)) & ((nt as u64) - 1);
+    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    m ^= (m ^ (m << 16)) & (nt as u64).wrapping_sub(1);
     e += (nt << 4) as i32;
 
     nt = (m >> 56) as u32;
-    nt = (nt | (!nt + 1)) >> 31;
-    m ^= (m ^ (m << 8)) & ((nt as u64) - 1);
+    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    m ^= (m ^ (m << 8)) & (nt as u64).wrapping_sub(1);
     e += (nt << 3) as i32;
 
     nt = (m >> 60) as u32;
-    nt = (nt | (!nt + 1)) >> 31;
-    m ^= (m ^ (m << 4)) & ((nt as u64) - 1);
+    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    m ^= (m ^ (m << 4)) & (nt as u64).wrapping_sub(1);
     e += (nt << 2) as i32;
 
     nt = (m >> 62) as u32;
-    nt = (nt | (!nt + 1)) >> 31;
-    m ^= (m ^ (m << 2)) & ((nt as u64) - 1);
+    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    m ^= (m ^ (m << 2)) & (nt as u64).wrapping_sub(1);
     e += (nt << 1) as i32;
 
     nt = (m >> 63) as u32;
-    nt = (nt | (!nt + 1)) >> 31;
-    m ^= (m ^ (m << 1)) & ((nt as u64) - 1);
+    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    m ^= (m ^ (m << 1)) & (nt as u64).wrapping_sub(1);
     e += nt as i32;
     (m, e)
 }
@@ -94,9 +94,9 @@ pub fn fpr_add(mut x: u64, mut y: u64) -> u64 {
     let (mut ex, mut ey, sx, sy, mut cc): (i32, i32, i32, i32, i32);
 
     m = (1 << 63) - 1;
-    za = (x & m) - (y & m);
+    za = (x & m).wrapping_sub(y & m);
     cs = (za >> 63) as u32 | ((1u32 - ((!za + 1) >> 63) as u32) & (x >> 63) as u32);
-    m = (x ^ y) & !(cs as u64) + 1;
+    m = (x ^ y) & (!(cs as u64)).wrapping_add(1);
     x ^= m;
     y ^= m;
 
@@ -114,14 +114,14 @@ pub fn fpr_add(mut x: u64, mut y: u64) -> u64 {
     ey -= 1078;
 
     cc = ex - ey;
-    yu &= !((((cc - 60) as u32) >> 31) as u64) + 1;
+    yu &= (!((((cc - 60) as u32) >> 31) as u64)).wrapping_add(1);
     cc &= 63;
 
     m = fpr_ulsh(1, cc) - 1;
     yu |= (yu & m) + m;
     yu = fpr_ursh(yu, cc);
 
-    xu += yu - ((yu << 1) & !((sx ^ sy) as u64) + 1);
+    xu = xu.wrapping_add(yu.wrapping_sub((yu << 1) & (!((sx ^ sy) as u64)).wrapping_add(1)));
 
     (xu, ex) = fpr_norm64(xu, ex);
 
@@ -225,7 +225,7 @@ pub fn fpr_mul(x: u64, y: u64) -> u64 {
 
     zv = (zu >> 1) | (zu & 1);
     w = zu >> 55;
-    zu ^= (zu ^ zv) & (!w + 1);
+    zu ^= (zu ^ zv) & (!w).wrapping_add(1);
 
     ex = ((x >> 52) & 0x7FF) as i32;
     ey = ((y >> 52) & 0x7FF) as i32;
@@ -238,7 +238,7 @@ pub fn fpr_mul(x: u64, y: u64) -> u64 {
 
 
     d = ((ex + 0x7FF) & (ey + 0x7FF)) >> 11;
-    zu &= (!d as u64) + 1;
+    zu &= (!d as u64).wrapping_add(1);
 
     fpr(s, e, zu)
 }
@@ -253,7 +253,7 @@ pub fn fpr_sqrt(x: u64) -> u64 {
     e = ex - 1023;
 
 
-    xu += xu & !((e & 1) as u64) + 1;
+    xu += xu & (!((e & 1) as u64)).wrapping_add(1);
     e >>= 1;
 
     xu <<= 1;
@@ -266,7 +266,7 @@ pub fn fpr_sqrt(x: u64) -> u64 {
         let (t, b): (u64, u64);
 
         t = s + r;
-        b = ((xu - t) >> 63) - 1;
+        b = (xu.wrapping_sub(t) >> 63).wrapping_sub(1);
         s += (r << 1) & b;
         xu -= t & b;
         q += r & b;
@@ -281,8 +281,7 @@ pub fn fpr_sqrt(x: u64) -> u64 {
 
     e -= 54;
 
-
-    q &= !(((ex + 0x7FF) >> 11) as u64) + 1;
+    q &= (!(((ex + 0x7FF) >> 11) as u64)).wrapping_add(1);
 
     fpr(0, e, q)
 }
@@ -297,10 +296,10 @@ pub fn fpr_trunc(x: u64) -> i64 {
     cc = 1085 - e;
     xu = fpr_ursh(xu, cc & 63);
 
-    xu &= !((((cc - 64) as u32) >> 31) as u64) + 1;
+    xu &= (!((((cc - 64) as u32) >> 31) as u64)).wrapping_add(1);
 
     t = x >> 63;
-    xu = (xu ^ (!t + 1)) + t;
+    xu = (xu ^ (!t).wrapping_add(1)).wrapping_add(t);
     xu as i64
 }
 
@@ -317,7 +316,7 @@ pub fn fpr_div(x: u64, y: u64) -> u64 {
     while i < 55 {
         let b: u64;
 
-        b = ((xu - yu) >> 63) - 1;
+        b = (xu.wrapping_sub(yu) >> 63).wrapping_sub(1);
         xu -= b & yu;
         q |= b & 1;
         xu <<= 1;
@@ -330,7 +329,7 @@ pub fn fpr_div(x: u64, y: u64) -> u64 {
 
     q2 = (q >> 1) | (q & 1);
     w = q >> 55;
-    q ^= (q ^ q2) & (!w + 1);
+    q ^= (q ^ q2) & (!w).wrapping_add(1);
 
 
     ex = ((x >> 52) & 0x7FF) as i32;
@@ -343,7 +342,7 @@ pub fn fpr_div(x: u64, y: u64) -> u64 {
     d = (ex + 0x7FF) >> 11;
     s &= d;
     e &= -d;
-    q &= (!d as u64) + 1;
+    q &= (!d as u64).wrapping_add(1);
 
     /*
      * FPR() packs the result and applies proper rounding.
@@ -354,13 +353,13 @@ pub fn fpr_div(x: u64, y: u64) -> u64 {
 
 #[inline(always)]
 pub fn fpr_ursh(mut x: u64, n: i32) -> u64 {
-    x ^= (x ^ (x >> 32)) & (!(n >> 5) as u64 + 1);
+    x ^= (x ^ (x >> 32)) & ((!(n >> 5) as u64).wrapping_add(1));
     x >> (n & 31)
 }
 
 #[inline(always)]
 pub fn fpr_ulsh(mut x: u64, n: i32) -> u64 {
-    x ^= (x ^ (x << 32)) & (!(n >> 5) as u64 + 1);
+    x ^= (x ^ (x << 32)) & ((!(n >> 5) as u64).wrapping_add(1));
     x << (n & 31)
 }
 
@@ -386,12 +385,12 @@ pub fn fpr_rint(x: u64) -> i64 {
     e = 1085 - (((x >> 52) as i32) & 0x7FF);
 
 
-    m &= !((((e - 64) as u32) >> 31) as u64) + 1;
+    m &= (!((((e - 64) as u32) >> 31) as u64)).wrapping_add(1);
     e &= 63;
 
     d = fpr_ulsh(m, 63 - e);
     dd = (d as u32) | (((d >> 32) as u32) & 0x1FFFFFFF);
-    f = ((d >> 61) as u32) | ((dd | (!dd + 1)) >> 31);
+    f = ((d >> 61) as u32) | ((dd | (!dd).wrapping_add(1)) >> 31);
 
     m = fpr_ursh(m, e) + (((0xC8 >> f) & 1) as u64);
 
@@ -435,16 +434,15 @@ pub fn fpr_neg(mut x: u64) -> u64 {
 pub fn fpr_half(mut x: u64) -> u64 {
     let t: u32;
 
-    x -= (1 as u64) << 52;
+    x = x.wrapping_sub((1 as u64) << 52);
     t = ((((x >> 52) as u32) & 0x7FF) + 1) >> 11;
-    x &= t as u64 - 1;
+    x &= (t as u64).wrapping_sub(1);
     x
 }
 
 #[inline(always)]
-pub fn fpr_double(mut x: u64) -> u64 {
-    x += ((((((x >> 52) as u32) & 0x7FF) + 0x7FF) >> 11) as u64) << 52;
-    x
+pub fn fpr_double(x: u64) -> u64 {
+    x.wrapping_add(((((((x >> 52) as u32) & 0x7FF) + 0x7FF) >> 11) as u64) << 52)
 }
 
 #[inline(always)]
@@ -475,11 +473,11 @@ fn fpr(s: i32, mut e: i32, mut m: u64) -> u64 {
 
     e += 1076;
     t = (e as u32) >> 31;
-    m &= (t as u64) - 1;
+    m &= (t as u64).wrapping_sub(1);
     t = (m >> 54) as u32;
     e &= -(t as i32);
 
-    x = (((s as u64) << 63) | (m >> 2)) + ((e as u32 as u64) << 52);
+    x = (((s as u64) << 63) | (m >> 2)).wrapping_add((e as u32 as u64) << 52);
 
     f = m as u32 & 7;
     x += ((0xC8u32 >> f) & 1) as u64;
