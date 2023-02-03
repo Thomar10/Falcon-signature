@@ -34,6 +34,7 @@
 
 #include "inner.h"
 
+
 /*
  * Normalize a provided unsigned integer to the 2^63..2^64-1 range by
  * left-shifting it if necessary. The exponent e is adjusted accordingly
@@ -76,80 +77,6 @@
 		(e) += (int)(nt); \
 	} while (0)
 
-
-void fpr_add_inter_c_xu(fpr x, fpr y) {
-	uint64_t m, xu, yu, za;
-	uint32_t cs;
-	int ex, ey, sx, sy, cc;
-
-	/*
-	 * Make sure that the first operand (x) has the larger absolute
-	 * value. This guarantees that the exponent of y is less than
-	 * or equal to the exponent of x, and, if they are equal, then
-	 * the mantissa of y will not be greater than the mantissa of x.
-	 *
-	 * After this swap, the result will have the sign x, except in
-	 * the following edge case: abs(x) = abs(y), and x and y have
-	 * opposite sign bits; in that case, the result shall be +0
-	 * even if the sign bit of x is 1. To handle this case properly,
-	 * we do the swap is abs(x) = abs(y) AND the sign of x is 1.
-	 */
-	m = ((uint64_t)1 << 63) - 1;
-	za = (x & m) - (y & m);
-	cs = (uint32_t)(za >> 63)
-		| ((1U - (uint32_t)(-za >> 63)) & (uint32_t)(x >> 63));
-
-	m = (x ^ y) & -(uint64_t)cs;
-	x ^= m;
-	y ^= m;
-
-	/*
-	 * Extract sign bits, exponents and mantissas. The mantissas are
-	 * scaled up to 2^55..2^56-1, and the exponent is unbiased. If
-	 * an operand is zero, its mantissa is set to 0 at this step, and
-	 * its exponent will be -1078.
-	 */
-	ex = (int)(x >> 52);
-	sx = ex >> 11;
-	ex &= 0x7FF;
-	m = (uint64_t)(uint32_t)((ex + 0x7FF) >> 11) << 52;
-	xu = ((x & (((uint64_t)1 << 52) - 1)) | m) << 3;
-	ex -= 1078;
-	ey = (int)(y >> 52);
-	sy = ey >> 11;
-	ey &= 0x7FF;
-	m = (uint64_t)(uint32_t)((ey + 0x7FF) >> 11) << 52;
-	yu = ((y & (((uint64_t)1 << 52) - 1)) | m) << 3;
-	ey -= 1078;
-
-	/*
-	 * x has the larger exponent; hence, we only need to right-shift y.
-	 * If the shift count is larger than 59 bits then we clamp the
-	 * value to zero.
-	 */
-	cc = ex - ey;
-	yu &= -(uint64_t)((uint32_t)(cc - 60) >> 31);
-	cc &= 63;
-
-	/*
-	 * The lowest bit of yu is "sticky".
-	 */
-	m = fpr_ulsh(1, cc) - 1;
-	yu |= (yu & m) + m;
-	yu = fpr_ursh(yu, cc);
-
-	/*
-	 * If the operands have the same sign, then we add the mantissas;
-	 * otherwise, we subtract the mantissas.
-	 */
-	xu += yu - ((yu << 1) & -(uint64_t)(sx ^ sy));
-	return xu;
-}
-
-uint64_t fpr_norm(uint64_t m, int e) {
-  FPR_NORM64(m, e);
-  return m;
-}
 
 fpr
 fpr_scaled_func(int64_t i, int sc)
@@ -242,7 +169,6 @@ fpr_add(fpr x, fpr y)
 	za = (x & m) - (y & m);
 	cs = (uint32_t)(za >> 63)
 		| ((1U - (uint32_t)(-za >> 63)) & (uint32_t)(x >> 63));
-	printf("value of cs= %d\n", cs);
 	m = (x ^ y) & -(uint64_t)cs;
 	x ^= m;
 	y ^= m;
@@ -692,6 +618,38 @@ fpr_expm_p63(fpr x, fpr ccs)
 	y += (uint64_t)z1 * (uint64_t)y1;
 
 	return y;
+}
+
+int64_t
+fpr_trunc_func(fpr x)
+{
+	uint64_t t, xu;
+	int e, cc;
+
+	/*
+	 * Extract the absolute value. Since we assume that the value
+	 * fits in the -(2^63-1)..+(2^63-1) range, we can left-shift
+	 * the absolute value into the 2^62..2^63-1 range, and then
+	 * do a right shift afterwards.
+	 */
+	e = (int)(x >> 52) & 0x7FF;
+	xu = ((x << 10) | ((uint64_t)1 << 62)) & (((uint64_t)1 << 63) - 1);
+	cc = 1085 - e;
+	xu = fpr_ursh(xu, cc & 63);
+
+	/*
+	 * If the exponent is too low (cc > 63), then the shift was wrong
+	 * and we must clamp the value to 0. This also covers the case
+	 * of an input equal to zero.
+	 */
+	xu &= -(uint64_t)((uint32_t)(cc - 64) >> 31);
+
+	/*
+	 * Apply back the sign, if the source value is negative.
+	 */
+	t = x >> 63;
+	xu = (xu ^ -t) + t;
+	return *(int64_t *)&xu;
 }
 
 const fpr fpr_gm_tab[] = {

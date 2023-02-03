@@ -14,8 +14,7 @@ extern "C" {
     #[allow(dead_code)]
     pub fn fpr_expm_p63_func(x: u64, ccs: u64) -> u64;
     #[allow(dead_code)]
-    pub fn fpr_scaled_func(i: u64, sc: i32) -> u64;
-
+    pub fn fpr_scaled_func(i: i64, sc: i32) -> u64;
     #[allow(dead_code)]
-    pub fn fpr_add_inter_c_xu(x: u64, y: u64) -> u64;
+    pub fn fpr_trunc_func(x: u64) -> i64;
 }
