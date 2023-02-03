@@ -1693,3 +1693,197 @@ const fpr fpr_p2_tab[] = {
 	4566650022153682944U
 };
 
+uint64_t
+fpr_ursh_func(uint64_t x, int n)
+{
+	x ^= (x ^ (x >> 32)) & -(uint64_t)(n >> 5);
+	return x >> (n & 31);
+}
+
+int64_t
+fpr_irsh_func(int64_t x, int n)
+{
+	x ^= (x ^ (x >> 32)) & -(int64_t)(n >> 5);
+	return x >> (n & 31);
+}
+
+uint64_t
+fpr_ulsh_func(uint64_t x, int n)
+{
+	x ^= (x ^ (x << 32)) & -(uint64_t)(n >> 5);
+	return x << (n & 31);
+}
+
+fpr
+fpr_of_func(int64_t i)
+{
+	return fpr_scaled(i, 0);
+}
+
+int64_t
+fpr_rint_func(fpr x)
+{
+	uint64_t m, d;
+	int e;
+	uint32_t s, dd, f;
+
+	/*
+	 * We assume that the value fits in -(2^63-1)..+(2^63-1). We can
+	 * thus extract the mantissa as a 63-bit integer, then right-shift
+	 * it as needed.
+	 */
+	m = ((x << 10) | ((uint64_t)1 << 62)) & (((uint64_t)1 << 63) - 1);
+	e = 1085 - ((int)(x >> 52) & 0x7FF);
+
+	/*
+	 * If a shift of more than 63 bits is needed, then simply set m
+	 * to zero. This also covers the case of an input operand equal
+	 * to zero.
+	 */
+	m &= -(uint64_t)((uint32_t)(e - 64) >> 31);
+	e &= 63;
+
+	/*
+	 * Right-shift m as needed. Shift count is e. Proper rounding
+	 * mandates that:
+	 *   - If the highest dropped bit is zero, then round low.
+	 *   - If the highest dropped bit is one, and at least one of the
+	 *     other dropped bits is one, then round up.
+	 *   - If the highest dropped bit is one, and all other dropped
+	 *     bits are zero, then round up if the lowest kept bit is 1,
+	 *     or low otherwise (i.e. ties are broken by "rounding to even").
+	 *
+	 * We thus first extract a word consisting of all the dropped bit
+	 * AND the lowest kept bit; then we shrink it down to three bits,
+	 * the lowest being "sticky".
+	 */
+	d = fpr_ulsh(m, 63 - e);
+	dd = (uint32_t)d | ((uint32_t)(d >> 32) & 0x1FFFFFFF);
+	f = (uint32_t)(d >> 61) | ((dd | -dd) >> 31);
+	m = fpr_ursh(m, e) + (uint64_t)((0xC8U >> f) & 1U);
+
+	/*
+	 * Apply the sign bit.
+	 */
+	s = (uint32_t)(x >> 63);
+	return ((int64_t)m ^ -(int64_t)s) + (int64_t)s;
+}
+
+
+int64_t
+fpr_floor_func(fpr x)
+{
+	uint64_t t;
+	int64_t xi;
+	int e, cc;
+
+	/*
+	 * We extract the integer as a _signed_ 64-bit integer with
+	 * a scaling factor. Since we assume that the value fits
+	 * in the -(2^63-1)..+(2^63-1) range, we can left-shift the
+	 * absolute value to make it in the 2^62..2^63-1 range: we
+	 * will only need a right-shift afterwards.
+	 */
+	e = (int)(x >> 52) & 0x7FF;
+	t = x >> 63;
+	xi = (int64_t)(((x << 10) | ((uint64_t)1 << 62))
+		& (((uint64_t)1 << 63) - 1));
+	xi = (xi ^ -(int64_t)t) + (int64_t)t;
+	cc = 1085 - e;
+
+	/*
+	 * We perform an arithmetic right-shift on the value. This
+	 * applies floor() semantics on both positive and negative values
+	 * (rounding toward minus infinity).
+	 */
+	xi = fpr_irsh(xi, cc & 63);
+
+	/*
+	 * If the true shift count was 64 or more, then we should instead
+	 * replace xi with 0 (if nonnegative) or -1 (if negative). Edge
+	 * case: -0 will be floored to -1, not 0 (whether this is correct
+	 * is debatable; in any case, the other functions normalize zero
+	 * to +0).
+	 *
+	 * For an input of zero, the non-shifted xi was incorrect (we used
+	 * a top implicit bit of value 1, not 0), but this does not matter
+	 * since this operation will clamp it down.
+	 */
+	xi ^= (xi ^ -(int64_t)t) & -(int64_t)((uint32_t)(63 - cc) >> 31);
+	return xi;
+}
+
+fpr
+fpr_sub_func(fpr x, fpr y)
+{
+	y ^= (uint64_t)1 << 63;
+	return fpr_add(x, y);
+}
+
+
+fpr
+fpr_neg_func(fpr x)
+{
+	x ^= (uint64_t)1 << 63;
+	return x;
+}
+
+fpr
+fpr_half_func(fpr x)
+{
+	/*
+	 * To divide a value by 2, we just have to subtract 1 from its
+	 * exponent, but we have to take care of zero.
+	 */
+	uint32_t t;
+
+	x -= (uint64_t)1 << 52;
+	t = (((uint32_t)(x >> 52) & 0x7FF) + 1) >> 11;
+	x &= (uint64_t)t - 1;
+	return x;
+}
+
+fpr
+fpr_double_func(fpr x)
+{
+	/*
+	 * To double a value, we just increment by one the exponent. We
+	 * don't care about infinites or NaNs; however, 0 is a
+	 * special case.
+	 */
+	x += (uint64_t)((((unsigned)(x >> 52) & 0x7FFU) + 0x7FFU) >> 11) << 52;
+	return x;
+}
+
+fpr
+fpr_sqr_func(fpr x)
+{
+	return fpr_mul(x, x);
+}
+
+fpr
+fpr_inv_func(fpr x)
+{
+	return fpr_div(4607182418800017408u, x);
+}
+
+int
+fpr_lt_func(fpr x, fpr y)
+{
+	/*
+	 * If x >= 0 or y >= 0, a signed comparison yields the proper
+	 * result:
+	 *   - For positive values, the order is preserved.
+	 *   - The sign bit is at the same place as in integers, so
+	 *     sign is preserved.
+	 *
+	 * If both x and y are negative, then the order is reversed.
+	 * We cannot simply invert the comparison result in that case
+	 * because it would not handle the edge case x = y properly.
+	 */
+	int cc0, cc1;
+
+	cc0 = *(int64_t *)&x < *(int64_t *)&y;
+	cc1 = *(int64_t *)&x > *(int64_t *)&y;
+	return cc0 ^ ((cc0 ^ cc1) & (int)((x & y) >> 63));
+}
