@@ -1,4 +1,4 @@
-use crate::fpr::{fpr_add, fpr_double, FPR_GM_TAB, fpr_inv, fpr_mul, fpr_neg, FPR_P2_TAB, fpr_sqr, fpr_sub, FPR_ZERO};
+use crate::fpr::{fpr_add, fpr_double, FPR_GM_TAB, fpr_half, fpr_inv, fpr_mul, fpr_neg, FPR_P2_TAB, fpr_sqr, fpr_sub, FPR_ZERO};
 
 fn fpc_add(a_re: u64, a_im: u64,
            b_re: u64, b_im: u64) -> (u64, u64) {
@@ -320,5 +320,59 @@ pub fn poly_LDLmv_fft(d11: &mut [u64], l10: &mut [u64], g00: &mut [u64], g01: &m
     }
 }
 
-// TODO poly_split_fft and down
+pub fn poly_split_fft(f0: &mut [u64], f1: &mut [u64], f: &mut [u64], logn: u32) {
+    let (n, hn, qn): (usize, usize, usize);
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    qn = hn >> 1;
+
+    f0[0] = f[0];
+    f1[0] = f[hn];
+    for u in 0..qn {
+        let (a_re, a_im, b_re, b_im): (u64, u64, u64, u64);
+
+        a_re = f[(u << 1) + 0];
+        a_im = f[(u << 1) + 0 + hn];
+        b_re = f[(u << 1) + 1];
+        b_im = f[(u << 1) + 1 + hn];
+
+        let (mut t_re, mut t_im) = fpc_add(a_re, a_im, b_re, b_im);
+        f0[u] = fpr_half(t_re);
+        f0[u + qn] = fpr_half(t_im);
+
+        (t_re, t_im) = fpc_sub(a_re, a_im, b_re, b_im);
+        (t_re, t_im) = fpc_mul(t_re, t_im,
+                               FPR_GM_TAB[((u + hn) << 1) + 0],
+                               fpr_neg(FPR_GM_TAB[((u + hn) << 1) + 1]));
+        f1[u] = fpr_half(t_re);
+        f1[u + qn] = fpr_half(t_im);
+    }
+}
+
+pub fn poly_merge_fft(f0: &mut [u64], f1: &mut [u64], f: &mut [u64], logn: u32) {
+    let (n, hn, qn): (usize, usize, usize);
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    qn = hn >> 1;
+
+    f0[0] = f[0];
+    f1[0] = f[hn];
+    for u in 0..qn {
+        let (a_re, a_im): (u64, u64);
+
+        a_re = f0[u];
+        a_im = f0[u + qn];
+        let (b_re, b_im) = fpc_mul(f1[u], f1[u + qn],
+                                   FPR_GM_TAB[((u + hn) << 1) + 0],
+                                   FPR_GM_TAB[((u + hn) << 1) + 1]);
+        let (mut t_re, mut t_im) = fpc_add(a_re, a_im, b_re, b_im);
+        f[(u << 1) + 0] = t_re;
+        f[(u << 1) + 0 + hn] = t_im;
+        (t_re, t_im) = fpc_sub(a_re, a_im, b_re, b_im);
+        f[(u << 1) + 1] = t_re;
+        f[(u << 1) + 1 + hn] = t_im;
+    }
+}
+
+
 
