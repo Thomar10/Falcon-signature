@@ -3,10 +3,8 @@ static FPR_LOG2: u64 = 4604418534313441775;
 #[allow(dead_code)]
 static FPR_INV_LOG2: u64 = 4609176140021203710;
 #[allow(dead_code)]
-#[allow(dead_code)]
 static FPR_BNORM_MAX: u64 = 4670353323383631276;
-#[allow(dead_code)]
-static FPR_ZERO: u64 = 0;
+pub static FPR_ZERO: u64 = 0;
 #[allow(dead_code)]
 static FPR_ONE: u64 = 4607182418800017408;
 #[allow(dead_code)]
@@ -534,7 +532,6 @@ fn fpr(s: i32, mut e: i32, mut m: u64) -> u64 {
     x
 }
 
-#[allow(dead_code)]
 pub static FPR_GM_TAB: [u64; 2048] = [
     0, 0,
     9223372036854775808, 4607182418800017408,
@@ -1561,8 +1558,8 @@ pub static FPR_GM_TAB: [u64; 2048] = [
     4569220649180767418, 4607182376410422530,
     13830554413265198338, 4569220649180767418
 ];
-#[allow(dead_code)]
-static FPR_P2_TAB: [u64; 11] = [
+
+pub static FPR_P2_TAB: [u64; 11] = [
     4611686018427387904,
     4607182418800017408,
     4602678819172646912,

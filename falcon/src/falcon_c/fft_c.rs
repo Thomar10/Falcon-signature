@@ -3,7 +3,7 @@ extern "C" {
     #[allow(dead_code)]
     pub fn falcon_inner_FFT(f: *const u64, logn: u32);
     #[allow(dead_code)]
-    pub fn falcon_inner_iFFT(f: *mut u64, logn: u32);
+    pub fn falcon_inner_iFFT(f: *const u64, logn: u32);
     #[allow(dead_code)]
     pub fn falcon_inner_poly_add(a: *mut u64, b: *mut u64, logn: u32);
     #[allow(dead_code)]
