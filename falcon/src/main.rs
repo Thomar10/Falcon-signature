@@ -1,3 +1,4 @@
+use rand::Rng;
 
 mod main_test;
 mod fft;
@@ -24,8 +25,11 @@ mod test {
 
 fn main() {
 
-    println!("{} tissemand", 2);
     println!("Hello, world falcon!");
+
+    let mut rng = rand::thread_rng();
+    let _array: [u8; 10] = core::array::from_fn(|_| rng.gen::<u8>());
+
 }
 
 pub fn addd(a: i32, b: i32) -> i32  {

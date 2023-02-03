@@ -1,3 +1,4 @@
+//TODO maybe we don't need a union and can avoid using unsafe?
 pub union St {
     pub(crate) a: [u64; 25],
     dbuf: [u8; 200],
@@ -453,8 +454,56 @@ pub fn process_block(a: &mut [u64]) -> () {
     a[20] = !a[20];
 }
 
+/*
+ * Initialize a SHAKE256 context to its initial state. The state is
+ * then ready to receive data (with shake256_inject()).
+ */
 pub fn i_shake256_init(sc: &mut InnerShake256Context) -> () {
     sc.dptr = 0;
 
     sc.st = St {a: [0; 25]};
+}
+
+/*
+ * Inject some data bytes into the SHAKE256 context ("absorb" operation).
+ * This function can be called several times, to inject several chunks
+ * of data of arbitrary length.
+ */
+pub fn i_shake256_inject(sc: &mut InnerShake256Context, input: &[u8]) -> (){
+    let mut dptr: usize = sc.dptr as usize; //What point in the internal state are we currently looking at
+    let mut len: usize = input.len();
+
+    let mut offset: usize = 0;
+
+    while len > 0 {
+        let mut clen: usize; //Chunklength
+        let mut u: usize;
+
+        clen = 136 - dptr;
+        if clen > len {
+            clen = len
+        }
+
+        u = 0;
+        while u < clen {
+            let v: usize = u + dptr;
+            unsafe {
+                sc.st.a[v >> 3] ^= (input[offset + u] as u64) << ((v & 7) << 3);
+            }
+            u += 1;
+        }
+
+        dptr += clen;
+        offset += clen;
+        len -= clen;
+
+        if dptr == 136 {
+            unsafe {
+                process_block(&mut sc.st.a);
+            }
+            dptr = 0;
+        }
+    }
+
+    sc.dptr = dptr as u64;
 }
