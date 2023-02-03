@@ -539,6 +539,9 @@ pub fn i_shake256_flip(sc: &mut InnerShake256Context) -> () {
  * Arbitrary amounts of data can be extracted, in one or several calls
  * to this function.
  */
+/* Rust doesn't support arrays of arbitrary length, as such we return
+ * a vector which can then be converted to an array... I think :)
+ */
 pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<u8> {
     let mut dptr: usize = sc.dptr as usize;
 
