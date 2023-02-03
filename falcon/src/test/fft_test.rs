@@ -1,8 +1,13 @@
 #[cfg(test)]
 mod tests {
+
+
     #[test]
-    fn test_add() {
-        let i = 3;
-        assert_eq!(3, i);
+    fn test_fft() {
+        // let a_re = rand::random();
+        // let a_im = rand::random();
+        // let b_re = rand::random();
+        // let b_im = rand::random();
+        assert_ne!(2, 3);
     }
 }
