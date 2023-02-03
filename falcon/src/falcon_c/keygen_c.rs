@@ -1,5 +1,5 @@
 use std::ffi::c_void;
-use crate::falcon_c::shake_c::inner_shake256_context;
+use crate::falcon_c::shake_c::InnerShake256Context;
 
 #[link(name = "keygen", kind = "static")]
 extern "C" {
@@ -70,9 +70,9 @@ extern "C" {
     #[allow(dead_code)]
     pub fn poly_sub_scaled_ntt(F: *const u32, Flen: usize, Fstride: usize, f: *const u32, flen: usize, fstride: usize, k: *const i32, sch: u32, scl: u32, logn: u32, tmp: *const u32);
     #[allow(dead_code)]
-    pub fn get_rng_u64(rng: *const inner_shake256_context) -> u64;
+    pub fn get_rng_u64(rng: *const InnerShake256Context) -> u64;
     #[allow(dead_code)]
-    pub fn mkgauss(rng: *const inner_shake256_context, logn: u32) -> i32;
+    pub fn mkgauss(rng: *const InnerShake256Context, logn: u32) -> i32;
     #[allow(dead_code)]
     pub fn poly_small_sqnorm(f: *const i8, logn: u32) -> u32;
     #[allow(dead_code)]
@@ -96,9 +96,9 @@ extern "C" {
     #[allow(dead_code)]
     pub fn solve_NTRU(logn_top: u32, F: *const i8, G: *const i8, f: *const i8, g: *const i8, lim: i32, tmp: *const u32) -> i32;
     #[allow(dead_code)]
-    pub fn poly_small_mkgauss(rng: *const inner_shake256_context, f: *const i8, logn: u32);
+    pub fn poly_small_mkgauss(rng: *const InnerShake256Context, f: *const i8, logn: u32);
     #[allow(dead_code)]
-    pub fn keygen(rng: *const inner_shake256_context, f: *const i8, g: *const i8, F: *const i8, G: *const i8, h: *const u16, logn: u32, tmp: *const u8);
+    pub fn keygen(rng: *const InnerShake256Context, f: *const i8, g: *const i8, F: *const i8, G: *const i8, h: *const u16, logn: u32, tmp: *const u8);
 }
 
 #[repr(C)]

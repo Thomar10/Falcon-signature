@@ -1,10 +1,10 @@
 use std::ffi::c_void;
-use crate::falcon_c::shake_c::inner_shake256_context;
+use crate::falcon_c::shake_c::InnerShake256Context;
 
 #[link(name = "rng", kind = "static")]
 extern "C" {
     #[allow(dead_code)]
-    pub fn prng_init(p: *const prng, src: *const inner_shake256_context);
+    pub fn prng_init(p: *const prng, src: *const InnerShake256Context);
     #[allow(dead_code)]
     pub fn prng_refill(p: *const prng);
     #[allow(dead_code)]
