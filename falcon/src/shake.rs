@@ -1,6 +1,7 @@
 //TODO maybe we don't need a union and can avoid using unsafe?
 pub union St {
     pub(crate) a: [u64; 25],
+    #[allow(dead_code)] //dbuf is never used. Maybe we can remove it?
     dbuf: [u8; 200],
 }
 
@@ -506,4 +507,70 @@ pub fn i_shake256_inject(sc: &mut InnerShake256Context, input: &[u8]) -> (){
     }
 
     sc.dptr = dptr as u64;
+}
+
+/*
+ * Flip the SHAKE256 state to output mode. After this call, shake256_inject()
+ * can no longer be called on the context, but shake256_extract() can be
+ * called.
+ *
+ * Flipping is one-way; a given context can be converted back to input
+ * mode only by initializing it again, which forgets all previously
+ * injected data.
+ */
+pub fn i_shake256_flip(sc: &mut InnerShake256Context) -> () {
+    /*
+	 * We apply padding and pre-XOR the value into the state. We
+	 * set dptr to the end of the buffer, so that first call to
+	 * shake_extract() will process the block.
+	 */
+    let v: usize = sc.dptr as usize;
+    unsafe {
+        sc.st.a[v >> 3] ^= (0x1F as u64) << ((v & 7) << 3);
+        sc.st.a[16] ^= (0x80 as u64) << 56;
+    }
+
+    sc.dptr = 136;
+}
+
+/*
+ * Extract bytes from the SHAKE256 context ("squeeze" operation). The
+ * context must have been flipped to output mode (with shake256_flip()).
+ * Arbitrary amounts of data can be extracted, in one or several calls
+ * to this function.
+ */
+pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<u8> {
+    let mut dptr: usize = sc.dptr as usize;
+
+    let mut output: Vec<u8> = Vec::with_capacity(len);
+
+    while len > 0 {
+        let mut clen: usize;
+
+        if dptr == 136 {
+            unsafe {
+                process_block(&mut sc.st.a);
+                dptr = 0;
+            }
+        }
+
+        clen = 136 - dptr;
+        if clen > len {
+            clen = len;
+        }
+
+        len -= clen;
+        while clen > 0 {
+            unsafe {
+                output.push((sc.st.a[dptr >> 3] >> ((dptr & 7) << 3)) as u8);
+            }
+            dptr += 1;
+            clen -= 1;
+        }
+
+    }
+
+    sc.dptr = dptr as u64;
+
+    return output;
 }
