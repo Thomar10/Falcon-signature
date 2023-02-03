@@ -154,6 +154,11 @@ pub fn fpr_scaled(mut i: i64, sc: i32) -> u64 {
     fpr(s, e, m)
 }
 
+
+/*
+ * Compute exp(x) for x such that |x| <= ln 2. We want a precision of 50
+ * bits or so.
+ */
 pub fn fpr_expm_p63(x: u64, ccs: u64) -> u64 {
     let (mut z, mut y): (u64, u64);
     let (mut z0, mut z1, mut y0, mut y1): (u32, u32, u32, u32);
@@ -350,19 +355,39 @@ pub fn fpr_div(x: u64, y: u64) -> u64 {
     fpr(s, e, q)
 }
 
-
+/*
+ * Right-shift a 64-bit unsigned value by a possibly secret shift count.
+ * We assumed that the underlying architecture had a barrel shifter for
+ * 32-bit shifts, but for 64-bit shifts on a 32-bit system, this will
+ * typically invoke a software routine that is not necessarily
+ * constant-time; hence the function below.
+ *
+ * Shift count n MUST be in the 0..63 range.
+ */
 #[inline(always)]
 pub fn fpr_ursh(mut x: u64, n: i32) -> u64 {
     x ^= (x ^ (x >> 32)) & ((!(n >> 5) as u64).wrapping_add(1));
     x >> (n & 31)
 }
 
+/*
+ * Left-shift a 64-bit unsigned value by a possibly secret shift count
+ * (see fpr_ursh() for the rationale).
+ *
+ * Shift count n MUST be in the 0..63 range.
+ */
 #[inline(always)]
 pub fn fpr_ulsh(mut x: u64, n: i32) -> u64 {
     x ^= (x ^ (x << 32)) & ((!(n >> 5) as u64).wrapping_add(1));
     x << (n & 31)
 }
 
+/*
+ * Right-shift a 64-bit signed value by a possibly secret shift count
+ * (see fpr_ursh() for the rationale).
+ *
+ * Shift count n MUST be in the 0..63 range.
+ */
 #[inline(always)]
 pub fn fpr_irsh(mut x: i64, n: i32) -> i64 {
     x ^= (x ^ (x >> 32)) & -(n >> 5) as i64;
@@ -450,6 +475,17 @@ pub fn fpr_inv(x: u64) -> u64 {
     fpr_div(4607182418800017408, x)
 }
 
+/*
+ * If x >= 0 or y >= 0, a signed comparison yields the proper
+ * result:
+ *   - For positive values, the order is preserved.
+ *   - The sign bit is at the same place as in integers, so
+ *     sign is preserved.
+ *
+ * If both x and y are negative, then the order is reversed.
+ * We cannot simply invert the comparison result in that case
+ * because it would not handle the edge case x = y properly.
+ */
 #[inline(always)]
 pub fn fpr_lt(x: u64, y: u64) -> i32 {
     let (cc0, cc1): (i32, i32);
@@ -464,7 +500,21 @@ pub fn fpr_sqr(x: u64) -> u64 {
     fpr_mul(x, x)
 }
 
-
+/*
+ * Expectations:
+ *   s = 0 or 1
+ *   exponent e is "arbitrary" and unbiased
+ *   2^54 <= m < 2^55
+ * Numerical value is (-1)^2 * m * 2^e
+ *
+ * Exponents which are too low lead to value zero. If the exponent is
+ * too large, the returned value is indeterminate.
+ *
+ * If m = 0, then a zero is returned (using the provided sign).
+ * If e < -1076, then a zero is returned (regardless of the value of m).
+ * If e >= -1076 and e != 0, m must be within the expected range
+ * (2^54 to 2^55-1).
+ */
 #[inline(always)]
 fn fpr(s: i32, mut e: i32, mut m: u64) -> u64 {
     let mut x: u64;
