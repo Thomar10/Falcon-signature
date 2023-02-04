@@ -3,30 +3,18 @@ use crate::falcon_c::shake_c::InnerShake256Context;
 
 #[link(name = "keygen", kind = "static")]
 extern "C" {
-    #[allow(dead_code)]
-    pub fn modp_set(x: i32, p: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_norm(x: i32, p: u32) -> i32;
-    #[allow(dead_code)]
-    pub fn modp_ninv31(p: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_R(p: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_add(a: u32, b: u32, p: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_sub(a: u32, b: u32, p: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_montymul(a: u32, b: u32, p: u32, p0i: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_R2(p: u32, p0i: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_Rx(x: u32, p: u32, p0i: u32, R2: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_div(a: u32, bp: u32, p: u32, p0i: u32, R2: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn modp_mkgm2(gm: *const u32, igm: *const u32, logn: u32, g: u32, p: u32, p0i: u32);
-    #[allow(dead_code)]
-    pub fn modp_NTT2_ext(a: *const u32, stride: u64, gm: *const u32, logn: u32, p: u32, p0i: u32);
+    pub fn modp_set_func(x: i32, p: u32) -> u32;
+    pub fn modp_norm_func(x: u32, p: u32) -> i32;
+    pub fn modp_ninv31_func(p: u32) -> u32;
+    pub fn modp_R_func(p: u32) -> u32;
+    pub fn modp_add_func(a: u32, b: u32, p: u32) -> u32;
+    pub fn modp_sub_func(a: u32, b: u32, p: u32) -> u32;
+    pub fn modp_montymul_func(a: u32, b: u32, p: u32, p0i: u32) -> u32;
+    pub fn modp_R2_func(p: u32, p0i: u32) -> u32;
+    pub fn modp_Rx_func(x: u32, p: u32, p0i: u32, R2: u32) -> u32;
+    pub fn modp_div_func(a: u32, b: u32, p: u32, p0i: u32, r: u32) -> u32;
+    pub fn modp_mkgm2_func(gm: *const u32, igm: *const u32, logn: u32, g: u32, p: u32, p0i: u32);
+    pub fn modp_NTT2_ext_func(a: *const u32, stride: usize, gm: *const u32, logn: u32, p: u32, p0i: u32);
     #[allow(dead_code)]
     pub fn modp_iNTT2_ext(a: *const u32, stride: u64, igm: *const u32, logn: u32, p: u32, p0i: u32);
     #[allow(dead_code)]

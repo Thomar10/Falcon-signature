@@ -637,6 +637,12 @@ modp_set(int32_t x, uint32_t p)
 	return w;
 }
 
+uint32_t modp_set_func(int32_t x, uint32_t p)
+{
+  return modp_set(x, p);
+}
+
+
 /*
  * Normalize a modular integer around 0.
  */
@@ -645,6 +651,12 @@ modp_norm(uint32_t x, uint32_t p)
 {
 	return (int32_t)(x - (p & (((x - ((p + 1) >> 1)) >> 31) - 1)));
 }
+
+int32_t modp_norm_func(uint32_t x, uint32_t p)
+{
+  return modp_norm(x, p);
+}
+
 
 /*
  * Compute -1/p mod 2^31. This works for all odd integers p that fit
@@ -663,6 +675,12 @@ modp_ninv31(uint32_t p)
 	return (uint32_t)0x7FFFFFFF & -y;
 }
 
+uint32_t modp_ninv31_func(uint32_t p)
+{
+  return modp_ninv31(p);
+}
+
+
 /*
  * Compute R = 2^31 mod p.
  */
@@ -674,6 +692,11 @@ modp_R(uint32_t p)
 	 * 2^31 - p.
 	 */
 	return ((uint32_t)1 << 31) - p;
+}
+
+uint32_t modp_R_func(uint32_t p)
+{
+  return modp_R(p);
 }
 
 /*
@@ -689,6 +712,11 @@ modp_add(uint32_t a, uint32_t b, uint32_t p)
 	return d;
 }
 
+uint32_t modp_add_func(uint32_t a, uint32_t b, uint32_t p)
+{
+  return modp_add(a, b, p);
+}
+
 /*
  * Subtraction modulo p.
  */
@@ -700,6 +728,11 @@ modp_sub(uint32_t a, uint32_t b, uint32_t p)
 	d = a - b;
 	d += p & -(d >> 31);
 	return d;
+}
+
+uint32_t modp_sub_func(uint32_t a, uint32_t b, uint32_t p)
+{
+  return modp_sub(a, b, p);
 }
 
 /*
@@ -731,6 +764,12 @@ modp_montymul(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i)
 	return d;
 }
 
+uint32_t modp_montymul_func(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i)
+{
+  return modp_montymul(a, b, p, p0i);
+}
+
+
 /*
  * Compute R2 = 2^62 mod p.
  */
@@ -745,7 +784,6 @@ modp_R2(uint32_t p, uint32_t p0i)
 	 */
 	z = modp_R(p);
 	z = modp_add(z, z, p);
-
 	/*
 	 * Square it five times to obtain 2^32 in Montgomery representation
 	 * (i.e. 2^63 mod p).
@@ -761,6 +799,11 @@ modp_R2(uint32_t p, uint32_t p0i)
 	 */
 	z = (z + (p & -(z & 1))) >> 1;
 	return z;
+}
+
+uint32_t
+modp_R2_func(uint32_t p, uint32_t p0i) {
+  return modp_R2(p, p0i);
 }
 
 /*
@@ -789,6 +832,12 @@ modp_Rx(unsigned x, uint32_t p, uint32_t p0i, uint32_t R2)
 		r = modp_montymul(r, r, p, p0i);
 	}
 	return z;
+}
+
+uint32_t
+modp_Rx_func(unsigned x, uint32_t p, uint32_t p0i, uint32_t R2)
+{
+  return modp_Rx(x, p, p0i, R2);
 }
 
 /*
@@ -830,6 +879,12 @@ modp_div(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i, uint32_t R)
 	 */
 	z = modp_montymul(z, 1, p, p0i);
 	return modp_montymul(a, z, p, p0i);
+}
+
+uint32_t
+modp_div_func(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i, uint32_t R)
+{
+  return modp_div(a, b, p, p0i, R);
 }
 
 /*
@@ -971,6 +1026,12 @@ modp_mkgm2(uint32_t *restrict gm, uint32_t *restrict igm, unsigned logn,
 	}
 }
 
+void modp_mkgm2_func(uint32_t *restrict gm, uint32_t *restrict igm, unsigned logn,
+	uint32_t g, uint32_t p, uint32_t p0i)
+{
+  modp_mkgm2(gm, igm, logn, g, p, p0i);
+}
+
 /*
  * Compute the NTT over a polynomial (binary case). Polynomial elements
  * are a[0], a[stride], a[2 * stride]...
@@ -1009,6 +1070,13 @@ modp_NTT2_ext(uint32_t *a, size_t stride, const uint32_t *gm, unsigned logn,
 		}
 		t = ht;
 	}
+}
+
+void
+modp_NTT2_ext_func(uint32_t *a, size_t stride, const uint32_t *gm, unsigned logn,
+	uint32_t p, uint32_t p0i)
+{
+  modp_NTT2_ext(a, stride, gm, logn, p, p0i);
 }
 
 /*
