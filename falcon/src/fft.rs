@@ -40,12 +40,14 @@ fn fpc_div(a_re: u64, a_im: u64,
     (fpct_d_re, fpct_d_im)
 }
 
+#[allow(dead_code)]
 fn fpc_sqr(a_re: u64, a_im: u64) -> (u64, u64) {
     let fpct_d_re = fpr_sub(fpr_sqr(a_re), fpr_sqr(a_im));
     let fpct_d_im = fpr_double(fpr_mul(a_re, a_im));
     (fpct_d_re, fpct_d_im)
 }
 
+#[allow(dead_code)]
 fn fpc_inv(a_re: u64, a_im: u64) -> (u64, u64) {
     let mut fpct_m = fpr_add(fpr_sqr(a_re), fpr_sqr(a_im));
     fpct_m = fpr_inv(fpct_m);
@@ -349,14 +351,14 @@ pub fn poly_split_fft(f0: &mut [u64], f1: &mut [u64], f: &mut [u64], logn: u32) 
     }
 }
 
-pub fn poly_merge_fft(f0: &mut [u64], f1: &mut [u64], f: &mut [u64], logn: u32) {
+pub fn poly_merge_fft(f: &mut [u64], f0: &mut [u64], f1: &mut [u64], logn: u32) {
     let (n, hn, qn): (usize, usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
     qn = hn >> 1;
 
-    f0[0] = f[0];
-    f1[0] = f[hn];
+    f[0] = f0[0];
+    f[hn] = f1[0];
     for u in 0..qn {
         let (a_re, a_im): (u64, u64);
 

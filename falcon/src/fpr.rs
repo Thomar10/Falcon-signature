@@ -328,7 +328,7 @@ pub fn fpr_div(x: u64, y: u64) -> u64 {
         i += 1;
     }
 
-    q |= (xu | (!xu + 1)) >> 63;
+    q |= (xu | ((!xu) .wrapping_add(1))) >> 63;
 
     q2 = (q >> 1) | (q & 1);
     w = q >> 55;
