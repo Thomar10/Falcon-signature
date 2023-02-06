@@ -4,7 +4,7 @@ mod tests {
     // use crate::falcon_c::common_c::hash_to_point_vartime;
     // use crate::falcon_c::fpr_c::fpr_mul_func;
     // use crate::falcon_c::nist_c::crypto_sign_keypair;
-    // use crate::falcon_c::rng_c::{Buf, prng, prng_init, prng_refill, State};
+    // use crate::falcon_c::rng_c::{Buf, Prng, prng_init, prng_refill, State};
     // use crate::falcon_c::shake_c::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, MyUnion, process_block};
     //
     // #[test]
@@ -116,7 +116,7 @@ mod tests {
     //         },
     //         dptr: 0,
     //     };
-    //     let prng = prng {
+    //     let Prng = Prng {
     //         buf: Buf {
     //             d: [0; 512]
     //         },
@@ -127,12 +127,12 @@ mod tests {
     //         typ: 0,
     //     };
     //
-    //     unsafe { prng_init(&prng, &shake); }
+    //     unsafe { prng_init(&Prng, &shake); }
     // }
     //
     // #[test]
     // fn prng_refill_test() {
-    //     let prng = prng {
+    //     let Prng = Prng {
     //         buf: Buf {
     //             d: [0; 512]
     //         },
@@ -143,8 +143,8 @@ mod tests {
     //         typ: 0,
     //     };
     //
-    //     unsafe { prng_refill(&prng); }
-    //     assert_eq!(prng.ptr, 0);
+    //     unsafe { prng_refill(&Prng); }
+    //     assert_eq!(Prng.ptr, 0);
     // }
 
     use crate::falcon_c::nist_c::crypto_sign_keypair;
