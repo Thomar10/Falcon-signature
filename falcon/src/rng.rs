@@ -3,10 +3,6 @@ use crate::shake::{i_shake256_extract, InnerShake256Context};
 //TODO maybe we don't need a union and can avoid using unsafe?
 //Supposedly, the dummy union is there to ensure proper alignment for 64 bit direct access
 //That is probably not needed in rust and should be removed
-pub union Buf {
-    pub(crate) d: [u8; 512],
-    dummy_u64: u64,
-}
 
 pub union State {
     pub(crate) d: [u8; 256],
@@ -15,7 +11,7 @@ pub union State {
 }
 
 pub struct Prng {
-    pub(crate) buf: Buf,
+    pub(crate) buf: [u8; 512],
     pub(crate) ptr: usize,
     pub(crate) state: State,
     pub(crate) typ: i32
@@ -139,12 +135,10 @@ pub fn prng_refill(p: &mut Prng) -> () {
         cc += 1;
 
         for v in 0..16 {
-            unsafe {
-                p.buf.d[(u << 2) + (v << 5) + 0] = state[v] as u8;
-                p.buf.d[(u << 2) + (v << 5) + 1] = (state[v] >> 8) as u8;
-                p.buf.d[(u << 2) + (v << 5) + 2] = (state[v] >> 16) as u8;
-                p.buf.d[(u << 2) + (v << 5) + 3] = (state[v] >> 24) as u8;
-            }
+            p.buf[(u << 2) + (v << 5) + 0] = state[v] as u8;
+            p.buf[(u << 2) + (v << 5) + 1] = (state[v] >> 8) as u8;
+            p.buf[(u << 2) + (v << 5) + 2] = (state[v] >> 16) as u8;
+            p.buf[(u << 2) + (v << 5) + 3] = (state[v] >> 24) as u8;
         }
     }
 
@@ -163,27 +157,22 @@ pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
 
         let mut clen: usize;
 
-        unsafe {
-            clen = p.buf.d.len() - p.ptr;
-        }
+        clen = p.buf.len() - p.ptr;
 
         if clen > len {
             clen = len;
         }
 
-        unsafe {
-            //output.append(&mut p.buf.d[p.ptr..p.ptr + clen].to_vec());
-            //This seems kinda weird as they just keep extracting the same part of the array
-            //without refill if multiple calls with a small length
-            output.append(&mut p.buf.d[0..clen].to_vec());
-        }
+        //output.append(&mut p.buf.d[p.ptr..p.ptr + clen].to_vec());
+        //This seems kinda weird as they just keep extracting the same part of the array
+        //without refill if multiple calls with a small length
+        output.append(&mut p.buf[0..clen].to_vec());
+
         len -= clen;
         p.ptr += clen;
 
-        unsafe {
-            if p.ptr == p.buf.d.len() {
-                prng_refill(p);
-            }
+        if p.ptr == p.buf.len() {
+            prng_refill(p);
         }
     }
 

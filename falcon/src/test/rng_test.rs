@@ -3,7 +3,7 @@ mod tests {
     use std::ffi::c_void;
     use rand::Rng;
     use crate::falcon_c::rng_c::{Buf as BufC, State as StateC, Prng as PrngC, prng_refill as prng_refill_c, prng_init as prng_init_c, prng_get_bytes as prng_get_bytes_c};
-    use crate::rng::{Buf, Prng, prng_get_bytes, prng_init, prng_refill, State};
+    use crate::rng::{Prng, prng_get_bytes, prng_init, prng_refill, State};
     use crate::shake::{i_shake256_init, InnerShake256Context, St};
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, InnerShake256Context as InnerShake256ContextC, St as StC};
 
@@ -88,16 +88,15 @@ mod tests {
 
     fn create_random_prngs() -> (Prng, PrngC) {
         let mut rng = rand::thread_rng();
-        let buf_d: [u8; 512] = core::array::from_fn(|_| rng.gen::<u8>());
+        let buf: [u8; 512] = core::array::from_fn(|_| rng.gen::<u8>());
         let state_d: [u8; 256] = core::array::from_fn(|_| rng.gen::<u8>());
 
         let ptr:usize = rand::random();
         let typ:i32 = rand::random();
 
-        let buf = Buf {d: buf_d};
         let state = State {d: state_d};
 
-        let buf_c: BufC = BufC {d: buf_d.clone()};
+        let buf_c: BufC = BufC {d: buf.clone()};
         let state_c: StateC = StateC {d: state_d.clone()};
 
         let prng = Prng {buf, ptr, state, typ};
@@ -107,7 +106,7 @@ mod tests {
     }
 
     unsafe fn test_prng_equality(prng: &Prng, prng_c: &PrngC) -> bool {
-        if prng.buf.d != prng_c.buf.d {
+        if prng.buf != prng_c.buf.d {
             return false;
         }
 
