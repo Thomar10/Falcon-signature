@@ -3,10 +3,8 @@ static FPR_LOG2: u64 = 4604418534313441775;
 #[allow(dead_code)]
 static FPR_INV_LOG2: u64 = 4609176140021203710;
 #[allow(dead_code)]
-#[allow(dead_code)]
 static FPR_BNORM_MAX: u64 = 4670353323383631276;
-#[allow(dead_code)]
-static FPR_ZERO: u64 = 0;
+pub static FPR_ZERO: u64 = 0;
 #[allow(dead_code)]
 static FPR_ONE: u64 = 4607182418800017408;
 #[allow(dead_code)]
@@ -95,7 +93,7 @@ pub fn fpr_add(mut x: u64, mut y: u64) -> u64 {
 
     m = (1 << 63) - 1;
     za = (x & m).wrapping_sub(y & m);
-    cs = (za >> 63) as u32 | ((1u32 - ((!za + 1) >> 63) as u32) & (x >> 63) as u32);
+    cs = (za >> 63) as u32 | ((1u32 - ((!za).wrapping_add(1) >> 63) as u32) & (x >> 63) as u32);
     m = (x ^ y) & (!(cs as u64)).wrapping_add(1);
     x ^= m;
     y ^= m;
@@ -330,7 +328,7 @@ pub fn fpr_div(x: u64, y: u64) -> u64 {
         i += 1;
     }
 
-    q |= (xu | (!xu + 1)) >> 63;
+    q |= (xu | ((!xu) .wrapping_add(1))) >> 63;
 
     q2 = (q >> 1) | (q & 1);
     w = q >> 55;
@@ -534,8 +532,7 @@ fn fpr(s: i32, mut e: i32, mut m: u64) -> u64 {
     x
 }
 
-#[allow(dead_code)]
-static FPR_GM_TAB: [u64; 2048] = [
+pub static FPR_GM_TAB: [u64; 2048] = [
     0, 0,
     9223372036854775808, 4607182418800017408,
     4604544271217802189, 4604544271217802189,
@@ -1561,8 +1558,8 @@ static FPR_GM_TAB: [u64; 2048] = [
     4569220649180767418, 4607182376410422530,
     13830554413265198338, 4569220649180767418
 ];
-#[allow(dead_code)]
-static FPR_P2_TAB: [u64; 11] = [
+
+pub static FPR_P2_TAB: [u64; 11] = [
     4611686018427387904,
     4607182418800017408,
     4602678819172646912,
