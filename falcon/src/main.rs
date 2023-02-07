@@ -4,6 +4,7 @@ use rand::Rng;
 
 mod main_test;
 mod fft;
+mod fpr;
 mod shake;
 mod rng;
 
@@ -21,6 +22,7 @@ mod falcon_c {
 
 mod test {
     pub mod fft_test;
+    pub mod fpr_test;
     pub mod shake_test;
     pub mod rng_test;
 }
