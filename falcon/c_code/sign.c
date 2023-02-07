@@ -234,7 +234,7 @@ skoff_tree(unsigned logn)
 
 /* see inner.h */
 void
-Zf(expand_privkey)(fpr *restrict expanded_key,
+falcon_inner_expand_privkey(fpr *restrict expanded_key,
 	const int8_t *f, const int8_t *g,
 	const int8_t *F, const int8_t *G,
 	unsigned logn, uint8_t *restrict tmp)
@@ -971,7 +971,7 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
  * on zero and standard deviation 1.8205, with a precision of 72 bits.
  */
 int
-Zf(gaussian0_sampler)(prng *p)
+falcon_inner_gaussian0_sampler(prng *p)
 {
 
 	static const uint32_t dist[] = {
@@ -1096,7 +1096,7 @@ BerExp(prng *p, fpr x, fpr ccs)
  * 0.5 and 1); in Falcon, sigma should always be between 1.2 and 1.9.
  */
 int
-Zf(sampler)(void *ctx, fpr mu, fpr isigma)
+falcon_inner_sampler(void *ctx, fpr mu, fpr isigma)
 {
 	sampler_context *spc;
 	int s;
@@ -1139,7 +1139,7 @@ Zf(sampler)(void *ctx, fpr mu, fpr isigma)
 		 *  - b = 0: z <= 0 and sampled against a Gaussian
 		 *    centered on 0.
 		 */
-		z0 = Zf(gaussian0_sampler)(&spc->p);
+		z0 = falcon_inner_gaussian0_sampler(&spc->p);
 		b = (int)prng_get_u8(&spc->p) & 1;
 		z = b + ((b << 1) - 1) * z0;
 
@@ -1182,7 +1182,7 @@ Zf(sampler)(void *ctx, fpr mu, fpr isigma)
 
 /* see inner.h */
 void
-Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
+falcon_inner_sign_tree(int16_t *sig, inner_shake256_context *rng,
 	const fpr *restrict expanded_key,
 	const uint16_t *hm, unsigned logn, uint8_t *tmp)
 {
@@ -1210,7 +1210,7 @@ Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 		 */
 		spc.sigma_min = fpr_sigma_min[logn];
 		prng_init(&spc.p, rng);
-		samp = Zf(sampler);
+		samp = falcon_inner_sampler;
 		samp_ctx = &spc;
 
 		/*
@@ -1226,7 +1226,7 @@ Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 
 /* see inner.h */
 void
-Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
+falcon_inner_sign_dyn(int16_t *sig, inner_shake256_context *rng,
 	const int8_t *restrict f, const int8_t *restrict g,
 	const int8_t *restrict F, const int8_t *restrict G,
 	const uint16_t *hm, unsigned logn, uint8_t *tmp)
@@ -1255,7 +1255,7 @@ Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
 		 */
 		spc.sigma_min = fpr_sigma_min[logn];
 		prng_init(&spc.p, rng);
-		samp = Zf(sampler);
+		samp = falcon_inner_sampler;
 		samp_ctx = &spc;
 
 		/*

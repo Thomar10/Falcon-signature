@@ -168,7 +168,7 @@ crypto_sign(unsigned char *sm, unsigned long long *smlen,
 	/*
 	 * Compute the signature.
 	 */
-	Zf(sign_dyn)(r.sig, &sc, f, g, F, G, r.hm, 9, tmp.b);
+	falcon_inner_sign_dyn(r.sig, &sc, f, g, F, G, r.hm, 9, tmp.b);
 
 
 	/*

@@ -7,6 +7,7 @@ mod fft;
 mod fpr;
 mod shake;
 mod rng;
+mod sign;
 
 mod falcon_c {
     pub mod codec_c;
@@ -16,6 +17,7 @@ mod falcon_c {
     pub mod shake_c;
     pub mod rng_c;
     pub mod common_c;
+    pub mod sign_c;
     pub mod vrfy_c;
     pub mod keygen_c;
 }
@@ -25,6 +27,7 @@ mod test {
     pub mod fpr_test;
     pub mod shake_test;
     pub mod rng_test;
+    pub mod sign_test;
 }
 
 
