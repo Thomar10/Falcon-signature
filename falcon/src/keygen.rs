@@ -565,11 +565,6 @@ pub fn zint_co_reduce_mod(a: &mut [u32], b: &mut [u32], m: &mut [u32], len: usiz
 
 
 pub fn zint_co_reduce_mod_index(a: &mut [u32], a_index: usize, b: &mut [u32], b_index: usize, m: &mut [u32], len: usize, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64) {
-    println!("xa {}", xa);
-    println!("xb {}", xb);
-
-    println!("ya {}", ya);
-    println!("yb {}", yb);
 
     let mut cca: i64 = 0;
     let mut ccb: i64 = 0;
@@ -633,8 +628,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
     tmp[v1_index] -= 1;
 
 
-    // num = 62 * (len as u32) + 30;
-    num = 31;
+    num = 62 * (len as u32) + 30;
     while num >= 30 {
         let (mut c0, mut c1): (u32, u32);
         let (mut a0, mut a1, mut b0, mut b1): (u32, u32, u32, u32);
@@ -667,9 +661,9 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
 
 
         a1 |= a0 & c1;
-        // a0 &= !c1;
+        a0 &= !c1;
         b1 |= b0 & c1;
-        // b0 &= !c1;
+        b0 &= !c1;
         a_hi = ((a0 as u64) << 31) + a1 as u64;
         b_hi = ((b0 as u64) << 31) + b1 as u64;
         a_lo = tmp[a_index];
@@ -691,8 +685,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
             oa = (a_lo >> i) & 1;
             ob = (b_lo >> i) & 1;
             c_ab = oa & ob & rt;
-            c_ba = 0;
-            // c_ba = oa & ob & !rt;
+            c_ba = oa & ob & !rt;
             c_a = c_ab | (oa ^ 1);
 
             a_lo = a_lo.wrapping_sub(b_lo & (!c_ab).wrapping_add(1));
@@ -715,14 +708,13 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
         }
 
 
-        r = 0;//zint_co_reduce_index(tmp, a_index, b_index, len, pa, pb, qa, qb);
-        // pa -= (pa + pa) & -((r & 1) as i64);
-        // pb -= (pb + pb) & -((r & 1) as i64);
-        // qa -= (qa + qa) & -((r >> 1) as i64);
-        // qb -= (qb + qb) & -((r >> 1) as i64);
+        r = zint_co_reduce_index(tmp, a_index, b_index, len, pa, pb, qa, qb);
+        pa -= (pa + pa) & -((r & 1) as i64);
+        pb -= (pb + pb) & -((r & 1) as i64);
+        qa -= (qa + qa) & -((r >> 1) as i64);
+        qb -= (qb + qb) & -((r >> 1) as i64);
 
-        // zint_co_reduce_mod_index(u, u_index, tmp, u1_index, y, len, y0i, pa, pb, qa, qb);
-
+        zint_co_reduce_mod_index(u, u_index, tmp, u1_index, y, len, y0i, pa, pb, qa, qb);
         zint_co_reduce_mod_index(v, 0, tmp, v1_index, x, len, x0i, pa, pb, qa, qb);
 
         num -= 30;
@@ -733,8 +725,8 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
     for j in 1..len {
         rc |= tmp[j + a_index];
     }
-    // ((1 - ((rc | (!rc).wrapping_add(1)) >> 31)) & x[0] & y[0]) as i32
-    0
+    ((1 - ((rc | (!rc).wrapping_add(1)) >> 31)) & x[0] & y[0]) as i32
+
 }
 
 pub fn wave(x: u32) -> u32 {

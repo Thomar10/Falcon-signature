@@ -1667,10 +1667,6 @@ static void
 zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
 	uint32_t m0i, int64_t xa, int64_t xb, int64_t ya, int64_t yb)
 {
-  printf("xa %d \n", xa);
-  printf("xb %d \n", xb);
-  printf("ya %d \n", ya);
-  printf("yb %d \n", yb);
 	size_t u;
 	int64_t cca, ccb;
 	uint32_t fa, fb;
@@ -1786,7 +1782,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	 * Each input operand may be as large as 31*len bits, and we
 	 * reduce the total length by at least 30 bits at each iteration.
 	 */
-	for (/*num = 62 * (uint32_t)len + 30*/ num = 31; num >= 30; num -= 30) {
+	for (num = 62 * (uint32_t)len + 30;  num >= 30; num -= 30) {
 		uint32_t c0, c1;
 		uint32_t a0, a1, b0, b1;
 		uint64_t a_hi, b_hi;
@@ -1829,9 +1825,9 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 		 * would mean that both integers are zero.
 		 */
 		a1 |= a0 & c1;
-//		a0 &= ~c1;
+		a0 &= ~c1;
 		b1 |= b0 & c1;
-//		b0 &= ~c1;
+		b0 &= ~c1;
 		a_hi = ((uint64_t)a0 << 31) + a1;
 		b_hi = ((uint64_t)b0 << 31) + b1;
 		a_lo = a[0];
@@ -1886,8 +1882,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 			oa = (a_lo >> i) & 1;
 			ob = (b_lo >> i) & 1;
 			cAB = oa & ob & rt;
-			cBA = 0;
-//			cBA = oa & ob & ~rt;
+			cBA = oa & ob & ~rt;
 			cA = cAB | (oa ^ 1);
 
 			/*
@@ -1921,13 +1916,12 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 		 * returned value of zint_co_reduce() (when a and/or b
 		 * had to be negated).
 		 */
-		r = 0; //zint_co_reduce(a, b, len, pa, pb, qa, qb);
-//		pa -= (pa + pa) & -(int64_t)(r & 1);
-//		pb -= (pb + pb) & -(int64_t)(r & 1);
-//		qa -= (qa + qa) & -(int64_t)(r >> 1);
-//		qb -= (qb + qb) & -(int64_t)(r >> 1);
-//		zint_co_reduce_mod(u0, u1, y, len, y0i, pa, pb, qa, qb);
-
+		r = zint_co_reduce(a, b, len, pa, pb, qa, qb);
+		pa -= (pa + pa) & -(int64_t)(r & 1);
+		pb -= (pb + pb) & -(int64_t)(r & 1);
+		qa -= (qa + qa) & -(int64_t)(r >> 1);
+		qb -= (qb + qb) & -(int64_t)(r >> 1);
+		zint_co_reduce_mod(u0, u1, y, len, y0i, pa, pb, qa, qb);
 		zint_co_reduce_mod(v0, v1, x, len, x0i, pa, pb, qa, qb);
 	}
 
@@ -1941,8 +1935,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	for (j = 1; j < len; j ++) {
 		rc |= a[j];
 	}
-//	return (int)((1 - ((rc | -rc) >> 31)) & x[0] & y[0]);
-return (int)0;
+	return (int)((1 - ((rc | -rc) >> 31)) & x[0] & y[0]);
 }
 
 int
