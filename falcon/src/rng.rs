@@ -154,5 +154,38 @@ pub fn prng_refill(p: &mut Prng) -> () {
     }
 
     p.ptr = 0;
+}
 
+pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
+    let mut output: Vec<u8> = Vec::with_capacity(len);
+
+    while len > 0 {
+
+        let mut clen: usize;
+
+        unsafe {
+            clen = p.buf.d.len() - p.ptr;
+        }
+
+        if clen > len {
+            clen = len;
+        }
+
+        unsafe {
+            //output.append(&mut p.buf.d[p.ptr..p.ptr + clen].to_vec());
+            //This seems kinda weird as they just keep extracting the same part of the array
+            //without refill if multiple calls with a small length
+            output.append(&mut p.buf.d[0..clen].to_vec());
+        }
+        len -= clen;
+        p.ptr += clen;
+
+        unsafe {
+            if p.ptr == p.buf.d.len() {
+                prng_refill(p);
+            }
+        }
+    }
+
+    return output;
 }

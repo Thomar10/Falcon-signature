@@ -1,3 +1,5 @@
+extern crate core;
+
 use rand::Rng;
 
 mod main_test;
