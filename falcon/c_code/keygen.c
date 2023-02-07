@@ -1132,6 +1132,12 @@ modp_iNTT2_ext(uint32_t *a, size_t stride, const uint32_t *igm, unsigned logn,
 	}
 }
 
+void
+modp_iNTT2_ext_func(uint32_t *a, size_t stride, const uint32_t *igm, unsigned logn,
+	uint32_t p, uint32_t p0i) {
+	modp_iNTT2_ext(a, stride, igm, logn, p, p0i);
+}
+
 /*
  * Simplified macros for NTT and iNTT (binary case) when the elements
  * are consecutive in RAM.
@@ -1168,6 +1174,13 @@ modp_poly_rec_res(uint32_t *f, unsigned logn,
 		f[u] = modp_montymul(modp_montymul(w0, w1, p, p0i), R2, p, p0i);
 	}
 }
+
+void
+modp_poly_rec_res_func(uint32_t *f, unsigned logn,
+	uint32_t p, uint32_t p0i, uint32_t R2) {
+	modp_poly_rec_res(f, logn,
+  	p, p0i, R2);
+	}
 
 /* ==================================================================== */
 /*
@@ -1231,6 +1244,11 @@ zint_sub(uint32_t *restrict a, const uint32_t *restrict b, size_t len,
 	return cc;
 }
 
+uint32_t zint_sub_func(uint32_t *restrict a, const uint32_t *restrict b, size_t len,
+	uint32_t ctl) {
+	return zint_sub(a, b, len, ctl);
+	}
+
 /*
  * Mutiply the provided big integer m with a small value x.
  * This function assumes that x < 2^31. The carry word is returned.
@@ -1250,6 +1268,11 @@ zint_mul_small(uint32_t *m, size_t mlen, uint32_t x)
 		cc = (uint32_t)(z >> 31);
 	}
 	return cc;
+}
+uint32_t
+zint_mul_small_func(uint32_t *m, size_t mlen, uint32_t x)
+{
+return zint_mul_small(m, mlen, x);
 }
 
 /*
@@ -1277,7 +1300,7 @@ zint_mod_small_unsigned(const uint32_t *d, size_t dlen,
 	x = 0;
 	u = dlen;
 	while (u -- > 0) {
-		uint32_t w;
+	uint32_t w;
 
 		x = modp_montymul(x, R2, p, p0i);
 		w = d[u] - p;
@@ -1285,6 +1308,13 @@ zint_mod_small_unsigned(const uint32_t *d, size_t dlen,
 		x = modp_add(x, w, p);
 	}
 	return x;
+}
+
+uint32_t
+zint_mod_small_unsigned_func(const uint32_t *d, size_t dlen,
+	uint32_t p, uint32_t p0i, uint32_t R2)
+{
+  return zint_mod_small_unsigned(d, dlen, p, p0i, R2);
 }
 
 /*
@@ -1304,6 +1334,13 @@ zint_mod_small_signed(const uint32_t *d, size_t dlen,
 	z = modp_sub(z, Rx & -(d[dlen - 1] >> 30), p);
 	return z;
 }
+uint32_t
+zint_mod_small_signed_func(const uint32_t *d, size_t dlen,
+	uint32_t p, uint32_t p0i, uint32_t R2, uint32_t Rx)
+{
+return zint_mod_small_signed(d, dlen, p, p0i, R2, Rx);
+}
+
 
 /*
  * Add y*s to x. x and y initially have length 'len' words; the new x
@@ -1329,6 +1366,12 @@ zint_add_mul_small(uint32_t *restrict x,
 		cc = (uint32_t)(z >> 31);
 	}
 	x[len] = cc;
+}
+
+zint_add_mul_small_func(uint32_t *restrict x,
+	const uint32_t *restrict y, size_t len, uint32_t s)
+{
+zint_add_mul_small(x, y, len, s);
 }
 
 /*
@@ -1381,6 +1424,12 @@ zint_norm_zero(uint32_t *restrict x, const uint32_t *restrict p, size_t len)
 	 * do the subtraction only if r = -1.
 	 */
 	zint_sub(x, p, len, r >> 31);
+}
+
+void
+zint_norm_zero_func(uint32_t *restrict x, const uint32_t *restrict p, size_t len)
+{
+zint_norm_zero(x, p, len);
 }
 
 /*
@@ -1457,6 +1506,14 @@ zint_rebuild_CRT(uint32_t *restrict xx, size_t xlen, size_t xstride,
 	}
 }
 
+void
+zint_rebuild_CRT_func(uint32_t *restrict xx, size_t xlen, size_t xstride,
+	size_t num, const small_prime *primes, int normalize_signed,
+	uint32_t *restrict tmp)
+{
+zint_rebuild_CRT(xx, xlen, xstride, num, primes, normalize_signed, tmp);
+}
+
 /*
  * Negate a big integer conditionally: value a is replaced with -a if
  * and only if ctl = 1. Control value ctl must be 0 or 1.
@@ -1482,6 +1539,12 @@ zint_negate(uint32_t *a, size_t len, uint32_t ctl)
 		a[u] = aw & 0x7FFFFFFF;
 		cc = aw >> 31;
 	}
+}
+
+void
+zint_negate_func(uint32_t *a, size_t len, uint32_t ctl)
+{
+zint_negate(a, len, ctl);
 }
 
 /*
@@ -1533,6 +1596,14 @@ zint_co_reduce(uint32_t *a, uint32_t *b, size_t len,
 	return nega | (negb << 1);
 }
 
+uint32_t
+zint_co_reduce_func(uint32_t *a, uint32_t *b, size_t len,
+	int64_t xa, int64_t xb, int64_t ya, int64_t yb)
+{
+return zint_co_reduce(a, b, len, xa, xb, ya, yb);
+
+}
+
 /*
  * Finish modular reduction. Rules on input parameters:
  *
@@ -1582,6 +1653,12 @@ zint_finish_mod(uint32_t *a, size_t len, const uint32_t *m, uint32_t neg)
 	}
 }
 
+void
+zint_finish_mod_func(uint32_t *a, size_t len, const uint32_t *m, uint32_t neg)
+{
+zint_finish_mod(a, len, m, neg);
+}
+
 /*
  * Replace a with (a*xa+b*xb)/(2^31) mod m, and b with
  * (a*ya+b*yb)/(2^31) mod m. Modulus m must be odd; m0i = -1/m[0] mod 2^31.
@@ -1590,6 +1667,10 @@ static void
 zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
 	uint32_t m0i, int64_t xa, int64_t xb, int64_t ya, int64_t yb)
 {
+  printf("xa %d \n", xa);
+  printf("xb %d \n", xb);
+  printf("ya %d \n", ya);
+  printf("yb %d \n", yb);
 	size_t u;
 	int64_t cca, ccb;
 	uint32_t fa, fb;
@@ -1607,6 +1688,7 @@ zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
 
 		wa = a[u];
 		wb = b[u];
+
 		za = wa * (uint64_t)xa + wb * (uint64_t)xb
 			+ m[u] * (uint64_t)fa + (uint64_t)cca;
 		zb = wa * (uint64_t)ya + wb * (uint64_t)yb
@@ -1633,6 +1715,13 @@ zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
 	zint_finish_mod(b, len, m, (uint32_t)((uint64_t)ccb >> 63));
 }
 
+zint_co_reduce_mod_func(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
+	uint32_t m0i, int64_t xa, int64_t xb, int64_t ya, int64_t yb)
+{
+zint_co_reduce_mod(a, b, m, len, m0i, xa, xb, ya, yb);
+
+}
+
 /*
  * Compute a GCD between two positive big integers x and y. The two
  * integers must be odd. Returned value is 1 if the GCD is 1, 0
@@ -1651,115 +1740,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	const uint32_t *restrict x, const uint32_t *restrict y,
 	size_t len, uint32_t *restrict tmp)
 {
-	/*
-	 * Algorithm is an extended binary GCD. We maintain 6 values
-	 * a, b, u0, u1, v0 and v1 with the following invariants:
-	 *
-	 *  a = x*u0 - y*v0
-	 *  b = x*u1 - y*v1
-	 *  0 <= a <= x
-	 *  0 <= b <= y
-	 *  0 <= u0 < y
-	 *  0 <= v0 < x
-	 *  0 <= u1 <= y
-	 *  0 <= v1 < x
-	 *
-	 * Initial values are:
-	 *
-	 *  a = x   u0 = 1   v0 = 0
-	 *  b = y   u1 = y   v1 = x-1
-	 *
-	 * Each iteration reduces either a or b, and maintains the
-	 * invariants. Algorithm stops when a = b, at which point their
-	 * common value is GCD(a,b) and (u0,v0) (or (u1,v1)) contains
-	 * the values (u,v) we want to return.
-	 *
-	 * The formal definition of the algorithm is a sequence of steps:
-	 *
-	 *  - If a is even, then:
-	 *        a <- a/2
-	 *        u0 <- u0/2 mod y
-	 *        v0 <- v0/2 mod x
-	 *
-	 *  - Otherwise, if b is even, then:
-	 *        b <- b/2
-	 *        u1 <- u1/2 mod y
-	 *        v1 <- v1/2 mod x
-	 *
-	 *  - Otherwise, if a > b, then:
-	 *        a <- (a-b)/2
-	 *        u0 <- (u0-u1)/2 mod y
-	 *        v0 <- (v0-v1)/2 mod x
-	 *
-	 *  - Otherwise:
-	 *        b <- (b-a)/2
-	 *        u1 <- (u1-u0)/2 mod y
-	 *        v1 <- (v1-v0)/2 mod y
-	 *
-	 * We can show that the operations above preserve the invariants:
-	 *
-	 *  - If a is even, then u0 and v0 are either both even or both
-	 *    odd (since a = x*u0 - y*v0, and x and y are both odd).
-	 *    If u0 and v0 are both even, then (u0,v0) <- (u0/2,v0/2).
-	 *    Otherwise, (u0,v0) <- ((u0+y)/2,(v0+x)/2). Either way,
-	 *    the a = x*u0 - y*v0 invariant is preserved.
-	 *
-	 *  - The same holds for the case where b is even.
-	 *
-	 *  - If a and b are odd, and a > b, then:
-	 *
-	 *      a-b = x*(u0-u1) - y*(v0-v1)
-	 *
-	 *    In that situation, if u0 < u1, then x*(u0-u1) < 0, but
-	 *    a-b > 0; therefore, it must be that v0 < v1, and the
-	 *    first part of the update is: (u0,v0) <- (u0-u1+y,v0-v1+x),
-	 *    which preserves the invariants. Otherwise, if u0 > u1,
-	 *    then u0-u1 >= 1, thus x*(u0-u1) >= x. But a <= x and
-	 *    b >= 0, hence a-b <= x. It follows that, in that case,
-	 *    v0-v1 >= 0. The first part of the update is then:
-	 *    (u0,v0) <- (u0-u1,v0-v1), which again preserves the
-	 *    invariants.
-	 *
-	 *    Either way, once the subtraction is done, the new value of
-	 *    a, which is the difference of two odd values, is even,
-	 *    and the remaining of this step is a subcase of the
-	 *    first algorithm case (i.e. when a is even).
-	 *
-	 *  - If a and b are odd, and b > a, then the a similar
-	 *    argument holds.
-	 *
-	 * The values a and b start at x and y, respectively. Since x
-	 * and y are odd, their GCD is odd, and it is easily seen that
-	 * all steps conserve the GCD (GCD(a-b,b) = GCD(a, b);
-	 * GCD(a/2,b) = GCD(a,b) if GCD(a,b) is odd). Moreover, either a
-	 * or b is reduced by at least one bit at each iteration, so
-	 * the algorithm necessarily converges on the case a = b, at
-	 * which point the common value is the GCD.
-	 *
-	 * In the algorithm expressed above, when a = b, the fourth case
-	 * applies, and sets b = 0. Since a contains the GCD of x and y,
-	 * which are both odd, a must be odd, and subsequent iterations
-	 * (if any) will simply divide b by 2 repeatedly, which has no
-	 * consequence. Thus, the algorithm can run for more iterations
-	 * than necessary; the final GCD will be in a, and the (u,v)
-	 * coefficients will be (u0,v0).
-	 *
-	 *
-	 * The presentation above is bit-by-bit. It can be sped up by
-	 * noticing that all decisions are taken based on the low bits
-	 * and high bits of a and b. We can extract the two top words
-	 * and low word of each of a and b, and compute reduction
-	 * parameters pa, pb, qa and qb such that the new values for
-	 * a and b are:
-	 *    a' = (a*pa + b*pb) / (2^31)
-	 *    b' = (a*qa + b*qb) / (2^31)
-	 * the two divisions being exact. The coefficients are obtained
-	 * just from the extracted words, and may be slightly off, requiring
-	 * an optional correction: if a' < 0, then we replace pa with -pa
-	 * and pb with -pb. Each such step will reduce the total length
-	 * (sum of lengths of a and b) by at least 30 bits at each
-	 * iteration.
-	 */
+
 	uint32_t *u0, *u1, *v0, *v1, *a, *b;
 	uint32_t x0i, y0i;
 	uint32_t num, rc;
@@ -1805,7 +1786,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	 * Each input operand may be as large as 31*len bits, and we
 	 * reduce the total length by at least 30 bits at each iteration.
 	 */
-	for (num = 62 * (uint32_t)len + 30; num >= 30; num -= 30) {
+	for (/*num = 62 * (uint32_t)len + 30*/ num = 31; num >= 30; num -= 30) {
 		uint32_t c0, c1;
 		uint32_t a0, a1, b0, b1;
 		uint64_t a_hi, b_hi;
@@ -1848,9 +1829,9 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 		 * would mean that both integers are zero.
 		 */
 		a1 |= a0 & c1;
-		a0 &= ~c1;
+//		a0 &= ~c1;
 		b1 |= b0 & c1;
-		b0 &= ~c1;
+//		b0 &= ~c1;
 		a_hi = ((uint64_t)a0 << 31) + a1;
 		b_hi = ((uint64_t)b0 << 31) + b1;
 		a_lo = a[0];
@@ -1869,7 +1850,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 		pb = 0;
 		qa = 0;
 		qb = 1;
-		for (i = 0; i < 31; i ++) {
+		for (i = 0; i < 1; i ++) {
 			/*
 			 * At each iteration:
 			 *
@@ -1905,7 +1886,8 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 			oa = (a_lo >> i) & 1;
 			ob = (b_lo >> i) & 1;
 			cAB = oa & ob & rt;
-			cBA = oa & ob & ~rt;
+			cBA = 0;
+//			cBA = oa & ob & ~rt;
 			cA = cAB | (oa ^ 1);
 
 			/*
@@ -1939,12 +1921,13 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 		 * returned value of zint_co_reduce() (when a and/or b
 		 * had to be negated).
 		 */
-		r = zint_co_reduce(a, b, len, pa, pb, qa, qb);
-		pa -= (pa + pa) & -(int64_t)(r & 1);
-		pb -= (pb + pb) & -(int64_t)(r & 1);
-		qa -= (qa + qa) & -(int64_t)(r >> 1);
-		qb -= (qb + qb) & -(int64_t)(r >> 1);
-		zint_co_reduce_mod(u0, u1, y, len, y0i, pa, pb, qa, qb);
+		r = 0; //zint_co_reduce(a, b, len, pa, pb, qa, qb);
+//		pa -= (pa + pa) & -(int64_t)(r & 1);
+//		pb -= (pb + pb) & -(int64_t)(r & 1);
+//		qa -= (qa + qa) & -(int64_t)(r >> 1);
+//		qb -= (qb + qb) & -(int64_t)(r >> 1);
+//		zint_co_reduce_mod(u0, u1, y, len, y0i, pa, pb, qa, qb);
+
 		zint_co_reduce_mod(v0, v1, x, len, x0i, pa, pb, qa, qb);
 	}
 
@@ -1958,7 +1941,21 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	for (j = 1; j < len; j ++) {
 		rc |= a[j];
 	}
-	return (int)((1 - ((rc | -rc) >> 31)) & x[0] & y[0]);
+//	return (int)((1 - ((rc | -rc) >> 31)) & x[0] & y[0]);
+return (int)0;
+}
+
+int
+zint_bezout_func(uint32_t *restrict u, uint32_t *restrict v,
+	const uint32_t *restrict x, const uint32_t *restrict y,
+	size_t len, uint32_t *restrict tmp)
+{
+return zint_bezout(u, v, x, y, len ,tmp);
+
+}
+
+uint32_t wave_func(uint32_t x) {
+return ~x;
 }
 
 /*
@@ -2021,6 +2018,13 @@ zint_add_scaled_mul_small(uint32_t *restrict x, size_t xlen,
 		cc = *(int32_t *)&ccu;
 	}
 }
+void
+zint_add_scaled_mul_small_func(uint32_t *restrict x, size_t xlen,
+	const uint32_t *restrict y, size_t ylen, int32_t k,
+	uint32_t sch, uint32_t scl)
+{
+zint_add_scaled_mul_small(x, xlen, y, ylen, k, sch, scl);
+}
 
 /*
  * Subtract y*2^sc from x. The result is assumed to fit in the array of
@@ -2066,6 +2070,13 @@ zint_sub_scaled(uint32_t *restrict x, size_t xlen,
 	}
 }
 
+void
+zint_sub_scaled_func(uint32_t *restrict x, size_t xlen,
+	const uint32_t *restrict y, size_t ylen, uint32_t sch, uint32_t scl)
+{
+zint_sub_scaled(x, xlen, y, ylen, sch ,scl);
+}
+
 /*
  * Convert a one-word signed big integer into a signed value.
  */
@@ -2077,6 +2088,12 @@ zint_one_to_plain(const uint32_t *x)
 	w = x[0];
 	w |= (w & 0x40000000) << 1;
 	return *(int32_t *)&w;
+}
+
+int32_t
+zint_one_to_plain_func(const uint32_t *x)
+{
+return zint_one_to_plain(x);
 }
 
 /* ==================================================================== */

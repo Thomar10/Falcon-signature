@@ -3,6 +3,7 @@ use crate::falcon_c::shake_c::InnerShake256Context;
 
 #[link(name = "keygen", kind = "static")]
 extern "C" {
+    pub fn wave_func(x: u32) -> u32;
     pub fn modp_set_func(x: i32, p: u32) -> u32;
     pub fn modp_norm_func(x: u32, p: u32) -> i32;
     pub fn modp_ninv31_func(p: u32) -> u32;
@@ -15,40 +16,23 @@ extern "C" {
     pub fn modp_div_func(a: u32, b: u32, p: u32, p0i: u32, r: u32) -> u32;
     pub fn modp_mkgm2_func(gm: *const u32, igm: *const u32, logn: u32, g: u32, p: u32, p0i: u32);
     pub fn modp_NTT2_ext_func(a: *const u32, stride: usize, gm: *const u32, logn: u32, p: u32, p0i: u32);
-    #[allow(dead_code)]
-    pub fn modp_iNTT2_ext(a: *const u32, stride: u64, igm: *const u32, logn: u32, p: u32, p0i: u32);
-    #[allow(dead_code)]
-    pub fn modp_poly_rec_res(f: *const u32, logn: u32, p: u32, p0i: u32, R2: u32);
-    #[allow(dead_code)]
-    pub fn zint_sub(a: *const u32, b: *const u32, len: u64, ctl: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn zint_mul_small(m: *const u32, mlen: u64, x: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn zint_mod_small_unsigned(d: *const u32, dlen: u64, p: u32, p0i: u32, R2: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn zint_mod_small_signed(d: *const u32, dlen: u64, p: u32, p0i: u32, R2: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn zint_add_mul_small(x: *const u32, y: *const u32, len: u64, s: u32);
-    #[allow(dead_code)]
-    pub fn zint_norm_zero(x: *const u32, p: *const u32, len: u64);
-    #[allow(dead_code)]
-    pub fn zint_rebuild_CRT(xx: *const u32, xlen: u64, xstride: u64, num: u64, primes: *const small_prime, normalized_signed: i32, tmp: *const u32);
-    #[allow(dead_code)]
-    pub fn zint_negate(a: *const u32, len: u64, ctl: u32);
-    #[allow(dead_code)]
-    pub fn zint_co_reduce(a: *const u32, b: *const u32, len: u64, xa: i64, xb: i64, ya: i64, yb: i64) -> u32;
-    #[allow(dead_code)]
-    pub fn zint_finish_mod(a: *const u32, len: u64, m: *const u32, neg: u32);
-    #[allow(dead_code)]
-    pub fn zint_co_reduce_mod(a: *const u32, b: *const u32, m: *const u32, len: u64, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64);
-    #[allow(dead_code)]
-    pub fn zint_bezout(u: *const u32, v: *const u32, x: *const u32, y: *const u32, len: u64, tmp: *const u32) -> i32;
-    #[allow(dead_code)]
-    pub fn zint_add_scaled_mul_small(x: *const u32, xlen: u64, y: *const u32, ylen: u64, k: i32, sch: u32, scl: u32);
-    #[allow(dead_code)]
-    pub fn zint_sub_scaled(x: *const u32, xlen: u64, y: *const u32, ylen: u64, sch: u32, scl: u32);
-    #[allow(dead_code)]
-    pub fn zint_one_to_plain(x: *const u32) -> i32;
+    pub fn modp_iNTT2_ext_func(a: *const u32, stride: usize, igm: *const u32, logn: u32, p: u32, p0i: u32);
+    pub fn modp_poly_rec_res_func(f: *const u32, logn: u32, p: u32, p0i: u32, R2: u32);
+    pub fn zint_sub_func(a: *const u32, b: *const u32, len: usize, ctl: u32) -> u32;
+    pub fn zint_mul_small_func(m: *const u32, mlen: usize, x: u32) -> u32;
+    pub fn zint_mod_small_unsigned_func(d: *const u32, dlen: usize, p: u32, p0i: u32, R2: u32) -> u32;
+    pub fn zint_mod_small_signed_func(d: *const u32, dlen: usize, p: u32, p0i: u32, R2: u32, Rx: u32) -> u32;
+    pub fn zint_add_mul_small_func(x: *const u32, y: *const u32, len: usize, s: u32);
+    pub fn zint_norm_zero_func(x: *const u32, p: *const u32, len: usize);
+    pub fn zint_rebuild_CRT_func(xx: *const u32, xlen: usize, xstride: usize, num: u64, primes: *const small_prime, normalized_signed: i32, tmp: *const u32);
+    pub fn zint_negate_func(a: *const u32, len: usize, ctl: u32);
+    pub fn zint_co_reduce_func(a: *const u32, b: *const u32, len: usize, xa: i64, xb: i64, ya: i64, yb: i64) -> u32;
+    pub fn zint_finish_mod_func(a: *const u32, len: usize, m: *const u32, neg: u32);
+    pub fn zint_co_reduce_mod_func(a: *const u32, b: *const u32, m: *const u32, len: usize, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64);
+    pub fn zint_bezout_func(u: *const u32, v: *const u32, x: *const u32, y: *const u32, len: usize, tmp: *const u32) -> i32;
+    pub fn zint_add_scaled_mul_small_func(x: *const u32, xlen: usize, y: *const u32, ylen: usize, k: i32, sch: u32, scl: u32);
+    pub fn zint_sub_scaled_func(x: *const u32, xlen: usize, y: *const u32, ylen: usize, sch: u32, scl: u32);
+    pub fn zint_one_to_plain_func(x: *const u32) -> i32;
     #[allow(dead_code)]
     pub fn poly_big_to_fp(d: u64, xlen: u64, f: *const u32, flen: u64, fstride: u64, logn: u32);
     #[allow(dead_code)]
