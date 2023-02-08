@@ -10,7 +10,7 @@ extern "C" {
     #[allow(dead_code)]
     pub fn ffLDL_fft_inner_func(tree: *const fpr, g0: *const fpr, g1: *const fpr, logn: u32, tmp: *const fpr);
     #[allow(dead_code)]
-    pub fn ffLDL_fft(tree: *const fpr, g00: *const fpr, g01: *const fpr, g11: *const fpr, logn: u32, tmp: *const fpr);
+    pub fn ffLDL_fft_func(tree: *const fpr, g00: *const fpr, g01: *const fpr, g11: *const fpr, logn: u32, tmp: *const fpr);
     #[allow(dead_code)]
     pub fn ffLDL_binary_normalize(tree: *const fpr, orig_logn: u32, logn: u32);
     #[allow(dead_code)]

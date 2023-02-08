@@ -161,6 +161,14 @@ ffLDL_fft(fpr *restrict tree, const fpr *restrict g00,
 		d00, d00 + hn, logn - 1, tmp);
 }
 
+void
+ffLDL_fft_func(fpr *restrict tree, const fpr *restrict g00,
+	const fpr *restrict g01, const fpr *restrict g11,
+	unsigned logn, fpr *restrict tmp)
+{
+return ffLDL_fft(tree, g00, g01, g11, logn, tmp);
+}
+
 /*
  * Normalize an ffLDL tree: each leaf of value x is replaced with
  * sigma / sqrt(x).
