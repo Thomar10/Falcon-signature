@@ -5,8 +5,7 @@ static FPR_INV_LOG2: u64 = 4609176140021203710;
 #[allow(dead_code)]
 static FPR_BNORM_MAX: u64 = 4670353323383631276;
 pub static FPR_ZERO: u64 = 0;
-#[allow(dead_code)]
-static FPR_ONE: u64 = 4607182418800017408;
+pub static FPR_ONE: u64 = 4607182418800017408;
 #[allow(dead_code)]
 static FPR_TWO: u64 = 4611686018427387904;
 #[allow(dead_code)]
@@ -15,8 +14,7 @@ static FPR_ONEHALF: u64 = 4602678819172646912;
 static FPR_INVSQRT2: u64 = 4604544271217802189;
 #[allow(dead_code)]
 static FPR_INVSQRT8: u64 = 4600040671590431693;
-#[allow(dead_code)]
-static FPR_PTWO31: u64 = 4746794007248502784;
+pub static FPR_PTWO31: u64 = 4746794007248502784;
 #[allow(dead_code)]
 static FPR_PTWO31M1: u64 = 4746794007244308480;
 #[allow(dead_code)]
@@ -146,7 +144,7 @@ pub fn fpr_scaled(mut i: i64, sc: i32) -> u64 {
     m >>= 9;
 
     t = (((i | -i) as u64) >> 63) as u32;
-    m &= !(t as u64) + 1;
+    m &= !(t as u64).wrapping_add(1);
     e &= -(t as i32);
 
     fpr(s, e, m)

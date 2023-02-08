@@ -2248,6 +2248,12 @@ poly_big_to_fp(fpr *d, const uint32_t *f, size_t flen, size_t fstride,
 	}
 }
 
+void
+poly_big_to_fp_func(fpr *d, const uint32_t *f, size_t flen, size_t fstride,
+	unsigned logn) {
+	poly_big_to_fp(d, f, flen, fstride, logn);
+	}
+
 /*
  * Convert a polynomial to small integers. Source values are supposed
  * to be one-word integers, signed over 31 bits. Returned value is 0
@@ -2274,6 +2280,11 @@ poly_big_to_small(int8_t *d, const uint32_t *s, int lim, unsigned logn)
 		d[u] = (int8_t)z;
 	}
 	return 1;
+}
+int
+poly_big_to_small_func(int8_t *d, const uint32_t *s, int lim, unsigned logn)
+{
+  return poly_big_to_small(d, s, lim, logn);
 }
 
 /*
@@ -2316,6 +2327,12 @@ poly_sub_scaled(uint32_t *restrict F, size_t Flen, size_t Fstride,
 		}
 	}
 }
+
+void poly_sub_scaled_func(uint32_t *restrict F, size_t Flen, size_t Fstride,
+     	const uint32_t *restrict f, size_t flen, size_t fstride,
+     	const int32_t *restrict k, uint32_t sch, uint32_t scl, unsigned logn) {
+     	poly_sub_scaled(F, Flen, Fstride, f, flen, fstride, k, sch, scl, logn);
+     	}
 
 /*
  * Subtract k*f from F. Coefficients of polynomial k are small integers
@@ -2386,6 +2403,16 @@ poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
 	}
 }
 
+void
+poly_sub_scaled_ntt_func(uint32_t *restrict F, size_t Flen, size_t Fstride,
+	const uint32_t *restrict f, size_t flen, size_t fstride,
+	const int32_t *restrict k, uint32_t sch, uint32_t scl, unsigned logn,
+	uint32_t *restrict tmp)
+{
+poly_sub_scaled_ntt(F, Flen, Fstride, f, flen, fstride, k, sch, scl, logn, tmp);
+
+}
+
 /* ==================================================================== */
 
 
@@ -2399,6 +2426,26 @@ poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
  */
 static inline uint64_t
 get_rng_u64(inner_shake256_context *rng)
+{
+	/*
+	 * We enforce little-endian representation.
+	 */
+
+	uint8_t tmp[8];
+
+	inner_shake256_extract(rng, tmp, sizeof tmp);
+	return (uint64_t)tmp[0]
+		| ((uint64_t)tmp[1] << 8)
+		| ((uint64_t)tmp[2] << 16)
+		| ((uint64_t)tmp[3] << 24)
+		| ((uint64_t)tmp[4] << 32)
+		| ((uint64_t)tmp[5] << 40)
+		| ((uint64_t)tmp[6] << 48)
+		| ((uint64_t)tmp[7] << 56);
+}
+
+uint64_t
+get_rng_u64_func(inner_shake256_context *rng)
 {
 	/*
 	 * We enforce little-endian representation.
@@ -2517,6 +2564,12 @@ mkgauss(RNG_CONTEXT *rng, unsigned logn)
 	}
 	return val;
 }
+int
+mkgauss_func(RNG_CONTEXT *rng, unsigned logn)
+{
+ return mkgauss(rng, logn);
+}
+
 
 /*
  * The MAX_BL_SMALL[] and MAX_BL_LARGE[] contain the lengths, in 31-bit
@@ -2633,6 +2686,12 @@ poly_small_sqnorm(const int8_t *f, unsigned logn)
 	return s | -(ng >> 31);
 }
 
+uint32_t
+poly_small_sqnorm_func(const int8_t *f, unsigned logn)
+{
+  return poly_small_sqnorm(f, logn);
+}
+
 /*
  * Align (upwards) the provided 'data' pointer with regards to 'base'
  * so that the offset is a multiple of the size of 'fpr'.
@@ -2651,6 +2710,12 @@ align_fpr(void *base, void *data)
 		k += (sizeof(fpr)) - km;
 	}
 	return (fpr *)(cb + k);
+}
+
+fpr *
+align_fpr_func(void *base, void *data)
+{
+align_fpr(base, data);
 }
 
 /*
@@ -2673,6 +2738,12 @@ align_u32(void *base, void *data)
 	return (uint32_t *)(cb + k);
 }
 
+uint32_t *
+align_u32_func(void *base, void *data)
+{
+align_u32(base, data);
+}
+
 /*
  * Convert a small vector to floating point.
  */
@@ -2685,6 +2756,12 @@ poly_small_to_fp(fpr *x, const int8_t *f, unsigned logn)
 	for (u = 0; u < n; u ++) {
 		x[u] = fpr_of(f[u]);
 	}
+}
+
+void
+poly_small_to_fp_func(fpr *x, const int8_t *f, unsigned logn)
+{
+poly_small_to_fp(x, f, logn);
 }
 
 /*
@@ -2829,6 +2906,12 @@ make_fg_step(uint32_t *data, unsigned logn, unsigned depth,
 		}
 	}
 }
+void
+make_fg_step_func(uint32_t *data, unsigned logn, unsigned depth,
+	int in_ntt, int out_ntt)
+{
+make_fg_step(data, logn, depth, in_ntt, out_ntt);
+}
 
 /*
  * Compute f and g at a specific depth, in RNS notation.
@@ -2878,6 +2961,12 @@ make_fg(uint32_t *data, const int8_t *f, const int8_t *g,
 		make_fg_step(data, logn - d, d,
 			d != 0, (d + 1) < depth || out_ntt);
 	}
+}
+void
+make_fg_func(uint32_t *data, const int8_t *f, const int8_t *g,
+	unsigned logn, unsigned depth, int out_ntt)
+{
+make_fg(data, f, g, logn, depth, out_ntt);
 }
 
 /*
@@ -2940,6 +3029,13 @@ solve_NTRU_deepest(unsigned logn_top,
 	}
 
 	return 1;
+}
+
+int
+solve_NTRU_deepest_func(unsigned logn_top,
+	const int8_t *f, const int8_t *g, uint32_t *tmp)
+{
+return solve_NTRU_deepest(logn_top, f, g, tmp);
 }
 
 /*
@@ -3010,7 +3106,7 @@ solve_NTRU_intermediate(unsigned logn_top,
 	Ft = tmp;
 	Gt = Ft + n * llen;
 	t1 = Gt + n * llen;
-	memmove(t1, ft, 2 * n * slen * sizeof *ft);
+//	memmove(t1, ft, 2 * n * slen * sizeof *ft);
 	ft = t1;
 	gt = ft + slen * n;
 	t1 = gt + slen * n;
@@ -3018,7 +3114,7 @@ solve_NTRU_intermediate(unsigned logn_top,
 	/*
 	 * Move Fd and Gd _after_ f and g.
 	 */
-	memmove(t1, Fd, 2 * hn * dlen * sizeof *Fd);
+//	memmove(t1, Fd, 2 * hn * dlen * sizeof *Fd);
 	Fd = t1;
 	Gd = Fd + hn * dlen;
 
@@ -3493,6 +3589,13 @@ solve_NTRU_intermediate(unsigned logn_top,
 	return 1;
 }
 
+int
+solve_NTRU_intermediate_func(unsigned logn_top,
+	const int8_t *f, const int8_t *g, unsigned depth, uint32_t *tmp)
+{
+return solve_NTRU_intermediate(logn_top, f, g, depth, tmp);
+}
+
 /*
  * Solving the NTRU equation, binary case, depth = 1. Upon entry, the
  * F and G from the previous level should be in the tmp[] array.
@@ -3873,6 +3976,13 @@ solve_NTRU_binary_depth1(unsigned logn_top,
 	return 1;
 }
 
+int
+solve_NTRU_binary_depth1_func(unsigned logn_top,
+	const int8_t *f, const int8_t *g, uint32_t *tmp)
+{
+return solve_NTRU_binary_depth1(logn_top, f, g, tmp);
+}
+
 /*
  * Solving the NTRU equation, top level. Upon entry, the F and G
  * from the previous level should be in the tmp[] array.
@@ -4136,6 +4246,12 @@ solve_NTRU_binary_depth0(unsigned logn,
 
 	return 1;
 }
+int
+solve_NTRU_binary_depth0_func(unsigned logn,
+	const int8_t *f, const int8_t *g, uint32_t *tmp)
+{
+return solve_NTRU_binary_depth0(logn, f, g, tmp);
+}
 
 /*
  * Solve the NTRU equation. Returned value is 1 on success, 0 on error.
@@ -4249,6 +4365,12 @@ solve_NTRU(unsigned logn, int8_t *F, int8_t *G,
 
 	return 1;
 }
+int
+solve_NTRU_func(unsigned logn, int8_t *F, int8_t *G,
+	const int8_t *f, const int8_t *g, int lim, uint32_t *tmp)
+{
+return solve_NTRU(logn, F, G, f, g, lim, tmp);
+}
 
 /*
  * Generate a random polynomial with a Gaussian distribution. This function
@@ -4292,6 +4414,11 @@ poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 		}
 		f[u] = (int8_t)s;
 	}
+}
+void
+poly_small_mkgauss_func(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
+{
+poly_small_mkgauss(rng, f, logn);
 }
 
 /* see falcon.h */
@@ -4453,4 +4580,13 @@ falcon_inner_keygen(inner_shake256_context *rng,
 		 */
 		break;
 	}
+}
+
+void
+falcon_inner_keygen_func(inner_shake256_context *rng,
+	int8_t *f, int8_t *g, int8_t *F, int8_t *G, uint16_t *h,
+	unsigned logn, uint8_t *tmp)
+{
+falcon_inner_keygen(rng, f, g, F, g, h, logn, tmp);
+
 }

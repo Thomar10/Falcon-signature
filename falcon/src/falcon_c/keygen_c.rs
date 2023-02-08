@@ -32,44 +32,25 @@ extern "C" {
     pub fn zint_add_scaled_mul_small_func(x: *const u32, xlen: usize, y: *const u32, ylen: usize, k: i32, sch: u32, scl: u32);
     pub fn zint_sub_scaled_func(x: *const u32, xlen: usize, y: *const u32, ylen: usize, sch: u32, scl: u32);
     pub fn zint_one_to_plain_func(x: *const u32) -> i32;
-    #[allow(dead_code)]
-    pub fn poly_big_to_fp(d: u64, xlen: u64, f: *const u32, flen: u64, fstride: u64, logn: u32);
-    #[allow(dead_code)]
-    pub fn poly_big_to_small(d: *const i8, s: *const u32, lim: i32, logn: u32) -> i32;
-    #[allow(dead_code)]
-    pub fn poly_sub_scaled(F: *const u32, Flen: usize, Fstride: usize, f: *const u32, flen: usize, fstride: usize, k: *const i32, sch: u32, scl: u32, logn: u32);
-    #[allow(dead_code)]
-    pub fn poly_sub_scaled_ntt(F: *const u32, Flen: usize, Fstride: usize, f: *const u32, flen: usize, fstride: usize, k: *const i32, sch: u32, scl: u32, logn: u32, tmp: *const u32);
-    #[allow(dead_code)]
-    pub fn get_rng_u64(rng: *const InnerShake256Context) -> u64;
-    #[allow(dead_code)]
-    pub fn mkgauss(rng: *const InnerShake256Context, logn: u32) -> i32;
-    #[allow(dead_code)]
-    pub fn poly_small_sqnorm(f: *const i8, logn: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn align_fpr(base: *const c_void, data: *const c_void) -> *const u64;
-    #[allow(dead_code)]
-    pub fn align_u32(base: *const c_void, data: *const c_void) -> *const u32;
-    #[allow(dead_code)]
-    pub fn poly_small_to_fp(x: *const u64, f: *const i8, logn: u32);
-    #[allow(dead_code)]
-    pub fn make_fg_step(data: *const u32, logn: u32, depth: u32, in_ntt: i32, out_ntt: i32);
-    #[allow(dead_code)]
-    pub fn make_fg(data: *const u32, f: *const i8, g: *const i8, logn: u32, depth: u32, out_ntt: i32);
-    #[allow(dead_code)]
-    pub fn solve_NTRU_deepest(logn_top: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
-    #[allow(dead_code)]
-    pub fn solve_NTRU_intermediate(logn_top: u32, f: *const i8, g: *const i8, depth: u32, tmp: *const u32) -> i32;
-    #[allow(dead_code)]
-    pub fn solve_NTRU_binary_depth1(logn_top: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
-    #[allow(dead_code)]
-    pub fn solve_NTRU_binary_depth0(logn_top: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
-    #[allow(dead_code)]
-    pub fn solve_NTRU(logn_top: u32, F: *const i8, G: *const i8, f: *const i8, g: *const i8, lim: i32, tmp: *const u32) -> i32;
-    #[allow(dead_code)]
-    pub fn poly_small_mkgauss(rng: *const InnerShake256Context, f: *const i8, logn: u32);
-    #[allow(dead_code)]
-    pub fn keygen(rng: *const InnerShake256Context, f: *const i8, g: *const i8, F: *const i8, G: *const i8, h: *const u16, logn: u32, tmp: *const u8);
+    pub fn poly_big_to_fp_func(d: *const u64, f: *const u32, flen: usize, fstride: usize, logn: u32);
+    pub fn poly_big_to_small_func(d: *const i8, s: *const u32, lim: i32, logn: u32) -> i32;
+    pub fn poly_sub_scaled_func(F: *const u32, Flen: usize, Fstride: usize, f: *const u32, flen: usize, fstride: usize, k: *const i32, sch: u32, scl: u32, logn: u32);
+    pub fn poly_sub_scaled_ntt_func(F: *const u32, Flen: usize, Fstride: usize, f: *const u32, flen: usize, fstride: usize, k: *const i32, sch: u32, scl: u32, logn: u32, tmp: *const u32);
+    pub fn get_rng_u64_func(rng: *const InnerShake256Context) -> u64;
+    pub fn mkgauss_func(rng: *const InnerShake256Context, logn: u32) -> i32;
+    pub fn poly_small_sqnorm_func(f: *const i8, logn: u32) -> u32;
+    pub fn align_fpr_func(base: *const c_void, data: *const c_void) -> *const u64;
+    pub fn align_u32_func(base: *const c_void, data: *const c_void) -> *const u32;
+    pub fn poly_small_to_fp_func(x: *const u64, f: *const i8, logn: u32);
+    pub fn make_fg_step_func(data: *const u32, logn: u32, depth: usize, in_ntt: bool, out_ntt: bool);
+    pub fn make_fg_func(data: *const u32, f: *const i8, g: *const i8, logn: u32, depth: u32, out_ntt: bool);
+    pub fn solve_NTRU_deepest_func(logn_top: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
+    pub fn solve_NTRU_intermediate_func(logn_top: u32, f: *const i8, g: *const i8, depth: u32, tmp: *const u32) -> i32;
+    pub fn solve_NTRU_binary_depth1_func(logn_top: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
+    pub fn solve_NTRU_binary_depth0_func(logn_top: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
+    pub fn solve_NTRU_func(logn_top: u32, F: *const i8, G: *const i8, f: *const i8, g: *const i8, lim: i32, tmp: *const u32) -> i32;
+    pub fn poly_small_mkgauss_func(rng: *const InnerShake256Context, f: *const i8, logn: u32);
+    pub fn falcon_inner_keygen(rng: *const InnerShake256Context, f: *const i8, g: *const i8, F: *const i8, G: *const i8, h: *const u16, logn: u32, tmp: *const u8);
 }
 
 #[repr(C)]
