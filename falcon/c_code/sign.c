@@ -166,7 +166,7 @@ ffLDL_fft_func(fpr *restrict tree, const fpr *restrict g00,
 	const fpr *restrict g01, const fpr *restrict g11,
 	unsigned logn, fpr *restrict tmp)
 {
-return ffLDL_fft(tree, g00, g01, g11, logn, tmp);
+    return ffLDL_fft(tree, g00, g01, g11, logn, tmp);
 }
 
 /*
@@ -196,6 +196,11 @@ ffLDL_binary_normalize(fpr *tree, unsigned orig_logn, unsigned logn)
 	}
 }
 
+void
+ffLDL_binary_normalize_func(fpr *tree, unsigned orig_logn, unsigned logn) {
+    return ffLDL_binary_normalize(tree, orig_logn, logn)
+}
+
 /* =================================================================== */
 
 /*
@@ -213,6 +218,10 @@ smallints_to_fpr(fpr *r, const int8_t *t, unsigned logn)
 	}
 }
 
+void smallints_to_fpr_func(fpr *r, const int8_t *t, unsigned logn) {
+    return smallints_to_fpr(r, t, logn);
+}
+
 /*
  * The expanded private key contains:
  *  - The B0 matrix (four elements)
@@ -226,10 +235,22 @@ skoff_b00(unsigned logn)
 	return 0;
 }
 
+size_t
+skoff_b00_func(unsigned logn)
+{
+	return skoff_b00(logn);
+}
+
 static inline size_t
 skoff_b01(unsigned logn)
 {
 	return MKN(logn);
+}
+
+size_t
+skoff_b01_func(unsigned logn)
+{
+	return skoff_b01(logn);
 }
 
 static inline size_t
@@ -238,16 +259,34 @@ skoff_b10(unsigned logn)
 	return 2 * MKN(logn);
 }
 
+size_t
+skoff_b10_func(unsigned logn)
+{
+	return skoff_b10(logn);
+}
+
 static inline size_t
 skoff_b11(unsigned logn)
 {
 	return 3 * MKN(logn);
 }
 
+size_t
+skoff_b11_func(unsigned logn)
+{
+	return skoff_b11(logn);
+}
+
 static inline size_t
 skoff_tree(unsigned logn)
 {
 	return 4 * MKN(logn);
+}
+
+size_t
+skoff_tree_func(unsigned logn)
+{
+	return skoff_tree(logn);
 }
 
 /* see inner.h */
@@ -432,6 +471,15 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	ffSampling_fft_dyntree(samp, samp_ctx, z0, z0 + hn,
 		g00, g00 + hn, g01, orig_logn, logn - 1, z0 + n);
 	poly_merge_fft(t0, z0, z0 + hn, logn);
+}
+
+void
+ffSampling_fft_dyntree_func(samplerZ samp, void *samp_ctx,
+	fpr *restrict t0, fpr *restrict t1,
+	fpr *restrict g00, fpr *restrict g01, fpr *restrict g11,
+	unsigned orig_logn, unsigned logn, fpr *restrict tmp)
+{
+    return ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, orig_logn, logn, tmp);
 }
 
 /*
@@ -660,6 +708,15 @@ ffSampling_fft(samplerZ samp, void *samp_ctx,
 	poly_merge_fft(z0, tmp, tmp + hn, logn);
 }
 
+void
+ffSampling_fft_func(samplerZ samp, void *samp_ctx,
+	fpr *restrict z0, fpr *restrict z1,
+	const fpr *restrict tree,
+	const fpr *restrict t0, const fpr *restrict t1, unsigned logn,
+	fpr *restrict tmp) {
+    return ffSampling_fft(samp, samp_ctx, z0, z1, tree, t0, t1, logn, tmp);
+}
+
 /*
  * Compute a signature: the signature contains two vectors, s1 and s2.
  * The s1 vector is not returned. The squared norm of (s1,s2) is
@@ -775,6 +832,15 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 		return 1;
 	}
 	return 0;
+}
+
+int
+do_sign_tree_func(samplerZ samp, void *samp_ctx, int16_t *s2,
+	const fpr *restrict expanded_key,
+	const uint16_t *hm,
+	unsigned logn, fpr *restrict tmp)
+{
+    return do_sign_tree(samp, samp_ctx, s2, expanded_key, hm, logn, tmp);
 }
 
 /*
@@ -984,6 +1050,15 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	return 0;
 }
 
+int
+do_sign_dyn_func(samplerZ samp, void *samp_ctx, int16_t *s2,
+	const int8_t *restrict f, const int8_t *restrict g,
+	const int8_t *restrict F, const int8_t *restrict G,
+	const uint16_t *hm, unsigned logn, fpr *restrict tmp)
+{
+    return do_sign_dyn(samp, samp_ctx, s2, f, g, F, G, hm, logn, tmp);
+}
+
 /*
  * Sample an integer value along a half-gaussian distribution centered
  * on zero and standard deviation 1.8205, with a precision of 72 bits.
@@ -1103,6 +1178,12 @@ BerExp(prng *p, fpr x, fpr ccs)
 		w = prng_get_u8(p) - ((uint32_t)(z >> i) & 0xFF);
 	} while (!w && i > 0);
 	return (int)(w >> 31);
+}
+
+int
+BerExp_func(prng *p, fpr x, fpr ccs)
+{
+    return BerExp(p, x, ccs);
 }
 
 /*
