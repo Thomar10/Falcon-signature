@@ -3,7 +3,6 @@ use crate::falcon_c::shake_c::InnerShake256Context;
 
 #[link(name = "keygen", kind = "static")]
 extern "C" {
-    pub fn wave_func(x: u32) -> u32;
     pub fn modp_set_func(x: i32, p: u32) -> u32;
     pub fn modp_norm_func(x: u32, p: u32) -> i32;
     pub fn modp_ninv31_func(p: u32) -> u32;

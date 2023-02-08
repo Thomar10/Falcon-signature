@@ -1736,7 +1736,115 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	const uint32_t *restrict x, const uint32_t *restrict y,
 	size_t len, uint32_t *restrict tmp)
 {
-
+	/*
+	 * Algorithm is an extended binary GCD. We maintain 6 values
+	 * a, b, u0, u1, v0 and v1 with the following invariants:
+	 *
+	 *  a = x*u0 - y*v0
+	 *  b = x*u1 - y*v1
+	 *  0 <= a <= x
+	 *  0 <= b <= y
+	 *  0 <= u0 < y
+	 *  0 <= v0 < x
+	 *  0 <= u1 <= y
+	 *  0 <= v1 < x
+	 *
+	 * Initial values are:
+	 *
+	 *  a = x   u0 = 1   v0 = 0
+	 *  b = y   u1 = y   v1 = x-1
+	 *
+	 * Each iteration reduces either a or b, and maintains the
+	 * invariants. Algorithm stops when a = b, at which point their
+	 * common value is GCD(a,b) and (u0,v0) (or (u1,v1)) contains
+	 * the values (u,v) we want to return.
+	 *
+	 * The formal definition of the algorithm is a sequence of steps:
+	 *
+	 *  - If a is even, then:
+	 *        a <- a/2
+	 *        u0 <- u0/2 mod y
+	 *        v0 <- v0/2 mod x
+	 *
+	 *  - Otherwise, if b is even, then:
+	 *        b <- b/2
+	 *        u1 <- u1/2 mod y
+	 *        v1 <- v1/2 mod x
+	 *
+	 *  - Otherwise, if a > b, then:
+	 *        a <- (a-b)/2
+	 *        u0 <- (u0-u1)/2 mod y
+	 *        v0 <- (v0-v1)/2 mod x
+	 *
+	 *  - Otherwise:
+	 *        b <- (b-a)/2
+	 *        u1 <- (u1-u0)/2 mod y
+	 *        v1 <- (v1-v0)/2 mod y
+	 *
+	 * We can show that the operations above preserve the invariants:
+	 *
+	 *  - If a is even, then u0 and v0 are either both even or both
+	 *    odd (since a = x*u0 - y*v0, and x and y are both odd).
+	 *    If u0 and v0 are both even, then (u0,v0) <- (u0/2,v0/2).
+	 *    Otherwise, (u0,v0) <- ((u0+y)/2,(v0+x)/2). Either way,
+	 *    the a = x*u0 - y*v0 invariant is preserved.
+	 *
+	 *  - The same holds for the case where b is even.
+	 *
+	 *  - If a and b are odd, and a > b, then:
+	 *
+	 *      a-b = x*(u0-u1) - y*(v0-v1)
+	 *
+	 *    In that situation, if u0 < u1, then x*(u0-u1) < 0, but
+	 *    a-b > 0; therefore, it must be that v0 < v1, and the
+	 *    first part of the update is: (u0,v0) <- (u0-u1+y,v0-v1+x),
+	 *    which preserves the invariants. Otherwise, if u0 > u1,
+	 *    then u0-u1 >= 1, thus x*(u0-u1) >= x. But a <= x and
+	 *    b >= 0, hence a-b <= x. It follows that, in that case,
+	 *    v0-v1 >= 0. The first part of the update is then:
+	 *    (u0,v0) <- (u0-u1,v0-v1), which again preserves the
+	 *    invariants.
+	 *
+	 *    Either way, once the subtraction is done, the new value of
+	 *    a, which is the difference of two odd values, is even,
+	 *    and the remaining of this step is a subcase of the
+	 *    first algorithm case (i.e. when a is even).
+	 *
+	 *  - If a and b are odd, and b > a, then the a similar
+	 *    argument holds.
+	 *
+	 * The values a and b start at x and y, respectively. Since x
+	 * and y are odd, their GCD is odd, and it is easily seen that
+	 * all steps conserve the GCD (GCD(a-b,b) = GCD(a, b);
+	 * GCD(a/2,b) = GCD(a,b) if GCD(a,b) is odd). Moreover, either a
+	 * or b is reduced by at least one bit at each iteration, so
+	 * the algorithm necessarily converges on the case a = b, at
+	 * which point the common value is the GCD.
+	 *
+	 * In the algorithm expressed above, when a = b, the fourth case
+	 * applies, and sets b = 0. Since a contains the GCD of x and y,
+	 * which are both odd, a must be odd, and subsequent iterations
+	 * (if any) will simply divide b by 2 repeatedly, which has no
+	 * consequence. Thus, the algorithm can run for more iterations
+	 * than necessary; the final GCD will be in a, and the (u,v)
+	 * coefficients will be (u0,v0).
+	 *
+	 *
+	 * The presentation above is bit-by-bit. It can be sped up by
+	 * noticing that all decisions are taken based on the low bits
+	 * and high bits of a and b. We can extract the two top words
+	 * and low word of each of a and b, and compute reduction
+	 * parameters pa, pb, qa and qb such that the new values for
+	 * a and b are:
+	 *    a' = (a*pa + b*pb) / (2^31)
+	 *    b' = (a*qa + b*qb) / (2^31)
+	 * the two divisions being exact. The coefficients are obtained
+	 * just from the extracted words, and may be slightly off, requiring
+	 * an optional correction: if a' < 0, then we replace pa with -pa
+	 * and pb with -pb. Each such step will reduce the total length
+	 * (sum of lengths of a and b) by at least 30 bits at each
+	 * iteration.
+	 */
 	uint32_t *u0, *u1, *v0, *v1, *a, *b;
 	uint32_t x0i, y0i;
 	uint32_t num, rc;
@@ -1846,7 +1954,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 		pb = 0;
 		qa = 0;
 		qb = 1;
-		for (i = 0; i < 1; i ++) {
+		for (i = 0; i < 31; i ++) {
 			/*
 			 * At each iteration:
 			 *
@@ -1947,9 +2055,6 @@ return zint_bezout(u, v, x, y, len ,tmp);
 
 }
 
-uint32_t wave_func(uint32_t x) {
-return ~x;
-}
 
 /*
  * Add k*y*2^sc to x. The result is assumed to fit in the array of

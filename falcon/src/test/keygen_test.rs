@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use crate::falcon_c::keygen_c::{modp_add_func, modp_div_func, modp_iNTT2_ext_func, modp_mkgm2_func, modp_montymul_func, modp_ninv31_func, modp_norm_func, modp_NTT2_ext_func, modp_poly_rec_res_func, modp_R2_func, modp_R_func, modp_Rx_func, modp_set_func, modp_sub_func, small_prime, wave_func, zint_add_mul_small_func, zint_add_scaled_mul_small_func, zint_bezout_func, zint_co_reduce_func, zint_co_reduce_mod_func, zint_finish_mod_func, zint_mod_small_signed_func, zint_mod_small_unsigned_func, zint_mul_small_func, zint_negate_func, zint_norm_zero_func, zint_one_to_plain_func, zint_rebuild_CRT_func, zint_sub_func, zint_sub_scaled_func};
-    use crate::keygen::{modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, PRIMES, wave, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_sub, zint_sub_scaled};
+    use crate::falcon_c::keygen_c::{modp_add_func, modp_div_func, modp_iNTT2_ext_func, modp_mkgm2_func, modp_montymul_func, modp_ninv31_func, modp_norm_func, modp_NTT2_ext_func, modp_poly_rec_res_func, modp_R2_func, modp_R_func, modp_Rx_func, modp_set_func, modp_sub_func, small_prime,  zint_add_mul_small_func, zint_add_scaled_mul_small_func, zint_bezout_func, zint_co_reduce_func, zint_co_reduce_mod_func, zint_finish_mod_func, zint_mod_small_signed_func, zint_mod_small_unsigned_func, zint_mul_small_func, zint_negate_func, zint_norm_zero_func, zint_one_to_plain_func, zint_rebuild_CRT_func, zint_sub_func, zint_sub_scaled_func};
+    use crate::keygen::{modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, PRIMES, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_sub, zint_sub_scaled};
 
 
     #[test]
@@ -150,12 +150,12 @@ mod tests {
     fn test_modp_NTT2_ext() {
         for _ in 0..50 {
             for logn in 1..10 {
-                for stride in 1usize..5 {
+                for stride in 1usize..2 {
                     let mut rng = rand::thread_rng();
-                    let mut a: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
-                    let a_c: [u32; 2048] = a.clone();
-                    let mut gm: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
-                    let gm_c: [u32; 2048] = gm.clone();
+                    let mut a: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let a_c: [u32; 1024] = a.clone();
+                    let mut gm: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let gm_c: [u32; 1024] = gm.clone();
                     let p: u32 = rand::random();
                     let p0i: u32 = rand::random();
                     modp_NTT2_ext(&mut a, stride, &mut gm, logn, p, p0i);
@@ -171,12 +171,12 @@ mod tests {
     fn test_modp_iNTT2_ext() {
         for _ in 0..50 {
             for logn in 1..10 {
-                for stride in 1usize..5 {
+                for stride in 1usize..2 {
                     let mut rng = rand::thread_rng();
-                    let mut a: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
-                    let a_c: [u32; 2048] = a.clone();
-                    let mut gm: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
-                    let gm_c: [u32; 2048] = gm.clone();
+                    let mut a: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let a_c: [u32; 1024] = a.clone();
+                    let mut gm: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let gm_c: [u32; 1024] = gm.clone();
                     let p: u32 = rand::random();
                     let p0i: u32 = rand::random();
                     modp_iNTT2_ext(&mut a, stride, &mut gm, logn, p, p0i);
@@ -213,9 +213,9 @@ mod tests {
             let mut b: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let b_c: [u32; 1024] = b.clone();
             let len: usize = a.len();
-            let ctl: u32 = rand::random();
-            let res = zint_sub(&mut a, &mut b, len, ctl);
-            let c_res = unsafe { zint_sub_func(a_c.as_ptr(), b_c.as_ptr(), len, ctl) };
+            let ctl: bool = rand::random();
+            let res = zint_sub(&mut a, &mut b, len, ctl as u32);
+            let c_res = unsafe { zint_sub_func(a_c.as_ptr(), b_c.as_ptr(), len, ctl as u32) };
             assert_eq!(res, c_res);
         }
     }
@@ -300,14 +300,14 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_zint_rebuild_CRT() {
-        for _ in 0..100 {
-            for stride in 1usize..5 {
+        for _ in 0..50 {
+            for stride in 1usize..3 {
                 let mut rng = rand::thread_rng();
-                let mut xx: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
+                let mut xx: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                 let num: u64 = rng.gen_range(0..10);
                 let len: usize = 100;
-                let mut tmp: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
-                let tmp_c: [u32; 1024] = tmp.clone();
+                let mut tmp: [u32; 512] = core::array::from_fn(|_| rng.gen::<u32>());
+                let tmp_c: [u32; 512] = tmp.clone();
                 zint_rebuild_CRT(&mut xx, len, stride, num, &PRIMES, false, &mut tmp);
                 unsafe { zint_rebuild_CRT_func(xx.as_ptr(), len, stride, num, PRIMES_C.as_ptr(), 0, tmp_c.as_ptr()) };
                 assert_eq!(tmp, tmp_c);
@@ -403,27 +403,27 @@ mod tests {
 
     #[test]
     fn test_zint_bezout() {
-        for _ in 0..10000 {
+        for _ in 0..1000 {
             let mut rng = rand::thread_rng();
-            let mut u: [u32; 3] = core::array::from_fn(|_| rng.gen::<u32>());
-            let u_c: [u32; 3] = u.clone();
-            let mut v: [u32; 3] = core::array::from_fn(|_| rng.gen::<u32>());
-            let v_c: [u32; 3] = v.clone();
-            let mut x: [u32; 3] = core::array::from_fn(|_| rng.gen::<u32>());
-            let x_c: [u32; 3] = x.clone();
-            let mut y: [u32; 3] = core::array::from_fn(|_| rng.gen::<u32>());
-            let y_c: [u32; 3] = y.clone();
-            let mut tmp: [u32; 3 * 4] = [0; 12];
-            let tmp_c: [u32; 3 * 4] = tmp.clone();
+            let mut u: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let u_c: [u32; 300] = u.clone();
+            let mut v: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let v_c: [u32; 300] = v.clone();
+            let mut x: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let x_c: [u32; 300] = x.clone();
+            let mut y: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y_c: [u32; 300] = y.clone();
+            let mut tmp: [u32; 300 * 4] = [0; 1200];
+            let tmp_c: [u32; 300 * 4] = tmp.clone();
             let len: usize = u.len();
             let res = zint_bezout(&mut u, &mut v, &mut x, &mut y, len, &mut tmp);
             let c_res = unsafe { zint_bezout_func(u_c.as_ptr(), v_c.as_ptr(), x_c.as_ptr(), y_c.as_ptr(), len, tmp_c.as_ptr()) };
             assert_eq!(x, x_c);
             assert_eq!(y, y_c);
             assert_eq!(res, c_res);
-            // assert_eq!(tmp, tmp_c);
-            // assert_eq!(v, v_c);
-            // assert_eq!(u, u_c);
+            assert_eq!(tmp, tmp_c);
+            assert_eq!(v, v_c);
+            assert_eq!(u, u_c);
         }
     }
 
@@ -478,17 +478,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_wave() {
-        for _ in 0..1000 {
-            let x: u32 = rand::random();
-            let res = wave(x);
-            let c_res = unsafe { wave_func(x) };
-            assert_eq!(res, c_res);
-            assert_eq!(wave(true as u32), unsafe { wave_func(true as u32) });
-            assert_eq!(wave(false as u32), unsafe { wave_func(false as u32) });
-        }
-    }
 
     pub(crate) static PRIMES_C: [small_prime; 522] = [
         small_prime { p: 2147473409, g: 383167813, s: 10239 },

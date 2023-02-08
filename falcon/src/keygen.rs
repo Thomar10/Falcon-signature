@@ -598,7 +598,7 @@ pub fn zint_co_reduce_mod_index(a: &mut [u32], a_index: usize, b: &mut [u32], b_
 }
 
 pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], len: usize, tmp: &mut [u32]) -> i32 {
-    let (u_index, u1_index, v_index, v1_index, a_index, b_index): (usize, usize, usize, usize, usize, usize);
+    let ( u1_index, v1_index, a_index, b_index): (usize,usize, usize, usize);
     let (x0i, y0i): (u32, u32);
     let (mut num, mut rc): (u32, u32);
     let mut j: usize;
@@ -607,8 +607,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
         return 0;
     }
 
-    u_index = 0;
-    v_index = 0;
+
     u1_index = 0;
     v1_index = len;
     a_index = 2 * len;
@@ -674,7 +673,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
         pb = 0;
         qa = 0;
         qb = 1;
-        for i in 0..1 {
+        for i in 0..31 {
             let (rt, oa, ob, c_ab, c_ba, c_a): (u32, u32, u32, u32, u32, u32);
             let rz: u64;
 
@@ -689,18 +688,18 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
             c_a = c_ab | (oa ^ 1);
 
             a_lo = a_lo.wrapping_sub(b_lo & (!c_ab).wrapping_add(1));
-            a_hi = a_hi.wrapping_sub(b_hi & (!c_ab as u64).wrapping_add(1));
-            pa -= qa & -(c_ba as i64);
-            pb -= qb & -(c_ba as i64);
-            b_lo = b_lo.wrapping_sub(a_lo & (!c_ab).wrapping_add(1));
-            b_hi = b_hi.wrapping_sub(a_hi & (!c_ab as u64).wrapping_add(1));
+            a_hi = a_hi.wrapping_sub(b_hi & (!(c_ab as u64)).wrapping_add(1));
+            pa -= qa & -(c_ab as i64);
+            pb -= qb & -(c_ab as i64);
+            b_lo = b_lo.wrapping_sub(a_lo & (!c_ba).wrapping_add(1));
+            b_hi = b_hi.wrapping_sub(a_hi & (!(c_ba as u64)).wrapping_add(1));
             qa -= pa & -(c_ba as i64);
             qb -= pb & -(c_ba as i64);
 
             a_lo = a_lo.wrapping_add( a_lo & (c_a.wrapping_sub(1)));
             pa += pa & ((c_a as i64) - 1);
             pb += pb & ((c_a as i64) - 1);
-            a_hi ^= (a_hi ^ (a_hi >> 1)) & (!c_a).wrapping_add(1) as u64;
+            a_hi ^= (a_hi ^ (a_hi >> 1)) & (!(c_a as u64)).wrapping_add(1);
             b_lo = b_lo.wrapping_add(b_lo & (!c_a).wrapping_add(1));
             qa += qa & -(c_a as i64);
             qb += qb & -(c_a as i64);
@@ -714,7 +713,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
         qa -= (qa + qa) & -((r >> 1) as i64);
         qb -= (qb + qb) & -((r >> 1) as i64);
 
-        zint_co_reduce_mod_index(u, u_index, tmp, u1_index, y, len, y0i, pa, pb, qa, qb);
+        zint_co_reduce_mod_index(u, 0, tmp, u1_index, y, len, y0i, pa, pb, qa, qb);
         zint_co_reduce_mod_index(v, 0, tmp, v1_index, x, len, x0i, pa, pb, qa, qb);
 
         num -= 30;
@@ -727,10 +726,6 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
     }
     ((1 - ((rc | (!rc).wrapping_add(1)) >> 31)) & x[0] & y[0]) as i32
 
-}
-
-pub fn wave(x: u32) -> u32 {
-    !x
 }
 
 pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &mut [u32], ylen: usize, k: i32, sch: usize, scl: u32) {
