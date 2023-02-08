@@ -198,7 +198,7 @@ ffLDL_binary_normalize(fpr *tree, unsigned orig_logn, unsigned logn)
 
 void
 ffLDL_binary_normalize_func(fpr *tree, unsigned orig_logn, unsigned logn) {
-    return ffLDL_binary_normalize(tree, orig_logn, logn)
+    return ffLDL_binary_normalize(tree, orig_logn, logn);
 }
 
 /* =================================================================== */
