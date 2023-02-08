@@ -64,6 +64,10 @@ ffLDL_treesize(unsigned logn)
 	return (logn + 1) << logn;
 }
 
+unsigned ffLDL_treesize_func(unsigned logn) {
+    return ffLDL_treesize(logn);
+}
+
 /*
  * Inner function for ffLDL_fft(). It expects the matrix to be both
  * auto-adjoint and quasicyclic; also, it uses the source operands
@@ -89,7 +93,7 @@ ffLDL_fft_inner(fpr *restrict tree,
 	 * and the diagonal of D. Since d00 = g0, we just write d11
 	 * into tmp.
 	 */
-	poly_LDLmv_fft(tmp, tree, g0, g1, g0, logn);
+	falcon_inner_poly_LDLmv_fft(tmp, tree, g0, g1, g0, logn);
 
 	/*
 	 * Split d00 (currently in g0) and d11 (currently in tmp). We
@@ -97,8 +101,8 @@ ffLDL_fft_inner(fpr *restrict tree,
 	 *   d00 splits into g1, g1+hn
 	 *   d11 splits into g0, g0+hn
 	 */
-	poly_split_fft(g1, g1 + hn, g0, logn);
-	poly_split_fft(g0, g0 + hn, tmp, logn);
+	falcon_inner_poly_split_fft(g1, g1 + hn, g0, logn);
+	falcon_inner_poly_split_fft(g0, g0 + hn, tmp, logn);
 
 	/*
 	 * Each split result is the first row of a new auto-adjoint
@@ -108,6 +112,12 @@ ffLDL_fft_inner(fpr *restrict tree,
 		g1, g1 + hn, logn - 1, tmp);
 	ffLDL_fft_inner(tree + n + ffLDL_treesize(logn - 1),
 		g0, g0 + hn, logn - 1, tmp);
+}
+
+void
+ffLDL_fft_inner_func(fpr *restrict tree,
+	fpr *restrict g0, fpr *restrict g1, unsigned logn, fpr *restrict tmp) {
+    return ffLDL_fft_inner(tree, g0, g1, logn, tmp);
 }
 
 /*
@@ -140,10 +150,10 @@ ffLDL_fft(fpr *restrict tree, const fpr *restrict g00,
 	tmp += n << 1;
 
 	memcpy(d00, g00, n * sizeof *g00);
-	poly_LDLmv_fft(d11, tree, g00, g01, g11, logn);
+	falcon_inner_poly_LDLmv_fft(d11, tree, g00, g01, g11, logn);
 
-	poly_split_fft(tmp, tmp + hn, d00, logn);
-	poly_split_fft(d00, d00 + hn, d11, logn);
+	falcon_inner_poly_split_fft(tmp, tmp + hn, d00, logn);
+	falcon_inner_poly_split_fft(d00, d00 + hn, d11, logn);
 	memcpy(d11, tmp, n * sizeof *tmp);
 	ffLDL_fft_inner(tree + n,
 		d11, d11 + hn, logn - 1, tmp);
@@ -365,9 +375,9 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * Split d00 and d11 and expand them into half-size quasi-cyclic
 	 * Gram matrices. We also save l10 in tmp[].
 	 */
-	poly_split_fft(tmp, tmp + hn, g00, logn);
+	falcon_inner_poly_split_fft(tmp, tmp + hn, g00, logn);
 	memcpy(g00, tmp, n * sizeof *tmp);
-	poly_split_fft(tmp, tmp + hn, g11, logn);
+	falcon_inner_poly_split_fft(tmp, tmp + hn, g11, logn);
 	memcpy(g11, tmp, n * sizeof *tmp);
 	memcpy(tmp, g01, n * sizeof *g01);
 	memcpy(g01, g00, hn * sizeof *g00);
@@ -387,7 +397,7 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * back into tmp + 2*n.
 	 */
 	z1 = tmp + n;
-	poly_split_fft(z1, z1 + hn, t1, logn);
+	falcon_inner_poly_split_fft(z1, z1 + hn, t1, logn);
 	ffSampling_fft_dyntree(samp, samp_ctx, z1, z1 + hn,
 		g11, g11 + hn, g01 + hn, orig_logn, logn - 1, z1 + n);
 	poly_merge_fft(tmp + (n << 1), z1, z1 + hn, logn);
@@ -410,7 +420,7 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * and the left sub-tree.
 	 */
 	z0 = tmp;
-	poly_split_fft(z0, z0 + hn, t0, logn);
+	falcon_inner_poly_split_fft(z0, z0 + hn, t0, logn);
 	ffSampling_fft_dyntree(samp, samp_ctx, z0, z0 + hn,
 		g00, g00 + hn, g01, orig_logn, logn - 1, z0 + n);
 	poly_merge_fft(t0, z0, z0 + hn, logn);
@@ -620,7 +630,7 @@ ffSampling_fft(samplerZ samp, void *samp_ctx,
 	 * the recursive invocation, with output in tmp. We finally
 	 * merge back into z1.
 	 */
-	poly_split_fft(z1, z1 + hn, t1, logn);
+	falcon_inner_poly_split_fft(z1, z1 + hn, t1, logn);
 	ffSampling_fft(samp, samp_ctx, tmp, tmp + hn,
 		tree1, z1, z1 + hn, logn - 1, tmp + n);
 	poly_merge_fft(z1, tmp, tmp + hn, logn);
@@ -636,7 +646,7 @@ ffSampling_fft(samplerZ samp, void *samp_ctx,
 	/*
 	 * Second recursive invocation.
 	 */
-	poly_split_fft(z0, z0 + hn, tmp, logn);
+	falcon_inner_poly_split_fft(z0, z0 + hn, tmp, logn);
 	ffSampling_fft(samp, samp_ctx, tmp, tmp + hn,
 		tree0, z0, z0 + hn, logn - 1, tmp + n);
 	poly_merge_fft(z0, tmp, tmp + hn, logn);

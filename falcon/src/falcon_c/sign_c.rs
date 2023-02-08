@@ -6,7 +6,9 @@ use crate::falcon_c::shake_c::InnerShake256Context;
 
 extern "C" {
     #[allow(dead_code)]
-    pub fn ffLDL_fft_inner(tree: *const fpr, g0: *const fpr, g1: *const fpr, logn: u32, tmp: *const fpr);
+    pub fn ffLDL_treesize_func(logn: u32) -> u32;
+    #[allow(dead_code)]
+    pub fn ffLDL_fft_inner_func(tree: *const fpr, g0: *const fpr, g1: *const fpr, logn: u32, tmp: *const fpr);
     #[allow(dead_code)]
     pub fn ffLDL_fft(tree: *const fpr, g00: *const fpr, g01: *const fpr, g11: *const fpr, logn: u32, tmp: *const fpr);
     #[allow(dead_code)]
