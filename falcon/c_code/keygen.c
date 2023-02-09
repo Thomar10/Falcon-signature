@@ -2373,34 +2373,34 @@ poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
 		Rx = modp_Rx((unsigned)flen, p, p0i, R2);
 		modp_mkgm2(gm, igm, logn, primes[u].g, p, p0i);
 
-		for (v = 0; v < n; v ++) {
-			t1[v] = modp_set(k[v], p);
-		}
-		modp_NTT2(t1, gm, logn, p, p0i);
-		for (v = 0, y = f, x = fk + u;
-			v < n; v ++, y += fstride, x += tlen)
-		{
-			*x = zint_mod_small_signed(y, flen, p, p0i, R2, Rx);
-		}
-		modp_NTT2_ext(fk + u, tlen, gm, logn, p, p0i);
-		for (v = 0, x = fk + u; v < n; v ++, x += tlen) {
-			*x = modp_montymul(
-				modp_montymul(t1[v], *x, p, p0i), R2, p, p0i);
-		}
-		modp_iNTT2_ext(fk + u, tlen, igm, logn, p, p0i);
+//		for (v = 0; v < n; v ++) {
+//			t1[v] = modp_set(k[v], p);
+//		}
+//		modp_NTT2(t1, gm, logn, p, p0i);
+//		for (v = 0, y = f, x = fk + u;
+//			v < n; v ++, y += fstride, x += tlen)
+//		{
+//			*x = zint_mod_small_signed(y, flen, p, p0i, R2, Rx);
+//		}
+//		modp_NTT2_ext(fk + u, tlen, gm, logn, p, p0i);
+//		for (v = 0, x = fk + u; v < n; v ++, x += tlen) {
+//			*x = modp_montymul(
+//				modp_montymul(t1[v], *x, p, p0i), R2, p, p0i);
+//		}
+//		modp_iNTT2_ext(fk + u, tlen, igm, logn, p, p0i);
 	}
-
-	/*
-	 * Rebuild k*f.
-	 */
-	zint_rebuild_CRT(fk, tlen, tlen, n, primes, 1, t1);
-
-	/*
-	 * Subtract k*f, scaled, from F.
-	 */
-	for (u = 0, x = F, y = fk; u < n; u ++, x += Fstride, y += tlen) {
-		zint_sub_scaled(x, Flen, y, tlen, sch, scl);
-	}
+//
+//	/*
+//	 * Rebuild k*f.
+//	 */
+//	zint_rebuild_CRT(fk, tlen, tlen, n, primes, 1, t1);
+//
+//	/*
+//	 * Subtract k*f, scaled, from F.
+//	 */
+//	for (u = 0, x = F, y = fk; u < n; u ++, x += Fstride, y += tlen) {
+//		zint_sub_scaled(x, Flen, y, tlen, sch, scl);
+//	}
 }
 
 void
@@ -3106,7 +3106,8 @@ solve_NTRU_intermediate(unsigned logn_top,
 	Ft = tmp;
 	Gt = Ft + n * llen;
 	t1 = Gt + n * llen;
-//	memmove(t1, ft, 2 * n * slen * sizeof *ft);
+
+	memmove(t1, ft, 2 * n * slen * sizeof *ft);
 	ft = t1;
 	gt = ft + slen * n;
 	t1 = gt + slen * n;
@@ -3114,7 +3115,7 @@ solve_NTRU_intermediate(unsigned logn_top,
 	/*
 	 * Move Fd and Gd _after_ f and g.
 	 */
-//	memmove(t1, Fd, 2 * hn * dlen * sizeof *Fd);
+	memmove(t1, Fd, 2 * hn * dlen * sizeof *Fd);
 	Fd = t1;
 	Gd = Fd + hn * dlen;
 
@@ -3272,119 +3273,130 @@ solve_NTRU_intermediate(unsigned logn_top,
 	 */
 	zint_rebuild_CRT(Ft, llen, llen, n, primes, 1, t1);
 	zint_rebuild_CRT(Gt, llen, llen, n, primes, 1, t1);
-
-	/*
-	 * At that point, Ft, Gt, ft and gt are consecutive in RAM (in that
-	 * order).
-	 */
-
-	/*
-	 * Apply Babai reduction to bring back F and G to size slen.
-	 *
-	 * We use the FFT to compute successive approximations of the
-	 * reduction coefficient. We first isolate the top bits of
-	 * the coefficients of f and g, and convert them to floating
-	 * point; with the FFT, we compute adj(f), adj(g), and
-	 * 1/(f*adj(f)+g*adj(g)).
-	 *
-	 * Then, we repeatedly apply the following:
-	 *
-	 *   - Get the top bits of the coefficients of F and G into
-	 *     floating point, and use the FFT to compute:
-	 *        (F*adj(f)+G*adj(g))/(f*adj(f)+g*adj(g))
-	 *
-	 *   - Convert back that value into normal representation, and
-	 *     round it to the nearest integers, yielding a polynomial k.
-	 *     Proper scaling is applied to f, g, F and G so that the
-	 *     coefficients fit on 32 bits (signed).
-	 *
-	 *   - Subtract k*f from F and k*g from G.
-	 *
-	 * Under normal conditions, this process reduces the size of F
-	 * and G by some bits at each iteration. For constant-time
-	 * operation, we do not want to measure the actual length of
-	 * F and G; instead, we do the following:
-	 *
-	 *   - f and g are converted to floating-point, with some scaling
-	 *     if necessary to keep values in the representable range.
-	 *
-	 *   - For each iteration, we _assume_ a maximum size for F and G,
-	 *     and use the values at that size. If we overreach, then
-	 *     we get zeros, which is harmless: the resulting coefficients
-	 *     of k will be 0 and the value won't be reduced.
-	 *
-	 *   - We conservatively assume that F and G will be reduced by
-	 *     at least 25 bits at each iteration.
-	 *
-	 * Even when reaching the bottom of the reduction, reduction
-	 * coefficient will remain low. If it goes out-of-range, then
-	 * something wrong occurred and the whole NTRU solving fails.
-	 */
-
-	/*
-	 * Memory layout:
-	 *  - We need to compute and keep adj(f), adj(g), and
-	 *    1/(f*adj(f)+g*adj(g)) (sizes N, N and N/2 fp numbers,
-	 *    respectively).
-	 *  - At each iteration we need two extra fp buffer (N fp values),
-	 *    and produce a k (N 32-bit words). k will be shared with one
-	 *    of the fp buffers.
-	 *  - To compute k*f and k*g efficiently (with the NTT), we need
-	 *    some extra room; we reuse the space of the temporary buffers.
-	 *
-	 * Arrays of 'fpr' are obtained from the temporary array itself.
-	 * We ensure that the base is at a properly aligned offset (the
-	 * source array tmp[] is supposed to be already aligned).
-	 */
-
+//
+//	/*
+//	 * At that point, Ft, Gt, ft and gt are consecutive in RAM (in that
+//	 * order).
+//	 */
+//
+//	/*
+//	 * Apply Babai reduction to bring back F and G to size slen.
+//	 *
+//	 * We use the FFT to compute successive approximations of the
+//	 * reduction coefficient. We first isolate the top bits of
+//	 * the coefficients of f and g, and convert them to floating
+//	 * point; with the FFT, we compute adj(f), adj(g), and
+//	 * 1/(f*adj(f)+g*adj(g)).
+//	 *
+//	 * Then, we repeatedly apply the following:
+//	 *
+//	 *   - Get the top bits of the coefficients of F and G into
+//	 *     floating point, and use the FFT to compute:
+//	 *        (F*adj(f)+G*adj(g))/(f*adj(f)+g*adj(g))
+//	 *
+//	 *   - Convert back that value into normal representation, and
+//	 *     round it to the nearest integers, yielding a polynomial k.
+//	 *     Proper scaling is applied to f, g, F and G so that the
+//	 *     coefficients fit on 32 bits (signed).
+//	 *
+//	 *   - Subtract k*f from F and k*g from G.
+//	 *
+//	 * Under normal conditions, this process reduces the size of F
+//	 * and G by some bits at each iteration. For constant-time
+//	 * operation, we do not want to measure the actual length of
+//	 * F and G; instead, we do the following:
+//	 *
+//	 *   - f and g are converted to floating-point, with some scaling
+//	 *     if necessary to keep values in the representable range.
+//	 *
+//	 *   - For each iteration, we _assume_ a maximum size for F and G,
+//	 *     and use the values at that size. If we overreach, then
+//	 *     we get zeros, which is harmless: the resulting coefficients
+//	 *     of k will be 0 and the value won't be reduced.
+//	 *
+//	 *   - We conservatively assume that F and G will be reduced by
+//	 *     at least 25 bits at each iteration.
+//	 *
+//	 * Even when reaching the bottom of the reduction, reduction
+//	 * coefficient will remain low. If it goes out-of-range, then
+//	 * something wrong occurred and the whole NTRU solving fails.
+//	 */
+//
+//	/*
+//	 * Memory layout:
+//	 *  - We need to compute and keep adj(f), adj(g), and
+//	 *    1/(f*adj(f)+g*adj(g)) (sizes N, N and N/2 fp numbers,
+//	 *    respectively).
+//	 *  - At each iteration we need two extra fp buffer (N fp values),
+//	 *    and produce a k (N 32-bit words). k will be shared with one
+//	 *    of the fp buffers.
+//	 *  - To compute k*f and k*g efficiently (with the NTT), we need
+//	 *    some extra room; we reuse the space of the temporary buffers.
+//	 *
+//	 * Arrays of 'fpr' are obtained from the temporary array itself.
+//	 * We ensure that the base is at a properly aligned offset (the
+//	 * source array tmp[] is supposed to be already aligned).
+//	 */
+//
 	rt3 = align_fpr(tmp, t1);
+//  printf("rt3[0] %lu \n", rt3[0]);
 	rt4 = rt3 + n;
 	rt5 = rt4 + n;
 	rt1 = rt5 + (n >> 1);
 	k = (int32_t *)align_u32(tmp, rt1);
+//  printf("k[0] %d\n", k[0]);
 	rt2 = align_fpr(tmp, k + n);
+//  printf("rt2[0] %lu\n", rt2[0]);
+
 	if (rt2 < (rt1 + n)) {
 		rt2 = rt1 + n;
 	}
-	t1 = (uint32_t *)k + n;
 
-	/*
-	 * Get f and g into rt3 and rt4 as floating-point approximations.
-	 *
-	 * We need to "scale down" the floating-point representation of
-	 * coefficients when they are too big. We want to keep the value
-	 * below 2^310 or so. Thus, when values are larger than 10 words,
-	 * we consider only the top 10 words. Array lengths have been
-	 * computed so that average maximum length will fall in the
-	 * middle or the upper half of these top 10 words.
-	 */
+//  printf("rt2[0] %lu\n", rt2[0]);
+	t1 = (uint32_t *)k + n;
+//
+//	/*
+//	 * Get f and g into rt3 and rt4 as floating-point approximations.
+//	 *
+//	 * We need to "scale down" the floating-point representation of
+//	 * coefficients when they are too big. We want to keep the value
+//	 * below 2^310 or so. Thus, when values are larger than 10 words,
+//	 * we consider only the top 10 words. Array lengths have been
+//	 * computed so that average maximum length will fall in the
+//	 * middle or the upper half of these top 10 words.
+//	 */
 	rlen = (slen > 10) ? 10 : slen;
 	poly_big_to_fp(rt3, ft + slen - rlen, rlen, slen, logn);
 	poly_big_to_fp(rt4, gt + slen - rlen, rlen, slen, logn);
-
-	/*
-	 * Values in rt3 and rt4 are downscaled by 2^(scale_fg).
-	 */
+//
+//	/*
+//	 * Values in rt3 and rt4 are downscaled by 2^(scale_fg).
+//	 */
 	scale_fg = 31 * (int)(slen - rlen);
-
-	/*
-	 * Estimated boundaries for the maximum size (in bits) of the
-	 * coefficients of (f,g). We use the measured average, and
-	 * allow for a deviation of at most six times the standard
-	 * deviation.
-	 */
+//
+//	/*
+//	 * Estimated boundaries for the maximum size (in bits) of the
+//	 * coefficients of (f,g). We use the measured average, and
+//	 * allow for a deviation of at most six times the standard
+//	 * deviation.
+//	 */
 	minbl_fg = BITLENGTH[depth].avg - 6 * BITLENGTH[depth].std;
 	maxbl_fg = BITLENGTH[depth].avg + 6 * BITLENGTH[depth].std;
-
-	/*
-	 * Compute 1/(f*adj(f)+g*adj(g)) in rt5. We also keep adj(f)
-	 * and adj(g) in rt3 and rt4, respectively.
-	 */
+//
+//	/*
+//	 * Compute 1/(f*adj(f)+g*adj(g)) in rt5. We also keep adj(f)
+//	 * and adj(g) in rt3 and rt4, respectively.
+//	 */
 	Zf(FFT)(rt3, logn);
 	Zf(FFT)(rt4, logn);
 	Zf(poly_invnorm2_fft)(rt5, rt3, rt4, logn);
 	Zf(poly_adj_fft)(rt3, logn);
+//	printf("rt4 %lu\n", rt4[0]);
 	Zf(poly_adj_fft)(rt4, logn);
+		for(int loop = 0; loop < 10; loop++) {
+          printf("%lu ", rt3[loop]);
+  	}
+  	printf("  \n");
 
 	/*
 	 * Reduce F and G repeatedly.
@@ -3490,7 +3502,6 @@ solve_NTRU_intermediate(unsigned logn_top,
 			fpr xv;
 
 			xv = fpr_mul(rt2[u], pdc);
-
 			/*
 			 * Sometimes the values can be out-of-bounds if
 			 * the algorithm fails; we must not call
@@ -3507,6 +3518,11 @@ solve_NTRU_intermediate(unsigned logn_top,
 			}
 			k[u] = (int32_t)fpr_rint(xv);
 		}
+//    printf("rt3\n");
+//    for(int loop = 0; loop < 10; loop++) {
+//          printf("%lu ", rt3[loop]);
+//    }
+//    printf("\n");
 
 		/*
 		 * Values in k[] are integers. They really are scaled
@@ -3518,30 +3534,32 @@ solve_NTRU_intermediate(unsigned logn_top,
 		sch = (uint32_t)(scale_k / 31);
 		scl = (uint32_t)(scale_k % 31);
 		if (depth <= DEPTH_INT_FG) {
+		  printf("HEJ\n");
 			poly_sub_scaled_ntt(Ft, FGlen, llen, ft, slen, slen,
 				k, sch, scl, logn, t1);
-			poly_sub_scaled_ntt(Gt, FGlen, llen, gt, slen, slen,
-				k, sch, scl, logn, t1);
+//			poly_sub_scaled_ntt(Gt, FGlen, llen, gt, slen, slen,
+//				k, sch, scl, logn, t1);
 		} else {
+				  printf("HERNEDE!\n");
 			poly_sub_scaled(Ft, FGlen, llen, ft, slen, slen,
 				k, sch, scl, logn);
 			poly_sub_scaled(Gt, FGlen, llen, gt, slen, slen,
 				k, sch, scl, logn);
 		}
-
-		/*
-		 * We compute the new maximum size of (F,G), assuming that
-		 * (f,g) has _maximal_ length (i.e. that reduction is
-		 * "late" instead of "early". We also adjust FGlen
-		 * accordingly.
-		 */
-		new_maxbl_FG = scale_k + maxbl_fg + 10;
-		if (new_maxbl_FG < maxbl_FG) {
-			maxbl_FG = new_maxbl_FG;
-			if ((int)FGlen * 31 >= maxbl_FG + 31) {
-				FGlen --;
-			}
-		}
+//
+//		/*
+//		 * We compute the new maximum size of (F,G), assuming that
+//		 * (f,g) has _maximal_ length (i.e. that reduction is
+//		 * "late" instead of "early". We also adjust FGlen
+//		 * accordingly.
+//		 */
+//		new_maxbl_FG = scale_k + maxbl_fg + 10;
+//		if (new_maxbl_FG < maxbl_FG) {
+//			maxbl_FG = new_maxbl_FG;
+//			if ((int)FGlen * 31 >= maxbl_FG + 31) {
+//				FGlen --;
+//			}
+//		}
 
 		/*
 		 * We suppose that scaling down achieves a reduction by
@@ -3557,36 +3575,36 @@ solve_NTRU_intermediate(unsigned logn_top,
 		}
 	}
 
-	/*
-	 * If (F,G) length was lowered below 'slen', then we must take
-	 * care to re-extend the sign.
-	 */
-	if (FGlen < slen) {
-		for (u = 0; u < n; u ++, Ft += llen, Gt += llen) {
-			size_t v;
-			uint32_t sw;
-
-			sw = -(Ft[FGlen - 1] >> 30) >> 1;
-			for (v = FGlen; v < slen; v ++) {
-				Ft[v] = sw;
-			}
-			sw = -(Gt[FGlen - 1] >> 30) >> 1;
-			for (v = FGlen; v < slen; v ++) {
-				Gt[v] = sw;
-			}
-		}
-	}
-
-	/*
-	 * Compress encoding of all values to 'slen' words (this is the
-	 * expected output format).
-	 */
-	for (u = 0, x = tmp, y = tmp;
-		u < (n << 1); u ++, x += slen, y += llen)
-	{
-		memmove(x, y, slen * sizeof *y);
-	}
-	return 1;
+//	/*
+//	 * If (F,G) length was lowered below 'slen', then we must take
+//	 * care to re-extend the sign.
+//	 */
+//	if (FGlen < slen) {
+//		for (u = 0; u < n; u ++, Ft += llen, Gt += llen) {
+//			size_t v;
+//			uint32_t sw;
+//
+//			sw = -(Ft[FGlen - 1] >> 30) >> 1;
+//			for (v = FGlen; v < slen; v ++) {
+//				Ft[v] = sw;
+//			}
+//			sw = -(Gt[FGlen - 1] >> 30) >> 1;
+//			for (v = FGlen; v < slen; v ++) {
+//				Gt[v] = sw;
+//			}
+//		}
+//	}
+//
+//	/*
+//	 * Compress encoding of all values to 'slen' words (this is the
+//	 * expected output format).
+//	 */
+//	for (u = 0, x = tmp, y = tmp;
+//		u < (n << 1); u ++, x += slen, y += llen)
+//	{
+//		memmove(x, y, slen * sizeof *y);
+//	}
+//	return 1;
 }
 
 int

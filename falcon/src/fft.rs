@@ -56,6 +56,48 @@ fn fpc_inv(a_re: u64, a_im: u64) -> (u64, u64) {
     (fpct_d_re, fpct_d_im)
 }
 
+pub fn fft_index(f: &mut [u64], f_index: usize, logn: u32) {
+    let mut u: u32 = 1;
+    let mut m: usize = 2;
+    let (mut t, n, hn): (usize, usize, usize);
+
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    t = hn;
+    while u < logn {
+        let (ht, hm, mut i1, mut j1): (usize, usize, usize, usize);
+        ht = t >> 1;
+        hm = m >> 1;
+        i1 = 0;
+        j1 = 0;
+        while i1 < hm {
+            let (mut j, j2): (usize, usize);
+            j2 = j1 + ht;
+            let (s_re, s_im): (u64, u64);
+            s_re = FPR_GM_TAB[((m + i1) << 1) + 0];
+            s_im = FPR_GM_TAB[((m + i1) << 1) + 1];
+            j = j1;
+            while j < j2 {
+                let (x_re, x_im, mut y_re, mut y_im): (u64, u64, u64, u64);
+                x_re = f[j + f_index];
+                x_im = f[j + hn + f_index];
+                y_re = f[j + ht + f_index];
+                y_im = f[j + ht + hn + f_index];
+                (y_re, y_im) = fpc_mul(y_re, y_im, s_re, s_im);
+                (f[j + f_index], f[j + hn + f_index]) = fpc_add(x_re, x_im, y_re, y_im);
+                (f[j + ht + f_index], f[j + ht + hn + f_index]) = fpc_sub(x_re, x_im, y_re, y_im);
+
+                j += 1;
+            }
+            i1 += 1;
+            j1 += t;
+        }
+        u += 1;
+        m <<= 1;
+        t = ht;
+    }
+}
+
 pub fn fft(f: &mut [u64], logn: u32) {
     let mut u: u32 = 1;
     let mut m: usize = 2;
@@ -149,12 +191,72 @@ pub fn ifft(f: &mut [u64], logn: u32) {
     }
 }
 
+pub fn ifft_index(f: &mut [u64], f_index: usize, logn: u32) {
+    let (mut u, n, hn, mut t, mut m): (u32, usize, usize, usize, usize);
+    n = (1 as usize) << logn;
+    t = 1;
+    m = n;
+    hn = n >> 1;
+    u = logn;
+    while u > 1 {
+        let (hm, dt, mut i1, mut j1): (usize, usize, usize, usize);
+        hm = m >> 1;
+        dt = t << 1;
+
+        i1 = 0;
+        j1 = 0;
+        while j1 < hn {
+            let (mut j, j2): (usize, usize);
+            j2 = j1 + t;
+
+            let (s_re, s_im): (u64, u64);
+            s_re = FPR_GM_TAB[((hm + i1) << 1) + 0];
+            s_im = fpr_neg(FPR_GM_TAB[((hm + i1) << 1) + 1]);
+            j = j1;
+            while j < j2 {
+                let (mut x_re, mut x_im, y_re, y_im): (u64, u64, u64, u64);
+                x_re = f[j + f_index];
+                x_im = f[j + hn + f_index];
+                y_re = f[j + t + f_index];
+                y_im = f[j + t + hn + f_index];
+                (f[j + f_index], f[j + hn + f_index]) = fpc_add(x_re, x_im, y_re, y_im);
+                (x_re, x_im) = fpc_sub(x_re, x_im, y_re, y_im);
+                (f[j + t + f_index], f[j + t + hn + f_index]) = fpc_mul(x_re, x_im, s_re, s_im);
+                j += 1;
+            }
+            i1 += 1;
+            j1 += dt;
+        }
+        t = dt;
+        m = hm;
+        u -= 1;
+    }
+
+    if logn > 0 {
+        let ni = FPR_P2_TAB[logn as usize];
+        let mut u = 0;
+        while u < n {
+            f[u] = fpr_mul(f[u], ni);
+            u += 1;
+        }
+    }
+}
+
 pub fn poly_add(a: &mut [u64], b: &mut [u64], logn: u32) {
     let n: usize;
 
     n = (1 as usize) << logn;
     for u in 0..n {
         a[u] = fpr_add(a[u], b[u]);
+    }
+}
+
+pub fn poly_add_index(a: &mut [u64], a_index: usize, b_index: usize, logn: u32) {
+    let n: usize;
+
+    n = (1 as usize) << logn;
+    for u in 0..n {
+        a[u + a_index] = fpr_add(a[u + a_index], a[u + b_index]);
     }
 }
 
@@ -182,6 +284,25 @@ pub fn poly_adj_fft(a: &mut [u64], logn: u32) {
     n = (1 as usize) << logn;
     for u in (n >> 1)..n {
         a[u] = fpr_neg(a[u]);
+    }
+}
+
+pub fn poly_adj_fft_index(a: &mut [u64], a_index: usize, logn: u32) {
+    let n: usize;
+
+    n = (1 as usize) << logn;
+    for u in (n >> 1)..n {
+        a[u + a_index] = fpr_neg(a[u + a_index]);
+    }
+}
+
+pub fn poly_mul_fft_index(a: &mut [u64], a_index: usize, b_index: usize, logn: u32) {
+    let (n, hn): (usize, usize);
+
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    for u in 0..hn {
+        (a[u + a_index], a[u + hn + a_index]) = fpc_mul(a[u + a_index], a[u + hn + a_index], a[u + b_index], a[u + hn + b_index]);
     }
 }
 
@@ -248,6 +369,19 @@ pub fn poly_invnorm2_fft(d: &mut [u64], a: &mut [u64], b: &mut [u64], logn: u32)
     }
 }
 
+pub fn poly_invnorm2_fft_index(d: &mut [u64], d_index: usize, a_index: usize, b_index: usize, logn: u32) {
+    let (n, hn): (usize, usize);
+
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+
+    for u in 0..hn {
+        d[u + d_index] = fpr_inv(fpr_add(
+            fpr_add(fpr_sqr(d[u + a_index]), fpr_sqr(d[u + hn + a_index])),
+            fpr_add(fpr_sqr(d[u + b_index]), fpr_sqr(d[u + hn + b_index]))));
+    }
+}
+
 #[allow(non_snake_case)]
 pub fn poly_add_muladj_fft(d: &mut [u64], F: &mut [u64], G: &mut [u64], f: &mut [u64], g: &mut [u64], logn: u32) {
     let (n, hn): (usize, usize);
@@ -268,6 +402,16 @@ pub fn poly_mul_autoadj_fft(a: &mut [u64], b: &mut [u64], logn: u32) {
     for u in 0..hn {
         a[u] = fpr_mul(a[u], b[u]);
         a[u + hn] = fpr_mul(a[u + hn], b[u]);
+    }
+}
+
+pub fn poly_mul_autoadj_fft_index(a: &mut [u64], a_index: usize, b_index: usize, logn: u32) {
+    let (n, hn): (usize, usize);
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    for u in 0..hn {
+        a[u + a_index] = fpr_mul(a[u + a_index], a[u + b_index]);
+        a[u + hn + a_index] = fpr_mul(a[u + hn + a_index], a[u + b_index]);
     }
 }
 

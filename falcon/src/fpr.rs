@@ -6,19 +6,15 @@ static FPR_INV_LOG2: u64 = 4609176140021203710;
 static FPR_BNORM_MAX: u64 = 4670353323383631276;
 pub static FPR_ZERO: u64 = 0;
 pub static FPR_ONE: u64 = 4607182418800017408;
-#[allow(dead_code)]
-static FPR_TWO: u64 = 4611686018427387904;
-#[allow(dead_code)]
-static FPR_ONEHALF: u64 = 4602678819172646912;
+pub static FPR_TWO: u64 = 4611686018427387904;
+pub static FPR_ONEHALF: u64 = 4602678819172646912;
 #[allow(dead_code)]
 static FPR_INVSQRT2: u64 = 4604544271217802189;
 #[allow(dead_code)]
 static FPR_INVSQRT8: u64 = 4600040671590431693;
 pub static FPR_PTWO31: u64 = 4746794007248502784;
-#[allow(dead_code)]
-static FPR_PTWO31M1: u64 = 4746794007244308480;
-#[allow(dead_code)]
-static FPR_MTWO31M1: u64 = 13970166044099084288;
+pub static FPR_PTWO31M1: u64 = 4746794007244308480;
+pub static FPR_MTWO31M1: u64 = 13970166044099084288;
 #[allow(dead_code)]
 static FPR_PTWO63M1: u64 = 4890909195324358656;
 #[allow(dead_code)]
