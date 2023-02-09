@@ -326,12 +326,12 @@ falcon_inner_expand_privkey(fpr *restrict expanded_key,
 	/*
 	 * Compute the FFT for the key elements, and negate f and F.
 	 */
-	FFT(rf, logn);
-	FFT(rg, logn);
-	FFT(rF, logn);
-	FFT(rG, logn);
-	poly_neg(rf, logn);
-	poly_neg(rF, logn);
+	falcon_inner_FFT(rf, logn);
+	falcon_inner_FFT(rg, logn);
+	falcon_inner_FFT(rF, logn);
+	falcon_inner_FFT(rG, logn);
+	falcon_inner_poly_neg(rf, logn);
+	falcon_inner_poly_neg(rF, logn);
 
 	/*
 	 * The Gram matrix is G = B·B*. Formulas are:
@@ -349,22 +349,22 @@ falcon_inner_expand_privkey(fpr *restrict expanded_key,
 	gxx = g11 + n;
 
 	memcpy(g00, b00, n * sizeof *b00);
-	poly_mulselfadj_fft(g00, logn);
+	falcon_inner_poly_mulselfadj_fft(g00, logn);
 	memcpy(gxx, b01, n * sizeof *b01);
-	poly_mulselfadj_fft(gxx, logn);
-	poly_add(g00, gxx, logn);
+	falcon_inner_poly_mulselfadj_fft(gxx, logn);
+	falcon_inner_poly_add(g00, gxx, logn);
 
 	memcpy(g01, b00, n * sizeof *b00);
-	poly_muladj_fft(g01, b10, logn);
+	falcon_inner_poly_muladj_fft(g01, b10, logn);
 	memcpy(gxx, b01, n * sizeof *b01);
-	poly_muladj_fft(gxx, b11, logn);
-	poly_add(g01, gxx, logn);
+	falcon_inner_poly_muladj_fft(gxx, b11, logn);
+	falcon_inner_poly_add(g01, gxx, logn);
 
 	memcpy(g11, b10, n * sizeof *b10);
-	poly_mulselfadj_fft(g11, logn);
+	falcon_inner_poly_mulselfadj_fft(g11, logn);
 	memcpy(gxx, b11, n * sizeof *b11);
-	poly_mulselfadj_fft(gxx, logn);
-	poly_add(g11, gxx, logn);
+	falcon_inner_poly_mulselfadj_fft(gxx, logn);
+	falcon_inner_poly_add(g11, gxx, logn);
 
 	/*
 	 * Compute the Falcon tree.
@@ -460,7 +460,7 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	poly_sub(z1, tmp + (n << 1), logn);
 	memcpy(t1, tmp + (n << 1), n * sizeof *tmp);
 	poly_mul_fft(tmp, z1, logn);
-	poly_add(t0, tmp, logn);
+	falcon_inner_poly_add(t0, tmp, logn);
 
 	/*
 	 * Second recursive invocation, on the split tb0 (currently in t0)
@@ -697,7 +697,7 @@ ffSampling_fft(samplerZ samp, void *samp_ctx,
 	memcpy(tmp, t1, n * sizeof *t1);
 	poly_sub(tmp, z1, logn);
 	poly_mul_fft(tmp, tree, logn);
-	poly_add(tmp, t0, logn);
+	falcon_inner_poly_add(tmp, t0, logn);
 
 	/*
 	 * Second recursive invocation.
@@ -763,7 +763,7 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 * Apply the lattice basis to obtain the real target
 	 * vector (after normalization with regards to modulus).
 	 */
-	FFT(t0, logn);
+	falcon_inner_FFT(t0, logn);
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
 	poly_mul_fft(t1, b01, logn);
@@ -786,13 +786,13 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	memcpy(t1, ty, n * sizeof *ty);
 	poly_mul_fft(tx, b00, logn);
 	poly_mul_fft(ty, b10, logn);
-	poly_add(tx, ty, logn);
+	falcon_inner_poly_add(tx, ty, logn);
 	memcpy(ty, t0, n * sizeof *t0);
 	poly_mul_fft(ty, b01, logn);
 
 	memcpy(t0, tx, n * sizeof *tx);
 	poly_mul_fft(t1, b11, logn);
-	poly_add(t1, ty, logn);
+	falcon_inner_poly_add(t1, ty, logn);
 
 	iFFT(t0, logn);
 	iFFT(t1, logn);
@@ -878,12 +878,12 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	smallints_to_fpr(b00, g, logn);
 	smallints_to_fpr(b11, F, logn);
 	smallints_to_fpr(b10, G, logn);
-	FFT(b01, logn);
-	FFT(b00, logn);
-	FFT(b11, logn);
-	FFT(b10, logn);
-	poly_neg(b01, logn);
-	poly_neg(b11, logn);
+	falcon_inner_FFT(b01, logn);
+	falcon_inner_FFT(b00, logn);
+	falcon_inner_FFT(b11, logn);
+	falcon_inner_FFT(b10, logn);
+	falcon_inner_poly_neg(b01, logn);
+	falcon_inner_poly_neg(b11, logn);
 
 	/*
 	 * Compute the Gram matrix G = B·B*. Formulas are:
@@ -903,20 +903,20 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	t1 = t0 + n;
 
 	memcpy(t0, b01, n * sizeof *b01);
-	poly_mulselfadj_fft(t0, logn);    // t0 <- b01*adj(b01)
+	falcon_inner_poly_mulselfadj_fft(t0, logn);    // t0 <- b01*adj(b01)
 
 	memcpy(t1, b00, n * sizeof *b00);
-	poly_muladj_fft(t1, b10, logn);   // t1 <- b00*adj(b10)
-	poly_mulselfadj_fft(b00, logn);   // b00 <- b00*adj(b00)
-	poly_add(b00, t0, logn);      // b00 <- g00
+	falcon_inner_poly_muladj_fft(t1, b10, logn);   // t1 <- b00*adj(b10)
+	falcon_inner_poly_mulselfadj_fft(b00, logn);   // b00 <- b00*adj(b00)
+	falcon_inner_poly_add(b00, t0, logn);      // b00 <- g00
 	memcpy(t0, b01, n * sizeof *b01);
-	poly_muladj_fft(b01, b11, logn);  // b01 <- b01*adj(b11)
-	poly_add(b01, t1, logn);      // b01 <- g01
+	falcon_inner_poly_muladj_fft(b01, b11, logn);  // b01 <- b01*adj(b11)
+	falcon_inner_poly_add(b01, t1, logn);      // b01 <- g01
 
-	poly_mulselfadj_fft(b10, logn);   // b10 <- b10*adj(b10)
+	falcon_inner_poly_mulselfadj_fft(b10, logn);   // b10 <- b10*adj(b10)
 	memcpy(t1, b11, n * sizeof *b11);
-	poly_mulselfadj_fft(t1, logn);    // t1 <- b11*adj(b11)
-	poly_add(b10, t1, logn);      // b10 <- g11
+	falcon_inner_poly_mulselfadj_fft(t1, logn);    // t1 <- b11*adj(b11)
+	falcon_inner_poly_add(b10, t1, logn);      // b10 <- g11
 
 	/*
 	 * We rename variables to make things clearer. The three elements
@@ -949,7 +949,7 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 * Apply the lattice basis to obtain the real target
 	 * vector (after normalization with regards to modulus).
 	 */
-	FFT(t0, logn);
+	falcon_inner_FFT(t0, logn);
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
 	poly_mul_fft(t1, b01, logn);
@@ -990,12 +990,12 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	smallints_to_fpr(b00, g, logn);
 	smallints_to_fpr(b11, F, logn);
 	smallints_to_fpr(b10, G, logn);
-	FFT(b01, logn);
-	FFT(b00, logn);
-	FFT(b11, logn);
-	FFT(b10, logn);
-	poly_neg(b01, logn);
-	poly_neg(b11, logn);
+	falcon_inner_FFT(b01, logn);
+	falcon_inner_FFT(b00, logn);
+	falcon_inner_FFT(b11, logn);
+	falcon_inner_FFT(b10, logn);
+	falcon_inner_poly_neg(b01, logn);
+	falcon_inner_poly_neg(b11, logn);
 	tx = t1 + n;
 	ty = tx + n;
 
@@ -1006,13 +1006,13 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	memcpy(ty, t1, n * sizeof *t1);
 	poly_mul_fft(tx, b00, logn);
 	poly_mul_fft(ty, b10, logn);
-	poly_add(tx, ty, logn);
+	falcon_inner_poly_add(tx, ty, logn);
 	memcpy(ty, t0, n * sizeof *t0);
 	poly_mul_fft(ty, b01, logn);
 
 	memcpy(t0, tx, n * sizeof *tx);
 	poly_mul_fft(t1, b11, logn);
-	poly_add(t1, ty, logn);
+	falcon_inner_poly_add(t1, ty, logn);
 	iFFT(t0, logn);
 	iFFT(t1, logn);
 
