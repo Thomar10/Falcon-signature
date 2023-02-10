@@ -1,7 +1,8 @@
-use bytemuck::{pod_align_to, pod_align_to_mut};
-use crate::fft::{fft, fft_index, ifft, ifft_index, poly_add, poly_add_index, poly_adj_fft, poly_adj_fft_index, poly_invnorm2_fft, poly_invnorm2_fft_index, poly_mul_autoadj_fft, poly_mul_autoadj_fft_index, poly_mul_fft, poly_mul_fft_index};
-use crate::fpr::{fpr_add, fpr_lt, FPR_MTWO31M1, fpr_mul, fpr_of, FPR_ONE, FPR_ONEHALF, FPR_PTWO31, FPR_PTWO31M1, fpr_rint, fpr_sqr, FPR_TWO, FPR_ZERO};
+use crate::codec::{max_fg_bits, max_FG_bits};
+use crate::fft::{fft_pointer, ifft_pointer, poly_add_muladj_fft_pointer, poly_add_pointer, poly_adj_fft_pointer, poly_div_autoadj_fft_pointer, poly_invnorm2_fft_pointer, poly_mul_autoadj_fft_pointer, poly_mul_fft_pointer, poly_mulconst_pointer, poly_sub_pointer};
+use crate::fpr::{fpr_add, FPR_BNORM_MAX, fpr_lt, FPR_MTWO31M1, FPR_MTWO63M1, fpr_mul, fpr_of, FPR_ONE, FPR_ONEHALF, FPR_PTWO31, FPR_PTWO31M1, FPR_PTWO63M1, FPR_Q, fpr_rint, fpr_sqr, FPR_TWO, FPR_ZERO};
 use crate::shake::{i_shake256_extract, InnerShake256Context};
+use crate::vrfy::compute_public;
 
 pub struct SmallPrimes {
     pub(crate) p: u32,
@@ -343,6 +344,7 @@ pub fn modp_iNTT2_ext(a: &mut [u32], stride: usize, igm: &mut [u32], logn: u32, 
     }
 }
 
+#[allow(non_snake_case)]
 pub fn modp_iNTT2_ext_pointer(a: *mut u32, stride: usize, igm: *mut u32, logn: u32, p: u32, p0i: u32) {
     if logn == 0 {
         return;
@@ -379,7 +381,6 @@ pub fn modp_iNTT2_ext_pointer(a: *mut u32, stride: usize, igm: *mut u32, logn: u
     }
 
     let ni: u32 = 1 << (31 - logn);
-    let mut r: usize = 0;
     let mut a = a;
     for _ in 0..n {
         unsafe { *a = modp_montymul(*a, ni, p, p0i); }
@@ -456,12 +457,28 @@ pub fn modp_iNTT2(a: &mut [u32], igm: &mut [u32], logn: u32, p: u32, p0i: u32) {
     modp_iNTT2_ext(a, 1, igm, logn, p, p0i);
 }
 
+#[allow(non_snake_case)]
+pub fn modp_iNTT2_pointer(a: *mut u32, igm: *mut u32, logn: u32, p: u32, p0i: u32) {
+    modp_iNTT2_ext_pointer(a, 1, igm, logn, p, p0i);
+}
+
 pub fn modp_poly_rec_res(f: &mut [u32], logn: u32, p: u32, p0i: u32, r2: u32) {
     let hn: usize = 1 << (logn - 1);
     for u in 0..hn {
         let w0 = f[(u << 1)];
         let w1 = f[(u << 1) + 1];
         f[u] = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
+    }
+}
+
+pub fn modp_poly_rec_res_pointer(f: *mut u32, logn: u32, p: u32, p0i: u32, r2: u32) {
+    let hn: usize = 1 << (logn - 1);
+    unsafe {
+        for u in 0..hn {
+            let w0 = *f.wrapping_add(u << 1);
+            let w1 = *f.wrapping_add((u << 1) + 1);
+            *f.wrapping_add(u) = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
+        }
     }
 }
 
@@ -483,17 +500,18 @@ pub fn zint_sub_pointer(a: *mut u32, b: *mut u32, len: usize, ctl: u32) -> u32 {
     let m = (!ctl).wrapping_add(1);
     let mut a = a;
     let mut b = b;
-    unsafe {
-        for _ in 0..len {
-            let mut aw = *a;
-            let w = aw.wrapping_sub(*b).wrapping_sub(cc);
-            cc = w >> 31;
-            aw ^= ((w & 0x7FFFFFFF) ^ aw) & m;
-            *a = aw;
-            a = a.wrapping_add(1);
-            b = b.wrapping_add(1);
-        }
+    for _ in 0..len {
+        let mut aw;
+        unsafe { aw = *a };
+        let w;
+        unsafe { w = aw.wrapping_sub(*b).wrapping_sub(cc); };
+        cc = w >> 31;
+        aw ^= ((w & 0x7FFFFFFF) ^ aw) & m;
+        unsafe { *a = aw; }
+        a = a.wrapping_add(1);
+        b = b.wrapping_add(1);
     }
+
     cc
 }
 
@@ -510,6 +528,7 @@ pub fn zint_sub_index(a: &mut [u32], a_index: usize, b: &mut [u32], len: usize, 
     cc
 }
 
+#[allow(dead_code)]
 pub fn zint_sub_index_one_arr(a: &mut [u32], a_index: usize, b_index: usize, len: usize, ctl: u32) -> u32 {
     let mut cc: u32 = 0;
     let m = (!ctl).wrapping_add(1);
@@ -533,16 +552,16 @@ pub fn zint_mul_small(m: &mut [u32], mlen: usize, x: u32) -> u32 {
     cc
 }
 
-pub fn zint_mul_small_pointer(m: *mut u32, mlen: usize, x: u32) -> u32 {
+pub unsafe fn zint_mul_small_pointer(m: *mut u32, mlen: usize, x: u32) -> u32 {
     let mut cc: u32 = 0;
+
     let mut m = m;
-    unsafe {
-        for _ in 0..mlen {
-            let z: u64 = (*m as u64) * (x as u64) + (cc as u64);
-            *m = (z as u32) & 0x7FFFFFFF;
-            cc = (z >> 31) as u32;
-            m = m.wrapping_add(1);
-        }
+    for _ in 0..mlen {
+        let z: u64;
+        unsafe { z = (*m as u64) * (x as u64) + (cc as u64); };
+        unsafe { *m = (z as u32) & 0x7FFFFFFF };
+        cc = (z >> 31) as u32;
+        m = m.wrapping_add(1);
     }
     cc
 }
@@ -575,16 +594,15 @@ pub fn zint_mod_small_unsigned(d: &mut [u32], dlen: usize, p: u32, p0i: u32, r2:
 pub fn zint_mod_small_unsigned_pointer(d: *mut u32, dlen: usize, p: u32, p0i: u32, r2: u32) -> u32 {
     let mut x = 0;
     let mut u = dlen;
-    let mut d = d.wrapping_sub(dlen - 1);
+    let mut dd = d.wrapping_add(dlen);
     while u > 0 {
         u -= 1;
+        dd = dd.wrapping_sub(1);
         let mut w: u32;
         x = modp_montymul(x, r2, p, p0i);
-        unsafe { w = (*d).wrapping_sub(p); }
-        println!("ww {}", w);
+        unsafe { w = (*dd).wrapping_sub(p); }
         w = w.wrapping_add(p & (!(w >> 31)).wrapping_add(1));
         x = modp_add(x, w, p);
-        d = d.wrapping_sub(1);
     }
     x
 }
@@ -598,7 +616,6 @@ pub fn zint_mod_small_unsigned_index(d: &mut [u32], d_index: usize, dlen: usize,
         let mut w: u32;
         x = modp_montymul(x, r2, p, p0i);
         w = d[u + d_index].wrapping_sub(p);
-        println!("w {}", w);
         w = w.wrapping_add(p & (!(w >> 31)).wrapping_add(1));
         x = modp_add(x, w, p);
     }
@@ -653,21 +670,21 @@ pub fn zint_add_mul_small(x: &mut [u32], y: &mut [u32], len: usize, s: u32) {
 
 pub fn zint_add_mul_small_pointer(x: *mut u32, y: *mut u32, len: usize, s: u32) {
     let mut cc = 0;
-    let mut x = x;
-    let mut y = y;
-    unsafe {
-        for _ in 0..len {
-            let xw = *x;
-            let yw = *y;
-            let z = (yw as u64) * (s as u64) + (xw as u64) + (cc as u64);
-            *x = (z as u32) & 0x7FFFFFFF;
-            cc = (z >> 31) as u32;
-            x = x.wrapping_add(1);
-            y = y.wrapping_add(1);
-        }
+    let mut xx = x;
+    let mut yy = y;
+
+    for _ in 0..len {
+        let xw;
+        let yw;
+        unsafe { xw = *xx };
+        unsafe { yw = *yy };
+        let z = (yw as u64) * (s as u64) + (xw as u64) + (cc as u64);
+        unsafe { *xx = (z as u32) & 0x7FFFFFFF; }
+        cc = (z >> 31) as u32;
+        xx = xx.wrapping_add(1);
+        yy = yy.wrapping_add(1);
     }
-    x = x.wrapping_add(1);
-    unsafe { *x = cc; }
+    unsafe { *xx = cc; }
 }
 
 pub fn zint_add_mul_small_index(x: &mut [u32], x_index: usize, y: &mut [u32], len: usize, s: u32) {
@@ -682,6 +699,7 @@ pub fn zint_add_mul_small_index(x: &mut [u32], x_index: usize, y: &mut [u32], le
     x[len + x_index] = cc;
 }
 
+#[allow(dead_code)]
 pub fn zint_add_mul_small_index_one_arr(x: &mut [u32], x_index: usize, y_index: usize, len: usize, s: u32) {
     let mut cc = 0;
     for u in 0..len {
@@ -722,21 +740,19 @@ pub fn zint_norm_zero_pointer(x: *mut u32, p: *mut u32, len: usize) -> u32 {
     let mut xx = x.wrapping_add(len);
     let mut pp = p.wrapping_add(len);
     while u > 0 {
+        let (wx, wp, mut cc): (u32, u32, u32);
         u -= 1;
         xx = xx.wrapping_sub(1);
         pp = pp.wrapping_sub(1);
-        let (wx, wp, mut cc): (u32, u32, u32);
 
         unsafe { wx = *xx; }
         unsafe { wp = ((*pp) >> 1) | (bb << 30); }
         unsafe { bb = (*pp) & 1; }
-
         cc = wp.wrapping_sub(wx);
         cc = ((!cc).wrapping_add(1) >> 31) | (!(cc >> 31)).wrapping_add(1);
 
         r |= cc & ((r & 1).wrapping_sub(1));
     }
-
     zint_sub_pointer(x, p, len, r >> 31)
 }
 
@@ -763,6 +779,7 @@ pub fn zint_norm_zero_index(x: &mut [u32], x_index: usize, p: &mut [u32], len: u
     zint_sub_index(x, x_index, p, len, r >> 31);
 }
 
+#[allow(dead_code)]
 pub fn zint_norm_zero_index_one_arr(x: &mut [u32], x_index: usize, p_index: usize, len: usize) -> u32 {
     let mut u = len;
     let mut r: u32 = 0;
@@ -793,28 +810,28 @@ pub fn zint_norm_zero_index_one_arr(x: &mut [u32], x_index: usize, p_index: usiz
  */
 #[allow(non_snake_case)]
 pub fn zint_rebuild_CRT(xx: &mut [u32], xlen: usize, xstride: usize, num: u64, primes: &[SmallPrimes; 522], normalized_signed: bool, tmp: &mut [u32]) {
-    // let mut xIndex;
+    let mut xIndex;
     tmp[0] = primes[0].p;
-    // for u in 1..xlen {
-    //     let (p, p0i, s, r2): (u32, u32, u32, u32);
-    //
-    //     p = primes[u].p;
-    //     s = primes[u].s;
-    //
-    //     p0i = modp_ninv31(p);
-    //     r2 = modp_R2(p, p0i);
-    //     xIndex = 0;
-    //     for _ in 0..num {
-    //         let (xp, xq, xr): (u32, u32, u32);
-    //
-    //         xp = xx[xIndex + u];
-    //         xq = zint_mod_small_unsigned_index(xx, xIndex, u, p, p0i, r2);
-    //         xr = modp_montymul(s, modp_sub(xp, xq, p), p, p0i);
-    //         zint_add_mul_small_index(xx, xIndex, tmp, u, xr);
-    //         xIndex += xstride;
-    //     }
-    //     tmp[u] = zint_mul_small(tmp, u, p);
-    // }
+    for u in 1..xlen {
+        let (p, p0i, s, r2): (u32, u32, u32, u32);
+
+        p = primes[u].p;
+        s = primes[u].s;
+
+        p0i = modp_ninv31(p);
+        r2 = modp_R2(p, p0i);
+        xIndex = 0;
+        for _ in 0..num {
+            let (xp, xq, xr): (u32, u32, u32);
+
+            xp = xx[xIndex + u];
+            xq = zint_mod_small_unsigned_index(xx, xIndex, u, p, p0i, r2);
+            xr = modp_montymul(s, modp_sub(xp, xq, p), p, p0i);
+            zint_add_mul_small_index(xx, xIndex, tmp, u, xr);
+            xIndex += xstride;
+        }
+        tmp[u] = zint_mul_small(tmp, u, p);
+    }
     if normalized_signed {
         let mut xIndex = 0;
         for _ in 0..num {
@@ -826,41 +843,35 @@ pub fn zint_rebuild_CRT(xx: &mut [u32], xlen: usize, xstride: usize, num: u64, p
 
 #[allow(non_snake_case)]
 pub fn zint_rebuild_CRT_pointer(xx: *mut u32, xlen: usize, xstride: usize, num: u64, primes: &[SmallPrimes; 522], normalized_signed: bool, tmp: *mut u32) {
-
     unsafe { *tmp = primes[0].p; }
-    let mut tmp = tmp;
-    // for u in 1..xlen {
-    //     let (p, p0i, s, r2): (u32, u32, u32, u32);
-    //
-    //     p = primes[u].p;
-    //     s = primes[u].s;
-    //
-    //     p0i = modp_ninv31(p);
-    //     r2 = modp_R2(p, p0i);
-    //     let mut x = xx;
-    //     let mut x_same = xx;
-    //     x = x.wrapping_add(u);
-    //     for _ in 0..num {
-    //         let (xp, xq, xr): (u32, u32, u32);
-    //
-    //         unsafe { xp = *x; }
-    //         println!("xpp {}", xp);
-    //         xq = zint_mod_small_unsigned_pointer(x_same, u, p, p0i, r2);
-    //         xr = modp_montymul(s, modp_sub(xp, xq, p), p, p0i);
-    //         println!("xqq {}", xq);
-    //         println!("xrr {}", xr);
-    //         zint_add_mul_small_pointer(x_same, tmp, u, xr);
-    //         x = x.wrapping_add(xstride);
-    //         x_same = x_same.wrapping_add(xstride);
-    //     }
-    //     // x = x;
-    //     // unsafe { *tmp = zint_mul_small_pointer(tmp, u, p); }
-    //     tmp = tmp.wrapping_add(1);
-    // }
+    let mut tmp_u = tmp;
+    for u in 1..xlen {
+        let (p, p0i, s, r2): (u32, u32, u32, u32);
+        tmp_u = tmp_u.wrapping_add(1);
+        p = primes[u].p;
+        s = primes[u].s;
+
+        p0i = modp_ninv31(p);
+        r2 = modp_R2(p, p0i);
+        let mut x_u = xx;
+        let mut x_stride = xx;
+        x_u = x_u.wrapping_add(u);
+        for _ in 0..num {
+            let (xp, xq, xr): (u32, u32, u32);
+
+            unsafe { xp = *x_u; }
+            xq = zint_mod_small_unsigned_pointer(x_stride, u, p, p0i, r2);
+            xr = modp_montymul(s, modp_sub(xp, xq, p), p, p0i);
+            zint_add_mul_small_pointer(x_stride, tmp, u, xr);
+            x_u = x_u.wrapping_add(xstride);
+            x_stride = x_stride.wrapping_add(xstride);
+        }
+        unsafe { *tmp_u = zint_mul_small_pointer(tmp, u, p); }
+    }
     if normalized_signed {
         let mut x = xx;
         for _ in 0..num {
-            println!("ress {}" ,zint_norm_zero_pointer(xx, tmp, xlen));
+            zint_norm_zero_pointer(x, tmp, xlen);
             x = x.wrapping_add(xstride);
         }
     }
@@ -870,33 +881,30 @@ pub fn zint_rebuild_CRT_pointer(xx: *mut u32, xlen: usize, xstride: usize, num: 
 pub fn zint_rebuild_CRT_index(xx: &mut [u32], xx_index: usize, xlen: usize, xstride: usize, num: u64, primes: &[SmallPrimes; 522], normalized_signed: bool, tmp_index: usize) {
     let mut xIndex;
     xx[tmp_index] = primes[0].p;
-    // for u in 1..xlen {
-    //     let (p, p0i, s, r2): (u32, u32, u32, u32);
-    //
-    //     p = primes[u].p;
-    //     s = primes[u].s;
-    //
-    //     p0i = modp_ninv31(p);
-    //     r2 = modp_R2(p, p0i);
-    //     xIndex = xx_index;
-    //     for _ in 0..num {
-    //         let (xp, xq, xr): (u32, u32, u32);
-    //
-    //         xp = xx[xIndex + u];
-    //         println!("xp {}", xp);
-    //         xq = zint_mod_small_unsigned_index(xx, xIndex, u, p, p0i, r2);
-    //         xr = modp_montymul(s, modp_sub(xp, xq, p), p, p0i);
-    //         println!("xq {}", xq);
-    //         println!("xr {}", xr);
-    //         zint_add_mul_small_index_one_arr(xx, xIndex, tmp_index, u, xr);
-    //         xIndex += xstride;
-    //     }
-    //     // xx[u + tmp_index] = zint_mul_small_index(xx, tmp_index, u, p);
-    // }
+    for u in 1..xlen {
+        let (p, p0i, s, r2): (u32, u32, u32, u32);
+
+        p = primes[u].p;
+        s = primes[u].s;
+
+        p0i = modp_ninv31(p);
+        r2 = modp_R2(p, p0i);
+        xIndex = xx_index;
+        for _ in 0..num {
+            let (xp, xq, xr): (u32, u32, u32);
+
+            xp = xx[xIndex + u];
+            xq = zint_mod_small_unsigned_index(xx, xIndex, u, p, p0i, r2);
+            xr = modp_montymul(s, modp_sub(xp, xq, p), p, p0i);
+            zint_add_mul_small_index_one_arr(xx, xIndex, tmp_index, u, xr);
+            xIndex += xstride;
+        }
+        xx[u + tmp_index] = zint_mul_small_index(xx, tmp_index, u, p);
+    }
     if normalized_signed {
         xIndex = xx_index;
         for _ in 0..num {
-            println!("res {} ", zint_norm_zero_index_one_arr(xx, xIndex, tmp_index, xlen));
+            zint_norm_zero_index_one_arr(xx, xIndex, tmp_index, xlen);
             xIndex += xstride;
         }
     }
@@ -910,6 +918,18 @@ pub fn zint_negate(a: &mut [u32], len: usize, ctl: u32) {
         aw = a[u];
         aw = (aw ^ m).wrapping_add(cc);
         a[u] = aw & 0x7FFFFFFF;
+        cc = aw >> 31;
+    }
+}
+
+pub fn zint_negate_pointer(a: *mut u32, len: usize, ctl: u32) {
+    let mut cc = ctl;
+    let m = (!ctl).wrapping_add(1) >> 1;
+    for u in 0..len {
+        let mut aw;
+        unsafe { aw = *a.wrapping_add(u); }
+        aw = (aw ^ m).wrapping_add(cc);
+        unsafe { *a.wrapping_add(u) = aw & 0x7FFFFFFF; }
         cc = aw >> 31;
     }
 }
@@ -951,6 +971,34 @@ pub fn zint_co_reduce(a: &mut [u32], b: &mut [u32], len: usize, xa: i64, xb: i64
     let negb = ((ccb as u64) >> 63) as u32;
     zint_negate(a, len, nega);
     zint_negate(b, len, negb);
+    nega | (negb << 1)
+}
+
+pub fn zint_co_reduce_pointer(a: *mut u32, b: *mut u32, len: usize, xa: i64, xb: i64, ya: i64, yb: i64) -> u32 {
+    let mut cca: i64 = 0;
+    let mut ccb: i64 = 0;
+    for u in 0..len {
+        let (wa, wb): (u32, u32);
+        let (za, zb): (u64, u64);
+
+        unsafe { wa = *a.wrapping_add(u); }
+        unsafe { wb = *b.wrapping_add(u); }
+        za = (wa as u64).wrapping_mul(xa as u64).wrapping_add((wb as u64).wrapping_mul(xb as u64)).wrapping_add(cca as u64);
+        zb = (wa as u64).wrapping_mul(ya as u64).wrapping_add((wb as u64).wrapping_mul(yb as u64)).wrapping_add(ccb as u64);
+        if u > 0 {
+            unsafe { *a.wrapping_add(u - 1) = (za as u32) & 0x7FFFFFFF; }
+            unsafe { *b.wrapping_add(u - 1) = (zb as u32) & 0x7FFFFFFF; }
+        }
+        cca = (za as i64) >> 31;
+        ccb = (zb as i64) >> 31;
+    }
+    unsafe { *a.wrapping_add(len - 1) = cca as u32; }
+    unsafe { *b.wrapping_add(len - 1) = ccb as u32; }
+
+    let nega = ((cca as u64) >> 63) as u32;
+    let negb = ((ccb as u64) >> 63) as u32;
+    zint_negate_pointer(a, len, nega);
+    zint_negate_pointer(b, len, negb);
     nega | (negb << 1)
 }
 
@@ -1009,6 +1057,28 @@ pub fn zint_co_reduce_index_tmp(a: &mut [u32], a_index: usize, b_index: usize, t
     zint_negate_index(a, b_index + tmp_index, len, negb);
     nega | (negb << 1)
 }
+
+pub fn zint_finish_mod_pointer(a: *mut u32, len: usize, m: *mut u32, neg: u32) {
+    let mut cc = 0;
+    for u in 0..len {
+        unsafe { cc = ((*a.wrapping_add(u)).wrapping_sub(*m.wrapping_add(u)).wrapping_sub(cc)) >> 31; }
+    }
+
+
+    let xm = (!neg).wrapping_add(1) >> 1;
+    let ym = (!(neg | (1 - cc))).wrapping_add(1);
+    cc = neg;
+    for u in 0..len {
+        let (mut aw, mw): (u32, u32);
+
+        unsafe { aw = *a.wrapping_add(u); }
+        unsafe { mw = (*m.wrapping_add(u) ^ xm) & ym; }
+        aw = aw.wrapping_sub(mw).wrapping_sub(cc);
+        unsafe { *a.wrapping_add(u) = aw & 0x7FFFFFFF; }
+        cc = aw >> 31;
+    }
+}
+
 
 pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &mut [u32], neg: u32) {
     let mut cc = 0;
@@ -1104,6 +1174,38 @@ pub fn zint_co_reduce_mod(a: &mut [u32], b: &mut [u32], m: &mut [u32], len: usiz
 
     zint_finish_mod(a, len, m, ((cca as u64) >> 63) as u32);
     zint_finish_mod(b, len, m, ((ccb as u64) >> 63) as u32);
+}
+
+pub unsafe fn zint_co_reduce_mod_pointer(a: *mut u32, b: *mut u32, m: *mut u32, len: usize, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64) {
+    let mut cca: i64 = 0;
+    let mut ccb: i64 = 0;
+    let fa = ((*a).wrapping_mul(xa as u32).wrapping_add((*b).wrapping_mul(xb as u32)).wrapping_mul(m0i)) & 0x7FFFFFFF;
+    let fb = ((*a).wrapping_mul(ya as u32).wrapping_add((*b).wrapping_mul(yb as u32)).wrapping_mul(m0i)) & 0x7FFFFFFF;
+    for u in 0..len {
+        let (wa, wb): (u32, u32);
+        let (za, zb): (u64, u64);
+
+        wa = *a.wrapping_add(u);
+        wb = *b.wrapping_add(u);
+
+        za = (wa as u64).wrapping_mul(xa as u64).wrapping_add((wb as u64).wrapping_mul(xb as u64))
+            .wrapping_add((*m.wrapping_add(u) as u64).wrapping_mul(fa as u64)).wrapping_add(cca as u64);
+        zb = (wa as u64).wrapping_mul(ya as u64).wrapping_add((wb as u64).wrapping_mul(yb as u64))
+            .wrapping_add((*m.wrapping_add(u) as u64).wrapping_mul(fb as u64)).wrapping_add(ccb as u64);
+
+        if u > 0 {
+            *a.wrapping_add(u - 1) = (za as u32) & 0x7FFFFFFF;
+            *b.wrapping_add(u - 1) = (zb as u32) & 0x7FFFFFFF;
+        }
+        cca = (za as i64) >> 31;
+        ccb = (zb as i64) >> 31;
+    }
+    *a.wrapping_add(len - 1) = cca as u32;
+    *b.wrapping_add(len - 1) = ccb as u32;
+
+
+    zint_finish_mod_pointer(a, len, m, ((cca as u64) >> 63) as u32);
+    zint_finish_mod_pointer(b, len, m, ((ccb as u64) >> 63) as u32);
 }
 
 
@@ -1299,6 +1401,136 @@ pub fn zint_bezout_index(data: &mut [u32], u_index: usize, v_index: usize, x_ind
     ((1 - ((rc | (!rc).wrapping_add(1)) >> 31)) & data[x_index] & data[y_index]) != 0
 }
 
+pub fn zint_bezout_pointer(u: *mut u32, v: *mut u32, x: *mut u32, y: *mut u32, len: usize, tmp: *mut u32) -> bool {
+    let (x0i, y0i): (u32, u32);
+    let (mut num, mut rc): (u32, u32);
+    let mut j: usize;
+
+    if len == 0 {
+        return false;
+    }
+
+    let u0 = u;
+    let v0 = v;
+    let u1 = tmp;
+    let v1 = u1.wrapping_add(len);
+    let a = v1.wrapping_add(len);
+    let b = a.wrapping_add(len);
+
+
+    unsafe { x0i = modp_ninv31(*x); }
+    unsafe { y0i = modp_ninv31(*y); }
+
+    unsafe { a.copy_from_nonoverlapping(x, len); }
+    unsafe { b.copy_from_nonoverlapping(y, len); }
+    unsafe { *u0 = 1; }
+    unsafe { u0.wrapping_add(1).write_bytes(0, len - 1); }
+    unsafe { v0.write_bytes(0, len); }
+    unsafe { u1.copy_from_nonoverlapping(y, len); }
+    unsafe { v1.copy_from_nonoverlapping(x, len); }
+    unsafe { *v1 -= 1; }
+
+
+    num = 62 * (len as u32) + 30;
+    while num >= 30 {
+        let (mut c0, mut c1): (u32, u32);
+        let (mut a0, mut a1, mut b0, mut b1): (u32, u32, u32, u32);
+        let (mut a_hi, mut b_hi): (u64, u64);
+        let (mut a_lo, mut b_lo): (u32, u32);
+        let (mut pa, mut pb, mut qa, mut qb): (i64, i64, i64, i64);
+        let r: u32;
+
+
+        c0 = (!1u32).wrapping_add(1);
+        c1 = (!1u32).wrapping_add(1);
+        a0 = 0;
+        a1 = 0;
+        b0 = 0;
+        b1 = 0;
+        j = len;
+        while j > 0 {
+            j -= 1;
+            let (aw, bw): (u32, u32);
+
+            unsafe { aw = *a.wrapping_add(j); }
+            unsafe { bw = *b.wrapping_add(j); }
+            a0 ^= (a0 ^ aw) & c0;
+            a1 ^= (a1 ^ aw) & c1;
+            b0 ^= (b0 ^ bw) & c0;
+            b1 ^= (b1 ^ bw) & c1;
+            c1 = c0;
+            c0 &= (((aw | bw).wrapping_add(0x7FFFFFFF)) >> 31).wrapping_sub(1u32);
+        }
+
+
+        a1 |= a0 & c1;
+        a0 &= !c1;
+        b1 |= b0 & c1;
+        b0 &= !c1;
+        a_hi = ((a0 as u64) << 31) + a1 as u64;
+        b_hi = ((b0 as u64) << 31) + b1 as u64;
+        unsafe { a_lo = *a; }
+        unsafe { b_lo = *b; }
+
+
+        pa = 1;
+        pb = 0;
+        qa = 0;
+        qb = 1;
+        for i in 0..31 {
+            let (rt, oa, ob, c_ab, c_ba, c_a): (u32, u32, u32, u32, u32, u32);
+            let rz: u64;
+
+            rz = b_hi.wrapping_sub(a_hi);
+            rt = ((rz ^ ((a_hi ^ b_hi)
+                & (a_hi ^ rz))) >> 63) as u32;
+
+            oa = (a_lo >> i) & 1;
+            ob = (b_lo >> i) & 1;
+            c_ab = oa & ob & rt;
+            c_ba = oa & ob & !rt;
+            c_a = c_ab | (oa ^ 1);
+
+            a_lo = a_lo.wrapping_sub(b_lo & (!c_ab).wrapping_add(1));
+            a_hi = a_hi.wrapping_sub(b_hi & (!(c_ab as u64)).wrapping_add(1));
+            pa -= qa & -(c_ab as i64);
+            pb -= qb & -(c_ab as i64);
+            b_lo = b_lo.wrapping_sub(a_lo & (!c_ba).wrapping_add(1));
+            b_hi = b_hi.wrapping_sub(a_hi & (!(c_ba as u64)).wrapping_add(1));
+            qa -= pa & -(c_ba as i64);
+            qb -= pb & -(c_ba as i64);
+
+            a_lo = a_lo.wrapping_add(a_lo & (c_a.wrapping_sub(1)));
+            pa += pa & ((c_a as i64) - 1);
+            pb += pb & ((c_a as i64) - 1);
+            a_hi ^= (a_hi ^ (a_hi >> 1)) & (!(c_a as u64)).wrapping_add(1);
+            b_lo = b_lo.wrapping_add(b_lo & (!c_a).wrapping_add(1));
+            qa += qa & -(c_a as i64);
+            qb += qb & -(c_a as i64);
+            b_hi ^= (b_hi ^ (b_hi >> 1)) & ((c_a as u64).wrapping_sub(1));
+        }
+
+
+        r = zint_co_reduce_pointer(a, b, len, pa, pb, qa, qb);
+        pa -= (pa + pa) & -((r & 1) as i64);
+        pb -= (pb + pb) & -((r & 1) as i64);
+        qa -= (qa + qa) & -((r >> 1) as i64);
+        qb -= (qb + qb) & -((r >> 1) as i64);
+
+        unsafe { zint_co_reduce_mod_pointer(u0, u1, y, len, y0i, pa, pb, qa, qb); }
+        unsafe { zint_co_reduce_mod_pointer(v0, v1, x, len, x0i, pa, pb, qa, qb); }
+
+        num -= 30;
+    }
+
+
+    unsafe { rc = *a ^ 1; }
+    for j in 1..len {
+        unsafe { rc |= *a.wrapping_add(j); }
+    }
+    unsafe { ((1 - ((rc | (!rc).wrapping_add(1)) >> 31)) & *x & *y) != 0 }
+}
+
 
 pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], len: usize, tmp: &mut [u32]) -> i32 {
     let (u1_index, v1_index, a_index, b_index): (usize, usize, usize, usize);
@@ -1453,6 +1685,31 @@ pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &mut [u32], ylen
     }
 }
 
+pub fn zint_add_scaled_mul_small_pointer(x: *mut u32, xlen: usize, y: *mut u32, ylen: usize, k: i32, sch: usize, scl: u32) {
+    let mut cc: i32;
+    let mut tw: u32;
+    if ylen == 0 {
+        return;
+    }
+    let ysign = (!(unsafe { *y.wrapping_add(ylen - 1) } >> 30)).wrapping_add(1) >> 1;
+    tw = 0;
+    cc = 0;
+    unsafe {
+        for u in sch..xlen {
+            let v: usize = u - sch;
+            let wy = if v < ylen { *y.wrapping_add(v) } else { ysign };
+            let wys: u32 = ((wy << scl) & 0x7FFFFFFF) | tw;
+            tw = wy >> (31 - scl);
+
+            let z = ((wys as i64) * (k as i64) + (*x.wrapping_add(u) as i64) + (cc as i64)) as u64;
+            *x.wrapping_add(u) = (z as u32) & 0x7FFFFFFF;
+
+            let ccu = (z >> 31) as u32;
+            cc = ccu as i32;
+        }
+    }
+}
+
 pub fn zint_add_scaled_mul_small_index(x: &mut [u32], x_index: usize, xlen: usize, y: &mut [u32], y_index: usize, ylen: usize, k: i32, sch: usize, scl: u32) {
     let mut cc: i32;
     let mut tw: u32;
@@ -1502,6 +1759,33 @@ pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &mut [u32], ylen: usize, s
     }
 }
 
+pub fn zint_sub_scaled_pointer(x: *mut u32, xlen: usize, y: *mut u32, ylen: usize, sch: usize, scl: u32) {
+    if ylen == 0 {
+        return;
+    }
+
+    let ysign: u32 = (!(unsafe { *y.wrapping_add(ylen - 1) } >> 30)).wrapping_add(1) >> 1;
+    let mut tw = 0;
+    let mut cc = 0;
+    for u in sch..xlen {
+        let v: usize;
+        let (w, wy, wys): (u32, u32, u32);
+
+        /*
+         * Get the next word of y (scaled).
+         */
+        v = (u as usize) - sch;
+        wy = if v < ylen { unsafe { *y.wrapping_add(v) } } else { ysign };
+        wys = ((wy << scl) & 0x7FFFFFFF) | tw;
+        tw = wy >> (31 - scl);
+
+        unsafe { w = (*x.wrapping_add(u)).wrapping_sub(wys).wrapping_sub(cc); }
+        unsafe { *x.wrapping_add(u) = w & 0x7FFFFFFF; }
+        cc = w >> 31;
+    }
+}
+
+#[allow(dead_code)]
 pub fn zint_sub_scaled_index_tmp(x: &mut [u32], x_index: usize, xlen: usize, tmp_y_index: usize, ylen: usize, sch: usize, scl: u32) {
     if ylen == 0 {
         return;
@@ -1556,6 +1840,13 @@ pub fn zint_sub_scaled_index(x: &mut [u32], x_index: usize, xlen: usize, y: &mut
 
 pub fn zint_one_to_plain(x: &mut [u32]) -> i32 {
     let mut w: u32 = x[0];
+    w |= (w & 0x40000000) << 1;
+    w as i32
+}
+
+#[inline(always)]
+pub unsafe fn zint_one_to_plain_pointer(x: *mut u32) -> i32 {
+    let mut w: u32 = *x;
     w |= (w & 0x40000000) << 1;
     w as i32
 }
@@ -1627,6 +1918,38 @@ pub fn poly_big_to_fp_index(d: &mut [u64], d_index: usize, f: &mut [u32], ff_ind
     }
 }
 
+pub fn poly_big_to_fp_pointer(d: *mut u64, f: *mut u32, flen: usize, fstride: usize, logn: u32) {
+    let n = mkn!(logn);
+    if flen == 0 {
+        for u in 0..n {
+            unsafe { *d.wrapping_add(u) = FPR_ZERO; }
+        }
+        return;
+    }
+    let mut f = f;
+    unsafe {
+        for u in 0..n {
+            let neg = (!(*f.wrapping_add(flen - 1) >> 30)).wrapping_add(1);
+            let xm = neg >> 1;
+            let mut cc = neg & 1;
+            let mut x: u64 = FPR_ZERO;
+            let mut fsc: u64 = FPR_ONE;
+            for v in 0..flen {
+                let mut w: u32;
+
+                w = (*f.wrapping_add(v) ^ xm) + cc;
+                cc = w >> 31;
+                w &= 0x7FFFFFFF;
+                w = w.wrapping_sub((w << 1) & neg);
+                x = fpr_add(x, fpr_mul(fpr_of(w as i32 as i64), fsc));
+                fsc = fpr_mul(fsc, FPR_PTWO31);
+            }
+            f = f.wrapping_add(fstride);
+            *d.wrapping_add(u) = x;
+        }
+    }
+}
+
 pub fn poly_big_to_small(d: &mut [i8], s: &mut [u32], lim: i32, logn: u32) -> i32 {
     let n = mkn!(logn);
     for u in 0..n {
@@ -1637,6 +1960,19 @@ pub fn poly_big_to_small(d: &mut [i8], s: &mut [u32], lim: i32, logn: u32) -> i3
         d[u] = z as i8;
     }
     1
+}
+
+pub fn poly_big_to_small_pointer(d: *mut i8, s: *mut u32, lim: i32, logn: u32) -> bool {
+    let n = mkn!(logn);
+    for u in 0..n {
+        let z: i32;
+        unsafe { z = zint_one_to_plain_pointer(s.wrapping_add(u)); }
+        if z < -lim || z > lim {
+            return false;
+        }
+        unsafe { *d.wrapping_add(u) = z as i8; }
+    }
+    true
 }
 
 #[allow(non_snake_case)]
@@ -1660,6 +1996,29 @@ pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32]
                 x_index += Fstride;
             }
             y_index += fstride;
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn poly_sub_scaled_pointer(F: *mut u32, Flen: usize, Fstride: usize, f: *mut u32, flen: usize, fstride: usize, k: *mut i32, sch: u32, scl: u32, logn: u32) {
+    let n = mkn!(logn);
+    for u in 0..n {
+        let mut kf: i32;
+
+        unsafe { kf = -*k.wrapping_add(u); }
+        let mut x = F.wrapping_add(u * Fstride);
+        let mut y = f;
+        for v in 0..n {
+            zint_add_scaled_mul_small_pointer(
+                x, Flen, y, flen, kf, sch as usize, scl);
+            if u + v == n - 1 {
+                x = F;
+                kf = -kf;
+            } else {
+                x = x.wrapping_add(Fstride);
+            }
+            y = y.wrapping_add(fstride);
         }
     }
 }
@@ -1714,15 +2073,14 @@ pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [
 }
 
 #[allow(non_snake_case)]
-pub fn poly_sub_scaled_ntt_index(F: &mut [u32], F_index: usize, Flen: usize, Fstride: usize, f_index: usize, flen: usize, fstride: usize, k: &mut [i32], sch: u32, scl: u32, logn: u32, tmp_index: usize) {
-    let (gm_index, igm_index, fk_index, t1_index, mut x_index, mut y_index): (usize, usize, usize, usize, usize, usize);
+pub fn poly_sub_scaled_ntt_pointer(F: *mut u32, Flen: usize, Fstride: usize, f: *mut u32, flen: usize, fstride: usize, k: *mut i32, sch: u32, scl: u32, logn: u32, tmp: *mut u32) {
     let tlen: usize;
     let n = mkn!(logn);
     tlen = flen + 1;
-    gm_index = 0;
-    igm_index = n;
-    fk_index = 2 * n;
-    t1_index = 2 * n + n * tlen;
+    let gm = tmp;
+    let igm = gm.wrapping_add(n);
+    let fk = igm.wrapping_add(n);
+    let t1 = fk.wrapping_add(n * tlen);
 
     for u in 0..tlen {
         let (p, p0i, r2, rx): (u32, u32, u32, u32);
@@ -1731,35 +2089,40 @@ pub fn poly_sub_scaled_ntt_index(F: &mut [u32], F_index: usize, Flen: usize, Fst
         p0i = modp_ninv31(p);
         r2 = modp_R2(p, p0i);
         rx = modp_Rx(flen as u32, p, p0i, r2);
-        modp_mkgm2_index(F, tmp_index + gm_index, tmp_index + igm_index, logn, PRIMES[u].g, p, p0i);
+        modp_mkgm2_pointer(gm, igm, logn, PRIMES[u].g, p, p0i);
 
-        // for v in 0..n {
-        //     F[v + t1_index + tmp_index] = modp_set(k[v], p);
-        // }
-        // modp_NTT2_index(F, t1_index + tmp_index, gm_index + tmp_index, logn, p, p0i);
-        // y_index = 0;
-        // x_index = fk_index + u;
-        // for _ in 0..n {
-        //     F[x_index + tmp_index] = zint_mod_small_signed_index(F, y_index + f_index, flen, p, p0i, r2, rx);
-        //     y_index += fstride;
-        //     x_index += tlen;
-        // }
-        // modp_NTT2_ext_index(F, tlen, fk_index + u + tmp_index, gm_index + tmp_index, logn, p, p0i);
-        // for v in 0..n {
-        //     F[x_index + tmp_index] = modp_montymul(
-        //         modp_montymul(F[v + t1_index + tmp_index], F[x_index + tmp_index], p, p0i), r2, p, p0i);
-        //     x_index += tlen;
-        // }
-        // modp_iNTT2_ext_index(F, tlen, fk_index + u + tmp_index, igm_index, logn, p, p0i);
+        for v in 0..n {
+            unsafe { *t1.wrapping_add(v) = modp_set(*k.wrapping_add(v), p); }
+        }
+        modp_NTT2_pointer(t1, gm, logn, p, p0i);
+
+        let mut y = f;
+        let mut x = fk.wrapping_add(u);
+        for _ in 0..n {
+            unsafe { *x = zint_mod_small_signed_pointer(y, flen, p, p0i, r2, rx); }
+            y = y.wrapping_add(fstride);
+            x = x.wrapping_add(tlen);
+        }
+
+        modp_NTT2_ext_pointer(fk.wrapping_add(u), tlen, gm, logn, p, p0i);
+        let mut x = fk.wrapping_add(u);
+        for v in 0..n {
+            unsafe {
+                *x = modp_montymul(
+                    modp_montymul(*t1.wrapping_add(v), *x, p, p0i), r2, p, p0i);
+            }
+            x = x.wrapping_add(tlen);
+        }
+        modp_iNTT2_ext_pointer(fk.wrapping_add(u), tlen, igm, logn, p, p0i);
     }
-    // zint_rebuild_CRT_index(F, fk_index + tmp_index, tlen, tlen, n as u64, &PRIMES, true, t1_index + tmp_index);
-    // x_index = F_index;
-    // y_index = fk_index + F_index;
-    // for _ in 0..n {
-    //     zint_sub_scaled_index_tmp(F, x_index, Flen, tmp_index + y_index, tlen, sch as usize, scl);
-    //     x_index += Fstride;
-    //     y_index += tlen;
-    // }
+    zint_rebuild_CRT_pointer(fk, tlen, tlen, n as u64, &PRIMES, true, t1);
+    let mut x = F;
+    let mut y = fk;
+    for _ in 0..n {
+        zint_sub_scaled_pointer(x, Flen, y, tlen, sch as usize, scl);
+        x = x.wrapping_add(Fstride);
+        y = y.wrapping_add(tlen);
+    }
 }
 
 
@@ -1816,13 +2179,18 @@ pub fn poly_small_sqnorm(f: &mut [i8], logn: u32) -> u32 {
     s | (!(ng >> 31)).wrapping_add(1)
 }
 
-// pub fn align_fpr(base: &mut [()], data: &mut [()]) -> &mut [u64] {
-//     panic!("TISSEMAND")
-// }
-//
-// pub fn align_u32(base: &mut [()], data: &mut [()]) -> &mut [u32] {
-//     panic!("TISSEMAND")
-// }
+pub fn poly_small_sqnorm_pointer(f: *mut i8, logn: u32) -> u32 {
+    let n = mkn!(logn);
+    let mut s = 0;
+    let mut ng = 0;
+    for u in 0..n {
+        let z: i32;
+        unsafe { z = (*f.wrapping_add(u)) as i32; }
+        s += z.wrapping_mul(z) as u32;
+        ng |= s;
+    }
+    s | (!(ng >> 31)).wrapping_add(1)
+}
 
 pub fn poly_small_to_fp(x: &mut [u64], f: &mut [i8], logn: u32) {
     let n = mkn!(logn);
@@ -1831,7 +2199,14 @@ pub fn poly_small_to_fp(x: &mut [u64], f: &mut [i8], logn: u32) {
     }
 }
 
-// TODO USE SPLIT_AT_MUT INSTEAD
+pub fn poly_small_to_fp_pointer(x: *mut u64, f: *mut i8, logn: u32) {
+    let n = mkn!(logn);
+    for u in 0..n {
+        unsafe { *x.wrapping_add(u) = fpr_of(*f.wrapping_add(u) as i64); }
+    }
+}
+
+
 pub fn make_fg_step_index(data: &mut [u32], data_index: usize, logn: u32, depth: usize, in_ntt: bool, out_ntt: bool) {
     let n = 1usize << logn;
     let hn = n >> 1;
@@ -1966,7 +2341,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
     let gm_index = gs_index + n * slen;
     let igm_index = gm_index + n;
     let t1_index = igm_index + n;
-    // data.copy_within(0..(2 * n * slen), fs_index);
+    data.copy_within(0..(2 * n * slen), fs_index);
 
     for u in 0..slen {
         let (p, p0i, r2): (u32, u32, u32);
@@ -2023,7 +2398,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
         }
     }
     zint_rebuild_CRT_index(data, fs_index, slen, slen, n as u64, &PRIMES, true, gm_index);
-    // zint_rebuild_CRT_index(data, gs_index, slen, slen, n as u64, &PRIMES, true, gm_index);
+    zint_rebuild_CRT_index(data, gs_index, slen, slen, n as u64, &PRIMES, true, gm_index);
 
     for u in slen..tlen {
         let p = PRIMES[u].p;
@@ -2076,14 +2451,14 @@ pub fn make_fg_step_pointer(data: *mut u32, logn: u32, depth: usize, in_ntt: boo
     let slen = MAX_BL_SMALL[depth];
     let tlen = MAX_BL_SMALL[depth + 1];
 
-    let mut fd = data;
-    let mut gd = fd.wrapping_add(hn * tlen);
-    let mut fs = gd.wrapping_add(hn * tlen);
-    let mut gs = fs.wrapping_add(n * slen);
-    let mut gm = gs.wrapping_add(n * slen);
-    let mut igm = gm.wrapping_add(n);
+    let fd = data;
+    let gd = fd.wrapping_add(hn * tlen);
+    let fs = gd.wrapping_add(hn * tlen);
+    let gs = fs.wrapping_add(n * slen);
+    let gm = gs.wrapping_add(n * slen);
+    let igm = gm.wrapping_add(n);
     let mut t1 = igm.wrapping_add(n);
-    // data.copy_within(0..(2 * n * slen), fs_index);
+    unsafe { fs.copy_from(data, 2 * n * slen); };
 
     let t1_restart = t1;
     for u in 0..slen {
@@ -2094,7 +2469,7 @@ pub fn make_fg_step_pointer(data: *mut u32, logn: u32, depth: usize, in_ntt: boo
         r2 = modp_R2(p, p0i);
         modp_mkgm2_pointer(gm, igm, logn, PRIMES[u].g, p, p0i);
         let mut x = fs.wrapping_add(u);
-        for v in 0..n {
+        for _ in 0..n {
             unsafe { *t1 = *x; }
             t1 = t1.wrapping_add(1);
             x = x.wrapping_add(slen);
@@ -2159,7 +2534,7 @@ pub fn make_fg_step_pointer(data: *mut u32, logn: u32, depth: usize, in_ntt: boo
         }
     }
     zint_rebuild_CRT_pointer(fs, slen, slen, n as u64, &PRIMES, true, gm);
-    // zint_rebuild_CRT_pointer(gs, slen, slen, n as u64, &PRIMES, true, gm);
+    zint_rebuild_CRT_pointer(gs, slen, slen, n as u64, &PRIMES, true, gm);
 
     for u in slen..tlen {
         let p = PRIMES[u].p;
@@ -2168,7 +2543,7 @@ pub fn make_fg_step_pointer(data: *mut u32, logn: u32, depth: usize, in_ntt: boo
         let rx = modp_Rx(slen as u32, p, p0i, r2);
         modp_mkgm2_pointer(gm, igm, logn, PRIMES[u].g, p, p0i);
         let mut x = fs;
-        for v in 0..n {
+        for _ in 0..n {
             unsafe { *t1 = zint_mod_small_signed_pointer(x, slen, p, p0i, r2, rx); }
             t1 = t1.wrapping_add(1);
             x = x.wrapping_add(slen);
@@ -2195,7 +2570,7 @@ pub fn make_fg_step_pointer(data: *mut u32, logn: u32, depth: usize, in_ntt: boo
         }
         t1 = t1_restart;
         x = gs;
-        for v in 0..n {
+        for _ in 0..n {
             unsafe { *t1 = zint_mod_small_signed_pointer(x, slen, p, p0i, r2, rx); }
             t1 = t1.wrapping_add(1);
             x = x.wrapping_add(slen);
@@ -2252,7 +2627,7 @@ pub fn make_fg(data: &mut [u32], f: &mut [i8], g: &mut [i8], logn: u32, depth: u
     }
 }
 
-pub fn make_fg_point(data: *mut u32, f: *mut i8, g: *mut i8, logn: u32, depth: u32, out_ntt: bool) {
+pub fn make_fg_pointer(data: *mut u32, f: *mut i8, g: *mut i8, logn: u32, depth: u32, out_ntt: bool) {
     let n = mkn!(logn);
     let p0 = PRIMES[0].p;
     let mut ft = data;
@@ -2309,33 +2684,35 @@ pub fn make_fg_index(data: &mut [u32], data_index: usize, f: &mut [i8], g: &mut 
 }
 
 #[allow(non_snake_case)]
-pub fn solve_ntru_deepest(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [u32]) -> i32
+pub fn solve_ntru_deepest(logn_top: u32, f: *mut i8, g: *mut i8, tmp: *mut u32) -> bool
 {
     let len = MAX_BL_SMALL[logn_top as usize];
-    let Fp_index = 0;
-    let Gp_index = Fp_index + len;
-    let fp_index = Gp_index + len;
-    let gp_index = fp_index + len;
-    let t1_index = gp_index + len;
-    make_fg_index(tmp, fp_index, f, g, logn_top, logn_top, false);
+    let Fp = tmp;
+    let Gp = Fp.wrapping_add(len);
+    let fp = Gp.wrapping_add(len);
+    let gp = fp.wrapping_add(len);
+    let t1 = gp.wrapping_add(len);
+    make_fg_pointer(fp, f, g, logn_top, logn_top, false);
 
-    zint_rebuild_CRT_index(tmp, fp_index, len, len, 2, &PRIMES, false, t1_index);
+    zint_rebuild_CRT_pointer(fp, len, len, 2, &PRIMES, false, t1);
 
-    if !zint_bezout_index(tmp, Gp_index, Fp_index, fp_index, gp_index, len, t1_index) {
-        return 0;
+    if !zint_bezout_pointer(Gp, Fp, fp, gp, len, t1) {
+        return false;
     }
     let q = 12289;
 
-    if zint_mul_small_index(tmp, Fp_index, len, q) != 0
-        || zint_mul_small_index(tmp, Gp_index, len, q) != 0
-    {
-        return 0;
+    unsafe {
+        if zint_mul_small_pointer(Fp, len, q) != 0
+            || zint_mul_small_pointer(Gp, len, q) != 0
+        {
+            return false;
+        }
     }
-    1
+    true
 }
 
 #[allow(non_snake_case)]
-pub fn solve_ntru_intermediate_point(logn_top: u32, f: *mut i8, g: *mut i8, depth: u32, tmp: *mut u32) -> i32 {
+pub fn solve_ntru_intermediate_point(logn_top: u32, f: *mut i8, g: *mut i8, depth: u32, tmp: *mut u32) -> bool {
     let logn = logn_top - depth;
     let n = mkn!(logn);
     let hn = n >> 1;
@@ -2346,70 +2723,36 @@ pub fn solve_ntru_intermediate_point(logn_top: u32, f: *mut i8, g: *mut i8, dept
 
     let mut Fd = tmp;
     let mut Gd = Fd.wrapping_add(dlen * hn);
-    let ft = Gd.wrapping_add(dlen * hn);
-    // make_fg(ft, f, g, logn, depth, true);
+    let mut ft = Gd.wrapping_add(dlen * hn);
+    make_fg_pointer(ft, f, g, logn_top, depth, true);
 
-    0
-}
-
-#[allow(non_snake_case)]
-pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth: u32, tmp: &mut [u32]) -> i32 {
-    let logn = logn_top - depth;
-    let n = mkn!(logn);
-    let hn = n >> 1;
-
-    let slen = MAX_BL_SMALL[depth as usize];
-    let dlen = MAX_BL_SMALL[(depth + 1) as usize];
-    let llen = MAX_BL_LARGE[depth as usize];
-
-    let mut Fd_index = 0;
-    let mut Gd_index = Fd_index + dlen * hn;
-
-    let mut ft_index = Gd_index + dlen * hn;
-    make_fg_index(tmp, ft_index, f, g, logn_top, depth, true);
-    println!("x1 {}", tmp[0]);
-    println!("x2 {}", tmp[1]);
-    let mut x1 = tmp.as_mut_ptr();
-    println!("");
-    unsafe { println!("x1 {}", (*x1)); }
-    let x2 = x1.wrapping_add(1);
-    // x1.as_ref()
-    unsafe { println!("x1 {}", (*x1)); }
-    unsafe { *x1 = 2; }
-    unsafe { println!("x1 {}", (*x1)); }
-    unsafe { println!("x2 {}", (*x2)); }
-
-    let mut Ft_index = 0;
-    let mut Gt_index = Ft_index + n * llen;
-    let mut t1_index = Gt_index + n * llen;
-
-
-    tmp.copy_within(ft_index..2 * n * slen + ft_index, t1_index);
-    ft_index = t1_index;
-    let gt_index = ft_index + slen * n;
-    t1_index = gt_index + slen * n;
-
-    tmp.copy_within(Fd_index..2 * hn * dlen + Fd_index, t1_index);
-    Fd_index = t1_index;
-    Gd_index = Fd_index + hn * dlen;
+    let mut Ft = tmp;
+    let mut Gt = Ft.wrapping_add(n * llen);
+    let mut t1 = Gt.wrapping_add(n * llen);
+    unsafe { t1.copy_from(ft, 2 * n * slen); }
+    ft = t1;
+    let gt = ft.wrapping_add(slen * n);
+    t1 = gt.wrapping_add(slen * n);
+    unsafe { t1.copy_from(Fd, 2 * hn * dlen); };
+    Fd = t1;
+    Gd = Fd.wrapping_add(hn * dlen);
 
     for u in 0..llen {
         let p = PRIMES[u].p;
         let p0i = modp_ninv31(p);
         let r2 = modp_R2(p, p0i);
         let rx = modp_Rx(dlen as u32, p, p0i, r2);
-
-        let mut xs = Fd_index;
-        let mut ys = Gd_index;
-        let mut xd = Ft_index + u;
-        let mut yd = Gt_index + u;
+        let mut xs = Fd;
+        let mut ys = Gd;
+        let mut xd = Ft.wrapping_add(u);
+        let mut yd = Gt.wrapping_add(u);
         for _ in 0..hn {
-            tmp[xd] = zint_mod_small_signed_index(tmp, xs, dlen, p, p0i, r2, rx);
-            tmp[yd] = zint_mod_small_signed_index(tmp, ys, dlen, p, p0i, r2, rx);
-            xs += dlen;
-            ys += dlen;
-            xd += llen;
-            yd += llen;
+            unsafe { *xd = zint_mod_small_signed_pointer(xs, dlen, p, p0i, r2, rx); }
+            unsafe { *yd = zint_mod_small_signed_pointer(ys, dlen, p, p0i, r2, rx); }
+            xs = xs.wrapping_add(dlen);
+            ys = ys.wrapping_add(dlen);
+            xd = xd.wrapping_add(llen);
+            yd = yd.wrapping_add(llen);
         }
     }
 
@@ -2419,138 +2762,145 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
         let r2 = modp_R2(p, p0i);
 
         if u == slen {
-            zint_rebuild_CRT_index(tmp, ft_index, slen, slen, n as u64, &PRIMES, true, t1_index);
-            zint_rebuild_CRT_index(tmp, gt_index, slen, slen, n as u64, &PRIMES, true, t1_index);
+            zint_rebuild_CRT_pointer(ft, slen, slen, n as u64, &PRIMES, true, t1);
+            zint_rebuild_CRT_pointer(gt, slen, slen, n as u64, &PRIMES, true, t1);
         }
 
-        let gm_index = t1_index;
-        let igm_index = gm_index + n;
-        let fx_index = igm_index + n;
-        let gx_index = fx_index + n;
-
-        modp_mkgm2_index(tmp, gm_index, igm_index, logn, PRIMES[u].g, p, p0i);
+        let gm = t1;
+        let igm = gm.wrapping_add(n);
+        let fx = igm.wrapping_add(n);
+        let gx = fx.wrapping_add(n);
+        modp_mkgm2_pointer(gm, igm, logn, PRIMES[u].g, p, p0i);
 
         if u < slen {
-            let mut x = ft_index + u;
-            let mut y = gt_index + u;
-            for v in 0..n {
-                tmp[fx_index + v] = tmp[x];
-                tmp[gx_index + v] = tmp[y];
-                x += slen;
-                y += slen;
+            let mut x = ft.wrapping_add(u);
+            let mut y = gt.wrapping_add(u);
+            let mut fx_v = fx;
+            let mut gx_v = gx;
+            for _ in 0..n {
+                unsafe { *fx_v = *x; }
+                unsafe { *gx_v = *y; }
+                fx_v = fx_v.wrapping_add(1);
+                gx_v = gx_v.wrapping_add(1);
+                x = x.wrapping_add(slen);
+                y = y.wrapping_add(slen);
             }
-            modp_iNTT2_ext_index(tmp, slen, ft_index + u, igm_index, logn, p, p0i);
-            modp_iNTT2_ext_index(tmp, slen, gt_index + u, igm_index, logn, p, p0i);
+            modp_iNTT2_ext_pointer(ft.wrapping_add(u), slen, igm, logn, p, p0i);
+            modp_iNTT2_ext_pointer(gt.wrapping_add(u), slen, igm, logn, p, p0i);
         } else {
             let rx = modp_Rx(slen as u32, p, p0i, r2);
-            let mut x = ft_index;
-            let mut y = gt_index;
-            for v in 0..n {
-                tmp[fx_index + v] = zint_mod_small_signed_index(tmp, x, slen,
-                                                                p, p0i, r2, rx);
-                tmp[gx_index + v] = zint_mod_small_signed_index(tmp, y, slen,
-                                                                p, p0i, r2, rx);
-                x += slen;
-                y += slen;
+            let mut x = ft;
+            let mut y = gt;
+            let mut fx_v = fx;
+            let mut gx_v = gx;
+            for _ in 0..n {
+                unsafe { *fx_v = zint_mod_small_signed_pointer(x, slen, p, p0i, r2, rx); }
+                unsafe { *gx_v = zint_mod_small_signed_pointer(y, slen, p, p0i, r2, rx); }
+                fx_v = fx_v.wrapping_add(1);
+                gx_v = gx_v.wrapping_add(1);
+                x = x.wrapping_add(slen);
+                y = y.wrapping_add(slen);
             }
-            modp_NTT2_index(tmp, fx_index, gm_index, logn, p, p0i);
-            modp_NTT2_index(tmp, gx_index, gm_index, logn, p, p0i);
+            modp_NTT2_pointer(fx, gm, logn, p, p0i);
+            modp_NTT2_pointer(gx, gm, logn, p, p0i);
         }
 
-        let Fp_index = gx_index + n;
-        let Gp_index = Fp_index + hn;
-        let mut x = Ft_index + u;
-        let mut y = Gt_index + u;
-        for v in 0..hn {
-            tmp[Fp_index + v] = tmp[x];
-            tmp[Gp_index + v] = tmp[y];
-            x += llen;
-            y += llen;
+        let Fp = gx.wrapping_add(n);
+        let Gp = Fp.wrapping_add(hn);
+        let mut Fp_v = Fp;
+        let mut Gp_v = Gp;
+        let mut x = Ft.wrapping_add(u);
+        let mut y = Gt.wrapping_add(u);
+        for _ in 0..hn {
+            unsafe { *Fp_v = *x; };
+            unsafe { *Gp_v = *y; };
+            Fp_v = Fp_v.wrapping_add(1);
+            Gp_v = Gp_v.wrapping_add(1);
+            x = x.wrapping_add(llen);
+            y = y.wrapping_add(llen);
         }
-        modp_NTT2_index(tmp, Fp_index, gm_index, logn - 1, p, p0i);
-        modp_NTT2_index(tmp, Gp_index, gm_index, logn - 1, p, p0i);
+        modp_NTT2_pointer(Fp, gm, logn - 1, p, p0i);
+        modp_NTT2_pointer(Gp, gm, logn - 1, p, p0i);
 
-        let mut x = Ft_index + u;
-        let mut y = Gt_index + u;
-        for v in 0..hn {
-            let ftA = tmp[fx_index + (v << 1)];
-            let ftB = tmp[fx_index + (v << 1) + 1];
-            let gtA = tmp[gx_index + (v << 1)];
-            let gtB = tmp[gx_index + (v << 1) + 1];
-            let mFp = modp_montymul(tmp[Fp_index + v], r2, p, p0i);
-            let mGp = modp_montymul(tmp[Gp_index + v], r2, p, p0i);
-            tmp[x] = modp_montymul(gtB, mFp, p, p0i);
-            tmp[x + llen] = modp_montymul(gtA, mFp, p, p0i);
-            tmp[y] = modp_montymul(ftB, mGp, p, p0i);
-            tmp[y + llen] = modp_montymul(ftA, mGp, p, p0i);
-
-            x += llen << 1;
-            y += llen << 1;
+        let mut x = Ft.wrapping_add(u);
+        let mut y = Gt.wrapping_add(u);
+        let mut Fp_v = Fp;
+        let mut Gp_v = Gp;
+        unsafe {
+            for v in 0..hn {
+                let ftA = *fx.wrapping_add(v << 1);
+                let ftB = *fx.wrapping_add((v << 1) + 1);
+                let gtA = *gx.wrapping_add(v << 1);
+                let gtB = *gx.wrapping_add((v << 1) + 1);
+                let mFp = modp_montymul(*Fp_v, r2, p, p0i);
+                let mGp = modp_montymul(*Gp_v, r2, p, p0i);
+                *x = modp_montymul(gtB, mFp, p, p0i);
+                *x.wrapping_add(llen) = modp_montymul(gtA, mFp, p, p0i);
+                *y = modp_montymul(ftB, mGp, p, p0i);
+                *y.wrapping_add(llen) = modp_montymul(ftA, mGp, p, p0i);
+                Fp_v = Fp_v.wrapping_add(1);
+                Gp_v = Gp_v.wrapping_add(1);
+                x = x.wrapping_add(llen << 1);
+                y = y.wrapping_add(llen << 1);
+            }
         }
-        modp_iNTT2_ext_index(tmp, llen, Ft_index + u, igm_index, logn, p, p0i);
-        modp_iNTT2_ext_index(tmp, llen, Gt_index + u, igm_index, logn, p, p0i);
+        modp_iNTT2_ext_pointer(Ft.wrapping_add(u), llen, igm, logn, p, p0i);
+        modp_iNTT2_ext_pointer(Gt.wrapping_add(u), llen, igm, logn, p, p0i);
+    }
+    zint_rebuild_CRT_pointer(Ft, llen, llen, n as u64, &PRIMES, true, t1);
+    zint_rebuild_CRT_pointer(Gt, llen, llen, n as u64, &PRIMES, true, t1);
+
+    let rt3: *mut u64 = t1.cast();
+    let rt4 = rt3.wrapping_add(n);
+    let rt5 = rt4.wrapping_add(n);
+    let rt1 = rt5.wrapping_add(n >> 1);
+    let k: *mut i32 = rt1.cast();
+    let mut rt2: *mut u64 = k.wrapping_add(n).cast();
+
+    if rt2 < (rt1.wrapping_add(n)) {
+        rt2 = rt1.wrapping_add(n);
     }
 
-    zint_rebuild_CRT_index(tmp, Ft_index, llen, llen, n as u64, &PRIMES, true, t1_index);
-    zint_rebuild_CRT_index(tmp, Gt_index, llen, llen, n as u64, &PRIMES, true, t1_index);
-
-    let (tmp_lower, tmp_upper) = tmp.split_at_mut(t1_index);
-    let (_, mut rt3, _) = pod_align_to_mut::<u32, u64>(tmp_upper);
-
-    let rt4 = 0 + n;
-    let rt5 = rt4 + n;
-    let rt1 = rt5 + (n >> 1);
-    // We multiply with 2 because the index from above is u64 index, so we need to jump 2x for u32
-    let k_index = rt1 * 2;
-    let rt2 = 3 * n + (n >> 1);
-    // if rt2_index < (rt1 + n) {
-    //     rt2_index = n / 2;
-    // }
-    // println!("n {}", n);
-    // println!("{:?}", rt2);
-    // println!("hmm {}", rt2[rt2_index]);
-    // TODO ??
-    // t1_index = k + n;
+    let t1: *mut u32 = k.wrapping_add(n).cast();
 
     let rlen = if slen > 10 { 10 } else { slen };
+    poly_big_to_fp_pointer(rt3, ft.wrapping_add(slen - rlen), rlen, slen, logn);
+    poly_big_to_fp_pointer(rt4, gt.wrapping_add(slen - rlen), rlen, slen, logn);
 
-    poly_big_to_fp_index(&mut *rt3, 0, tmp_lower, ft_index + slen - rlen, rlen, slen, logn);
-    poly_big_to_fp_index(rt3, n, tmp_lower, gt_index + slen - rlen, rlen, slen, logn);
-    // println!("{:?}", rt3);
     let scale_fg = 31 * (slen - rlen) as i32;
 
     let minbl_fg = BITLENGTH[depth as usize].avg - 6 * BITLENGTH[depth as usize].std;
     let maxbl_fg = BITLENGTH[depth as usize].avg + 6 * BITLENGTH[depth as usize].std;
 
-    fft(rt3, logn);
-    fft_index(rt3, rt4, logn);
-    poly_invnorm2_fft_index(rt3, 2 * n, 0, n, logn);
-    poly_adj_fft(rt3, logn);
-    poly_adj_fft_index(rt3, n, logn);
+    fft_pointer(rt3, logn);
+    fft_pointer(rt4, logn);
+    poly_invnorm2_fft_pointer(rt5, rt3, rt4, logn);
+    poly_adj_fft_pointer(rt3, logn);
+    poly_adj_fft_pointer(rt4, logn);
 
     let mut FGlen = llen;
     let mut maxbl_FG = 31 * llen as i32;
 
     let mut scale_k = maxbl_FG - minbl_fg;
+
     loop {
-        let mut pt: u64;
         let rlen = if FGlen > 10 { 10 } else { FGlen };
         let scale_FG = 31 * (FGlen - rlen) as i32;
-        poly_big_to_fp_index(&mut *rt3, 2 * n + (n >> 1), tmp_lower, Ft_index + FGlen - rlen, rlen, llen, logn);
-        poly_big_to_fp_index(rt3, 3 * n + (n >> 1), tmp_lower, Gt_index + FGlen - rlen, rlen, llen, logn);
+        poly_big_to_fp_pointer(rt1, Ft.wrapping_add(FGlen - rlen), rlen, llen, logn);
+        poly_big_to_fp_pointer(rt2, Gt.wrapping_add(FGlen - rlen), rlen, llen, logn);
 
-        fft_index(rt3, 2 * n + (n >> 1), logn);
-        fft_index(rt3, 3 * n + (n >> 1), logn);
-        poly_mul_fft_index(rt3, 2 * n + (n >> 1), 0, logn);
-        poly_mul_fft_index(rt3, 3 * n + (n >> 1), n, logn);
-        poly_add_index(rt3, 3 * n + (n >> 1), 2 * n + (n >> 1), logn);
-        poly_mul_autoadj_fft_index(rt3, 3 * n + (n >> 1), 2 * n, logn);
-        ifft_index(rt3, 3 * n + (n >> 1), logn);
-        // println!("{:?}", rt3);
+        fft_pointer(rt1, logn);
+        fft_pointer(rt2, logn);
+        poly_mul_fft_pointer(rt1, rt3, logn);
+        poly_mul_fft_pointer(rt2, rt4, logn);
+        poly_add_pointer(rt2, rt1, logn);
+        poly_mul_autoadj_fft_pointer(rt2, rt5, logn);
+        ifft_pointer(rt2, logn);
 
         let mut dc = scale_k - scale_FG + scale_fg;
+        let mut pt: u64;
         if dc < 0 {
-            dc -= dc;
+            dc = -dc;
             pt = FPR_TWO;
         } else {
             pt = FPR_ONEHALF;
@@ -2564,38 +2914,33 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
             pt = fpr_sqr(pt);
         }
 
-        let mut rt3_vec: Vec<u64> = vec![0; rt3.len()];
-        rt3.clone_into(&mut rt3_vec);
-        let (_, mut k, _) = pod_align_to_mut::<u64, i32>(rt3);
-        for u in 0..n {
-            let xv: u64 = fpr_mul(*rt3_vec.get(u + rt2).unwrap(), pdc);
-
-            if !(fpr_lt(FPR_MTWO31M1, xv) != 0) || !(fpr_lt(xv, FPR_PTWO31M1) != 0) {
-                return 0;
+        unsafe {
+            for u in 0..n {
+                let xv = fpr_mul(*rt2.wrapping_add(u), pdc);
+                if !(fpr_lt(FPR_MTWO31M1, xv) != 0) || !(fpr_lt(xv, FPR_PTWO31M1) != 0) {
+                    return false;
+                }
+                *k.wrapping_add(u) = fpr_rint(xv) as i32;
             }
-            k[u + k_index] = fpr_rint(xv) as i32;
         }
-        // let (_, rt3, _) = pod_align_to_mut::<u32, u64>(k);
-
 
         let sch = (scale_k / 31) as u32;
         let scl = (scale_k % 31) as u32;
-        println!("tmp_lower size {}", tmp_lower.len());
-        if depth <= DEPTH_INT_FG as u32 {
-            poly_sub_scaled_ntt_index(tmp_lower, Ft_index, FGlen, llen, ft_index, slen, slen, &mut k, sch, scl, logn, t1_index);
-            // poly_sub_scaled_ntt_index()
-        } else {
-            // poly_sub_scaled()
-            // poly_sub_scaled()
-        }
 
-        // let new_maxbl_FG = scale_k * maxbl_fg + 10;
-        // if new_maxbl_FG < maxbl_FG {
-        //     maxbl_FG = new_maxbl_FG;
-        //     if (FGlen * 31) as i32 >= maxbl_FG + 31 {
-        //         FGlen -= 1;
-        //     }
-        // }
+        if depth <= DEPTH_INT_FG {
+            poly_sub_scaled_ntt_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn, t1);
+            poly_sub_scaled_ntt_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn, t1);
+        } else {
+            poly_sub_scaled_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn);
+            poly_sub_scaled_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn);
+        }
+        let new_maxbl_FG = scale_k + maxbl_fg + 10;
+        if new_maxbl_FG < maxbl_FG {
+            maxbl_FG = new_maxbl_FG;
+            if FGlen as i32 * 31 >= maxbl_FG + 31 {
+                FGlen -= 1;
+            }
+        }
 
         if scale_k <= 0 {
             break;
@@ -2605,49 +2950,587 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
             scale_k = 0;
         }
     }
-    // if FGlen < slen {
-    //     for u in 0..n {
-    //         let mut sw = (!(tmp[Ft_index + FGlen - 1] >> 30) >> 1).wrapping_add(1);
-    //         for v in FGlen..slen {
-    //             tmp[Ft_index + v] = sw;
-    //         }
-    //         let mut sw = (!(tmp[Gt_index + FGlen - 1] >> 30) >> 1).wrapping_add(1);
-    //         for v in FGlen..slen {
-    //             tmp[Gt_index + v] = sw;
-    //         }
-    //         Ft_index += llen;
-    //         Gt_index += llen;
-    //     }
-    // }
-
-    // // TODO DEATH
-    // let mut x = 0;
-    // let mut y = 0;
-    // for u in 0..(n<< 1) {
-    //     // memmove(x, y, slen * sizeof *y);
-    //     x += slen;
-    //     y += llen;
-    // }
-    0
+    if FGlen < slen {
+        for _ in 0..n {
+            let mut sw: u32;
+            unsafe { sw = (!(*Ft.wrapping_add(FGlen - 1) >> 30)).wrapping_add(1) >> 1; }
+            for v in FGlen..slen {
+                unsafe { *Ft.wrapping_add(v) = sw; }
+            }
+            unsafe { sw = (!(*Gt.wrapping_add(FGlen - 1) >> 30)).wrapping_add(1) >> 1; }
+            for v in FGlen..slen {
+                unsafe { *Gt.wrapping_add(v) = sw; }
+            }
+            Ft = Ft.wrapping_add(llen);
+            Gt = Gt.wrapping_add(llen);
+        }
+    }
+    let mut x = tmp;
+    let mut y = tmp;
+    for _ in 0..n << 1 {
+        unsafe { x.copy_from(y, slen); }
+        x = x.wrapping_add(slen);
+        y = y.wrapping_add(llen);
+    }
+    true
 }
 
-pub fn solve_ntru_binary_depth1(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [u32]) -> i32 {
-    0
-}
 
-pub fn solve_ntru_binary_depth0(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [u32]) -> i32 {
-    0
+#[allow(non_snake_case)]
+pub fn solve_ntru_binary_depth1(logn_top: u32, f: *mut i8, g: *mut i8, tmp: *mut u32) -> bool {
+    let depth: usize = 1;
+    let n_top = 1usize << logn_top;
+    let logn = logn_top - depth as u32;
+    let n = 1usize << logn;
+    let hn = n >> 1;
+
+    let slen = MAX_BL_SMALL[depth];
+    let dlen = MAX_BL_SMALL[depth + 1];
+    let llen = MAX_BL_LARGE[depth];
+
+    let Fd = tmp;
+    let Gd = Fd.wrapping_add(dlen * hn);
+    let mut Ft = Gd.wrapping_add(dlen * hn);
+    let mut Gt = Ft.wrapping_add(llen * n);
+
+    for u in 0..llen {
+        let p = PRIMES[u].p;
+        let p0i = modp_ninv31(p);
+        let r2 = modp_R2(p, p0i);
+        let rx = modp_Rx(dlen as u32, p, p0i, r2);
+        let mut xs = Fd;
+        let mut ys = Gd;
+        let mut xd = Ft.wrapping_add(u);
+        let mut yd = Gt.wrapping_add(u);
+        for _ in 0..hn {
+            unsafe { *xd = zint_mod_small_signed_pointer(xs, dlen, p, p0i, r2, rx); }
+            unsafe { *yd = zint_mod_small_signed_pointer(ys, dlen, p, p0i, r2, rx); }
+
+            xs = xs.wrapping_add(dlen);
+            ys = ys.wrapping_add(dlen);
+            xd = xd.wrapping_add(llen);
+            yd = yd.wrapping_add(llen);
+        }
+    }
+    unsafe { tmp.copy_from(Ft, llen * n); }
+    Ft = tmp;
+    unsafe { Ft.wrapping_add(llen * n).copy_from(Gt, llen * n); }
+    Gt = Ft.wrapping_add(llen * n);
+    let mut ft = Gt.wrapping_add(llen * n);
+    let mut gt = ft.wrapping_add(slen * n);
+
+    let t1 = gt.wrapping_add(slen * n);
+
+    for u in 0..llen {
+        let p = PRIMES[u].p;
+        let p0i = modp_ninv31(p);
+        let r2 = modp_R2(p, p0i);
+
+        let gm = t1;
+        let mut igm = gm.wrapping_add(n_top);
+        let mut fx = igm.wrapping_add(n);
+        let mut gx = fx.wrapping_add(n_top);
+        modp_mkgm2_pointer(gm, igm, logn_top, PRIMES[u].g, p, p0i);
+
+        for v in 0..n_top {
+            unsafe { *fx.wrapping_add(v) = modp_set(*f.wrapping_add(v) as i32, p); }
+            unsafe { *gx.wrapping_add(v) = modp_set(*g.wrapping_add(v) as i32, p); }
+        }
+
+        modp_NTT2_pointer(fx, gm, logn_top, p, p0i);
+        modp_NTT2_pointer(gx, gm, logn_top, p, p0i);
+
+        let mut e = logn_top;
+        while e > logn {
+            modp_poly_rec_res_pointer(fx, e, p, p0i, r2);
+            modp_poly_rec_res_pointer(gx, e, p, p0i, r2);
+            e -= 1;
+        }
+
+
+        unsafe { gm.wrapping_add(n).copy_from(igm, n); }
+        igm = gm.wrapping_add(n);
+        unsafe { igm.wrapping_add(n).copy_from(fx, n); }
+        fx = igm.wrapping_add(n);
+        unsafe { fx.wrapping_add(n).copy_from(gx, n); }
+        gx = fx.wrapping_add(n);
+
+
+        let Fp = gx.wrapping_add(n);
+        let Gp = Fp.wrapping_add(hn);
+        let mut x = Ft.wrapping_add(u);
+        let mut y = Gt.wrapping_add(u);
+        for v in 0..hn {
+            unsafe { *Fp.wrapping_add(v) = *x; }
+            unsafe { *Gp.wrapping_add(v) = *y; }
+            x = x.wrapping_add(llen);
+            y = y.wrapping_add(llen);
+        }
+        modp_NTT2_pointer(Fp, gm, logn - 1, p, p0i);
+        modp_NTT2_pointer(Gp, gm, logn - 1, p, p0i);
+
+        let mut x = Ft.wrapping_add(u);
+        let mut y = Gt.wrapping_add(u);
+        unsafe {
+            for v in 0..hn {
+                let ftA = *fx.wrapping_add(v << 1);
+                let ftB = *fx.wrapping_add((v << 1) + 1);
+                let gtA = *gx.wrapping_add(v << 1);
+                let gtB = *gx.wrapping_add((v << 1) + 1);
+                let mFp = modp_montymul(*Fp.wrapping_add(v), r2, p, p0i);
+                let mGp = modp_montymul(*Gp.wrapping_add(v), r2, p, p0i);
+                *x = modp_montymul(gtB, mFp, p, p0i);
+                *x.wrapping_add(llen) = modp_montymul(gtA, mFp, p, p0i);
+                *y = modp_montymul(ftB, mGp, p, p0i);
+                *y.wrapping_add(llen) = modp_montymul(ftA, mGp, p, p0i);
+                x = x.wrapping_add(llen << 1);
+                y = y.wrapping_add(llen << 1);
+            }
+        }
+        modp_iNTT2_ext_pointer(Ft.wrapping_add(u), llen, igm, logn, p, p0i);
+        modp_iNTT2_ext_pointer(Gt.wrapping_add(u), llen, igm, logn, p, p0i);
+
+        if u < slen {
+            modp_iNTT2_pointer(fx, igm, logn, p, p0i);
+            modp_iNTT2_pointer(gx, igm, logn, p, p0i);
+
+            let mut x = ft.wrapping_add(u);
+            let mut y = gt.wrapping_add(u);
+            for v in 0..n {
+                unsafe { *x = *fx.wrapping_add(v); }
+                unsafe { *y = *gx.wrapping_add(v); }
+                x = x.wrapping_add(slen);
+                y = y.wrapping_add(slen);
+            }
+        }
+    }
+
+    zint_rebuild_CRT_pointer(Ft, llen, llen, (n << 1) as u64, &PRIMES, true, t1);
+    zint_rebuild_CRT_pointer(ft, slen, slen, (n << 1) as u64, &PRIMES, true, t1);
+
+    let mut rt1: *mut u64 = gt.wrapping_add(slen * n).cast();
+    let rt2 = rt1.wrapping_add(n);
+    poly_big_to_fp_pointer(rt1, Ft, llen, llen, logn);
+    poly_big_to_fp_pointer(rt2, Gt, llen, llen, logn);
+
+    unsafe { tmp.copy_from(ft, 2 * slen * n); }
+    ft = tmp;
+    gt = ft.wrapping_add(slen * n);
+    let rt3: *mut u64 = gt.wrapping_add(slen * n).cast();
+    unsafe { rt3.copy_from(rt1, 2 * n); }
+    rt1 = rt3;
+    let rt2 = rt1.wrapping_add(n);
+    let rt3 = rt2.wrapping_add(n);
+    let rt4 = rt3.wrapping_add(n);
+
+    poly_big_to_fp_pointer(rt3, ft, slen, slen, logn);
+    poly_big_to_fp_pointer(rt4, gt, slen, slen, logn);
+
+    unsafe {
+        let tmptmp: *mut u64 = tmp.cast();
+        tmptmp.copy_from(rt1, 4 * n);
+    }
+    rt1 = tmp.cast();
+    let mut rt2 = rt1.wrapping_add(n);
+    let rt3 = rt2.wrapping_add(n);
+    let rt4 = rt3.wrapping_add(n);
+
+    fft_pointer(rt1, logn);
+    fft_pointer(rt2, logn);
+    fft_pointer(rt3, logn);
+    fft_pointer(rt4, logn);
+
+    let rt5 = rt4.wrapping_add(n);
+    let rt6 = rt5.wrapping_add(n);
+    poly_add_muladj_fft_pointer(rt5, rt1, rt2, rt3, rt4, logn);
+    poly_invnorm2_fft_pointer(rt6, rt3, rt4, logn);
+
+    poly_mul_autoadj_fft_pointer(rt5, rt6, logn);
+    ifft_pointer(rt5, logn);
+    for u in 0..n {
+        let z: u64;
+
+        unsafe { z = *rt5.wrapping_add(u); }
+        if !(fpr_lt(z, FPR_PTWO63M1) != 0) || !(fpr_lt(FPR_MTWO63M1, z) != 0) {
+            return false;
+        }
+        unsafe { *rt5.wrapping_add(u) = fpr_of(fpr_rint(z)); }
+    }
+    fft_pointer(rt5, logn);
+
+    poly_mul_fft_pointer(rt3, rt5, logn);
+    poly_mul_fft_pointer(rt4, rt5, logn);
+    poly_sub_pointer(rt1, rt3, logn);
+    poly_sub_pointer(rt2, rt4, logn);
+    ifft_pointer(rt1, logn);
+    ifft_pointer(rt2, logn);
+
+    Ft = tmp;
+    Gt = Ft.wrapping_add(n);
+    let rt3: *mut u64 = Gt.wrapping_add(n).cast();
+    unsafe { rt3.copy_from(rt1, 2 * n); }
+    rt1 = rt3;
+    rt2 = rt1.wrapping_add(n);
+    for u in 0..n {
+        unsafe { *Ft = fpr_rint(*rt1.wrapping_add(u)) as u32; }
+        unsafe { *Gt = fpr_rint(*rt2.wrapping_add(u)) as u32; }
+        Ft = Ft.wrapping_add(1);
+        Gt = Gt.wrapping_add(1);
+    }
+    true
 }
 
 #[allow(non_snake_case)]
-pub fn solve_ntru(logn_top: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [i8], lim: i32, tmp: &mut [u32]) -> i32 {
-    0
+pub fn solve_ntru_binary_depth0(logn: u32, f: *mut i8, g: *mut i8, tmp: *mut u32) -> bool {
+    let n = 1usize << logn;
+    let hn = n >> 1;
+    let p = PRIMES[0].p;
+    let p0i = modp_ninv31(p);
+    let r2 = modp_R2(p, p0i);
+
+    let Fp = tmp;
+    let mut Gp = Fp.wrapping_add(hn);
+    let ft = Gp.wrapping_add(hn);
+    let gt = ft.wrapping_add(n);
+    let gm = gt.wrapping_add(n);
+    let igm = gm.wrapping_add(n);
+    modp_mkgm2_pointer(gm, igm, logn, PRIMES[0].g, p, p0i);
+
+    for u in 0..hn {
+        unsafe { *Fp.wrapping_add(u) = modp_set(zint_one_to_plain_pointer(Fp.wrapping_add(u)), p); }
+        unsafe { *Gp.wrapping_add(u) = modp_set(zint_one_to_plain_pointer(Gp.wrapping_add(u)), p); }
+    }
+    modp_NTT2_pointer(Fp, gm, logn - 1, p, p0i);
+    modp_NTT2_pointer(Gp, gm, logn - 1, p, p0i);
+
+    for u in 0..n {
+        unsafe { *ft.wrapping_add(u) = modp_set(*f.wrapping_add(u) as i32, p); }
+        unsafe { *gt.wrapping_add(u) = modp_set(*g.wrapping_add(u) as i32, p); }
+    }
+    modp_NTT2_pointer(ft, gm, logn, p, p0i);
+    modp_NTT2_pointer(gt, gm, logn, p, p0i);
+
+    unsafe {
+        for u in (0..n).step_by(2) {
+            let ftA = *ft.wrapping_add(u);
+            let ftB = *ft.wrapping_add(u + 1);
+            let gtA = *gt.wrapping_add(u);
+            let gtB = *gt.wrapping_add(u + 1);
+            let mFp = modp_montymul(*Fp.wrapping_add(u >> 1), r2, p, p0i);
+            let mGp = modp_montymul(*Gp.wrapping_add(u >> 1), r2, p, p0i);
+            *ft.wrapping_add(u) = modp_montymul(gtB, mFp, p, p0i);
+            *ft.wrapping_add(u + 1) = modp_montymul(gtA, mFp, p, p0i);
+            *gt.wrapping_add(u) = modp_montymul(ftB, mGp, p, p0i);
+            *gt.wrapping_add(u + 1) = modp_montymul(ftA, mGp, p, p0i);
+        }
+    }
+    modp_iNTT2_pointer(ft, igm, logn, p, p0i);
+    modp_iNTT2_pointer(gt, igm, logn, p, p0i);
+
+    Gp = Fp.wrapping_add(n);
+    let t1 = Gp.wrapping_add(n);
+    unsafe { Fp.copy_from(ft, 2 * n); }
+    let mut t2 = t1.wrapping_add(n);
+    let mut t3 = t2.wrapping_add(n);
+    let mut t4 = t3.wrapping_add(n);
+    let mut t5 = t4.wrapping_add(n);
+
+    modp_mkgm2_pointer(t1, t2, logn, PRIMES[0].g, p, p0i);
+
+    modp_NTT2_pointer(Fp, t1, logn, p, p0i);
+    modp_NTT2_pointer(Gp, t1, logn, p, p0i);
+
+    unsafe {
+        let modp_set = modp_set(*f as i32, p);
+        *t4 = modp_set;
+        *t5 = modp_set;
+    }
+    for u in 1..n {
+        unsafe { *t4.wrapping_add(u) = modp_set(*f.wrapping_add(u) as i32, p); }
+        unsafe { *t5.wrapping_add(n - u) = modp_set(-((*f.wrapping_add(u)) as i32), p); }
+    }
+    modp_NTT2_pointer(t4, t1, logn, p, p0i);
+    modp_NTT2_pointer(t5, t1, logn, p, p0i);
+
+    for u in 0..n {
+        let w: u32;
+        unsafe { w = modp_montymul(*t5.wrapping_add(u), r2, p, p0i); }
+        unsafe { *t2.wrapping_add(u) = modp_montymul(w, *Fp.wrapping_add(u), p, p0i); }
+        unsafe { *t3.wrapping_add(u) = modp_montymul(w, *t4.wrapping_add(u), p, p0i); }
+    }
+
+    unsafe {
+        let modp_set = modp_set(*g as i32, p);
+        *t4 = modp_set;
+        *t5 = modp_set;
+    }
+    for u in 1..n {
+        unsafe { *t4.wrapping_add(u) = modp_set(*g.wrapping_add(u) as i32, p); }
+        unsafe { *t5.wrapping_add(n - u) = modp_set(-((*g.wrapping_add(u)) as i32), p); }
+    }
+    modp_NTT2_pointer(t4, t1, logn, p, p0i);
+    modp_NTT2_pointer(t5, t1, logn, p, p0i);
+
+    for u in 0..n {
+        let w: u32;
+        unsafe { w = modp_montymul(*t5.wrapping_add(u), r2, p, p0i); }
+        unsafe {
+            *t2.wrapping_add(u) = modp_add(*t2.wrapping_add(u),
+                                           modp_montymul(w, *Gp.wrapping_add(u), p, p0i), p);
+        }
+        unsafe {
+            *t3.wrapping_add(u) = modp_add(*t3.wrapping_add(u),
+                                           modp_montymul(w, *t4.wrapping_add(u), p, p0i), p);
+        }
+    }
+
+    modp_mkgm2_pointer(t1, t4, logn, PRIMES[0].g, p, p0i);
+    modp_iNTT2_pointer(t2, t4, logn, p, p0i);
+    modp_iNTT2_pointer(t3, t4, logn, p, p0i);
+    for u in 0..n {
+        unsafe { *t1.wrapping_add(u) = modp_norm(*t2.wrapping_add(u), p) as u32; }
+        unsafe { *t2.wrapping_add(u) = modp_norm(*t3.wrapping_add(u), p) as u32; }
+    }
+
+    let rt3: *mut u64 = t3.cast();
+    for u in 0..n {
+        unsafe { *rt3.wrapping_add(u) = fpr_of(*t2.wrapping_add(u) as i32 as i64); }
+    }
+    fft_pointer(rt3, logn);
+    let rt2: *mut u64 = t2.cast();
+    unsafe { rt2.copy_from(rt3, hn); }
+    let rt3 = rt2.wrapping_add(hn);
+
+    for u in 0..n {
+        unsafe { *rt3.wrapping_add(u) = fpr_of(*t1.wrapping_add(u) as i32 as i64); }
+    }
+    fft_pointer(rt3, logn);
+
+    unsafe { poly_div_autoadj_fft_pointer(rt3, rt2, logn); }
+    ifft_pointer(rt3, logn);
+    for u in 0..n {
+        unsafe { *t1.wrapping_add(u) = modp_set(fpr_rint(*rt3.wrapping_add(u)) as i32, p); }
+    }
+
+    t2 = t1.wrapping_add(n);
+    t3 = t2.wrapping_add(n);
+    t4 = t3.wrapping_add(n);
+    t5 = t4.wrapping_add(n);
+    modp_mkgm2_pointer(t2, t3, logn, PRIMES[0].g, p, p0i);
+    for u in 0..n {
+        unsafe { *t4.wrapping_add(u) = modp_set(*f.wrapping_add(u) as i32, p); }
+        unsafe { *t5.wrapping_add(u) = modp_set(*g.wrapping_add(u) as i32, p); }
+    }
+    modp_NTT2_pointer(t1, t2, logn, p, p0i);
+    modp_NTT2_pointer(t4, t2, logn, p, p0i);
+    modp_NTT2_pointer(t5, t2, logn, p, p0i);
+    unsafe {
+        for u in 0..n {
+            let kw = modp_montymul(*t1.wrapping_add(u), r2, p, p0i);
+            *Fp.wrapping_add(u) = modp_sub(*Fp.wrapping_add(u),
+                                           modp_montymul(kw, *t4.wrapping_add(u), p, p0i), p);
+            *Gp.wrapping_add(u) = modp_sub(*Gp.wrapping_add(u),
+                                           modp_montymul(kw, *t5.wrapping_add(u), p, p0i), p);
+        }
+    }
+    modp_iNTT2_pointer(Fp, t3, logn, p, p0i);
+    modp_iNTT2_pointer(Gp, t3, logn, p, p0i);
+    for u in 0..n {
+        unsafe { *Fp.wrapping_add(u) = modp_norm(*Fp.wrapping_add(u), p) as u32; }
+        unsafe { *Gp.wrapping_add(u) = modp_norm(*Gp.wrapping_add(u), p) as u32; }
+    }
+
+    true
 }
 
-pub fn poly_small_mkgauss(rng: *const InnerShake256Context, f: &mut [i8], logn: u32) {}
+#[allow(non_snake_case)]
+pub fn solve_ntru(logn: u32, F: *mut i8, mut G: *mut i8, f: *mut i8, g: *mut i8, lim: i32, tmp: *mut u32) -> bool {
+    let n = mkn!(logn);
+    let mut depth: u32;
+    let r: u32;
+
+    if !solve_ntru_deepest(logn, f, g, tmp) {
+        return false;
+    }
+
+    if logn <= 2 {
+        depth = logn;
+        while depth > 0 {
+            depth -= 1;
+            if !solve_ntru_intermediate_point(logn, f, g, depth, tmp) {
+                return false;
+            }
+        }
+    } else {
+        depth = logn;
+        while depth > 2 {
+            depth -= 1;
+            if !solve_ntru_intermediate_point(logn, f, g, depth, tmp) {
+                return false;
+            }
+        }
+        if !solve_ntru_binary_depth1(logn, f, g, tmp) {
+            return false;
+        }
+        if !solve_ntru_binary_depth0(logn, f, g, tmp) {
+            return false;
+        }
+    }
+    if G.is_null() {
+        G = tmp.wrapping_add(2 * n).cast();
+    }
+
+    if !poly_big_to_small_pointer(F, tmp, lim, logn)
+        || !poly_big_to_small_pointer(G, tmp.wrapping_add(n), lim, logn) {
+        return false;
+    }
+
+    let Gt = tmp;
+    let ft = Gt.wrapping_add(n);
+    let gt = ft.wrapping_add(n);
+    let Ft = gt.wrapping_add(n);
+    let gm = Ft.wrapping_add(n);
+
+    let p = PRIMES[0].p;
+    let p0i = modp_ninv31(p);
+    modp_mkgm2_pointer(gm, tmp, logn, PRIMES[0].g, p, p0i);
+    for u in 0..n {
+        unsafe { *Gt.wrapping_add(u) = modp_set(*G.wrapping_add(u) as i32, p); }
+    }
+
+    for u in 0..n {
+        unsafe { *ft.wrapping_add(u) = modp_set(*f.wrapping_add(u) as i32, p); }
+        unsafe { *gt.wrapping_add(u) = modp_set(*g.wrapping_add(u) as i32, p); }
+        unsafe { *Ft.wrapping_add(u) = modp_set(*F.wrapping_add(u) as i32, p); }
+    }
+    modp_NTT2_pointer(ft, gm, logn, p, p0i);
+    modp_NTT2_pointer(gt, gm, logn, p, p0i);
+    modp_NTT2_pointer(Ft, gm, logn, p, p0i);
+    modp_NTT2_pointer(Gt, gm, logn, p, p0i);
+    r = modp_montymul(12289, 1, p, p0i);
+    for u in 0..n {
+        let z: u32;
+
+        unsafe {
+            z = modp_sub(modp_montymul(*ft.wrapping_add(u), *Gt.wrapping_add(u), p, p0i),
+                         modp_montymul(*gt.wrapping_add(u), *Ft.wrapping_add(u), p, p0i), p);
+        }
+        if z != r {
+            return false;
+        }
+    }
+
+    true
+}
+
+
+pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: *mut i8, logn: u32) {
+    let n = mkn!(logn);
+    let mut mod2: u32 = 0;
+    let mut u = 0;
+    while u < n {
+        let s: i32;
+
+        s = mkgauss(&mut rng, logn);
+
+        if s < -127 || s > 127 {
+            continue;
+        }
+
+        if u == n - 1 {
+            if (mod2 ^ (s & 1) as u32) == 0 {
+                continue;
+            }
+        } else {
+            mod2 ^= (s & 1) as u32;
+        }
+        unsafe { *f.add(u) = s as i8; }
+        u += 1;
+    }
+}
+
 
 #[allow(non_snake_case)]
-pub fn keygen(rng: *const InnerShake256Context, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &mut [i8], h: *const u16, logn: u32, tmp: &mut [u8]) {}
+pub fn keygen(mut rng: &mut InnerShake256Context, f: *mut i8, g: *mut i8, F: *mut i8, G: *mut i8, h: *mut u16, logn: u32, tmp: *mut u8) {
+    let n = mkn!(logn);
+    let mut tmp2: *mut u16;
+    let mut h2: *mut u16;
+    loop {
+        let mut bnorm: u64;
+        let mut lim: i32;
+
+        poly_small_mkgauss(&mut rng, f, logn);
+        poly_small_mkgauss(&mut rng, f, logn);
+
+        lim = 1 << (max_fg_bits[logn as usize] - 1);
+        for u in 0..n {
+            unsafe {
+                if *f.wrapping_add(u) as i32 >= lim ||
+                    *f.wrapping_add(u) as i32 <= -lim ||
+                    *g.wrapping_add(u) as i32 >= lim ||
+                    *g.wrapping_add(u) as i32 <= -lim {
+                    lim -= 1;
+                    break;
+                }
+            }
+            if lim < 0 {
+                continue;
+            }
+        }
+        let normf = poly_small_sqnorm_pointer(f, logn);
+        let normq = poly_small_sqnorm_pointer(g, logn);
+        let norm = (normf + normq) | (!((normf | normq) >> 31)).wrapping_add(1);
+        if norm >= 16823 {
+            continue;
+        }
+
+        let rt1: *mut u64 = tmp.cast();
+        let rt2 = rt1.wrapping_add(n);
+        let rt3 = rt2.wrapping_add(n);
+        poly_small_to_fp_pointer(rt1, f, logn);
+        poly_small_to_fp_pointer(rt2, g, logn);
+        fft_pointer(rt1, logn);
+        fft_pointer(rt2, logn);
+        poly_invnorm2_fft_pointer(rt3, rt1, rt2, logn);
+        poly_adj_fft_pointer(rt1, logn);
+        poly_adj_fft_pointer(rt2, logn);
+        poly_mulconst_pointer(rt1, FPR_Q, logn);
+        poly_mulconst_pointer(rt2, FPR_Q, logn);
+        poly_mul_autoadj_fft_pointer(rt1, rt3, logn);
+        poly_mul_autoadj_fft_pointer(rt2, rt3, logn);
+        ifft_pointer(rt1, logn);
+        ifft_pointer(rt2, logn);
+        bnorm = FPR_ZERO;
+
+        for u in 0..n {
+            unsafe { bnorm = fpr_add(bnorm, fpr_sqr(*rt1.wrapping_add(u))); }
+            unsafe { bnorm = fpr_add(bnorm, fpr_sqr(*rt2.wrapping_add(u))); }
+        }
+        if !(fpr_lt(bnorm, FPR_BNORM_MAX) != 0) {
+            continue;
+        }
+
+        if h.is_null() {
+            h2 = tmp.cast();
+            tmp2 = h2.wrapping_add(n);
+        } else {
+            h2 = h;
+            tmp2 = tmp.cast();
+        }
+
+        if !compute_public(h2,f, g, logn, tmp2.cast()) {
+            continue;
+        }
+
+
+        lim = (1 << (max_FG_bits[logn as usize] - 1)) - 1;
+        if !solve_ntru(logn, F, G, f, g, lim, tmp.cast()) {
+            continue;
+        }
+
+        break;
+    }
+}
 
 pub(crate) static MAX_BL_SMALL: [usize; 11] = [
     1, 1, 2, 2, 4, 7, 14, 27, 53, 106, 209
@@ -2669,7 +3552,7 @@ pub(crate) static GAUSS_1024_12289: [u64; 27] = [
     94, 4, 0
 ];
 
-pub static DEPTH_INT_FG: i32 = 4;
+pub static DEPTH_INT_FG: u32 = 4;
 
 pub(crate) static BITLENGTH: [BitLength; 11] = [
     BitLength { avg: 4, std: 0 },
@@ -3299,3 +4182,284 @@ pub(crate) static PRIMES: [SmallPrimes; 522] = [
     SmallPrimes { p: 2135955457, g: 538755304, s: 1688831340 },
     SmallPrimes { p: 0, g: 0, s: 0 }
 ];
+
+// Dead code for later use maybe
+
+// #[allow(non_snake_case)]
+// pub fn solve_ntru_intermediate(logn: u32, f: &mut [i8], g: &mut [i8], depth: u32, tmp: &mut [u32]) -> i32 {
+//     let logn = logn_top - depth;
+//     let n = mkn!(logn);
+//     let hn = n >> 1;
+//
+//     let slen = MAX_BL_SMALL[depth as usize];
+//     let dlen = MAX_BL_SMALL[(depth + 1) as usize];
+//     let llen = MAX_BL_LARGE[depth as usize];
+//
+//     let mut Fd_index = 0;
+//     let mut Gd_index = Fd_index + dlen * hn;
+//
+//     let mut ft_index = Gd_index + dlen * hn;
+//     make_fg_index(tmp, ft_index, f, g, logn_top, depth, true);
+//     println!("x1 {}", tmp[0]);
+//     println!("x2 {}", tmp[1]);
+//     let mut x1 = tmp.as_mut_ptr();
+//     println!("");
+//     unsafe { println!("x1 {}", (*x1)); }
+//     let x2 = x1.wrapping_add(1);
+//     // x1.as_ref()
+//     unsafe { println!("x1 {}", (*x1)); }
+//     unsafe { *x1 = 2; }
+//     unsafe { println!("x1 {}", (*x1)); }
+//     unsafe { println!("x2 {}", (*x2)); }
+//
+//     let mut Ft_index = 0;
+//     let mut Gt_index = Ft_index + n * llen;
+//     let mut t1_index = Gt_index + n * llen;
+//
+//
+//     tmp.copy_within(ft_index..2 * n * slen + ft_index, t1_index);
+//     ft_index = t1_index;
+//     let gt_index = ft_index + slen * n;
+//     t1_index = gt_index + slen * n;
+//
+//     tmp.copy_within(Fd_index..2 * hn * dlen + Fd_index, t1_index);
+//     Fd_index = t1_index;
+//     Gd_index = Fd_index + hn * dlen;
+//
+//     for u in 0..llen {
+//         let p = PRIMES[u].p;
+//         let p0i = modp_ninv31(p);
+//         let r2 = modp_R2(p, p0i);
+//         let rx = modp_Rx(dlen as u32, p, p0i, r2);
+//
+//         let mut xs = Fd_index;
+//         let mut ys = Gd_index;
+//         let mut xd = Ft_index + u;
+//         let mut yd = Gt_index + u;
+//         for _ in 0..hn {
+//             tmp[xd] = zint_mod_small_signed_index(tmp, xs, dlen, p, p0i, r2, rx);
+//             tmp[yd] = zint_mod_small_signed_index(tmp, ys, dlen, p, p0i, r2, rx);
+//             xs += dlen;
+//             ys += dlen;
+//             xd += llen;
+//             yd += llen;
+//         }
+//     }
+//
+//     for u in 0..llen {
+//         let p = PRIMES[u].p;
+//         let p0i = modp_ninv31(p);
+//         let r2 = modp_R2(p, p0i);
+//
+//         if u == slen {
+//             zint_rebuild_CRT_index(tmp, ft_index, slen, slen, n as u64, &PRIMES, true, t1_index);
+//             zint_rebuild_CRT_index(tmp, gt_index, slen, slen, n as u64, &PRIMES, true, t1_index);
+//         }
+//
+//         let gm_index = t1_index;
+//         let igm_index = gm_index + n;
+//         let fx_index = igm_index + n;
+//         let gx_index = fx_index + n;
+//
+//         modp_mkgm2_index(tmp, gm_index, igm_index, logn, PRIMES[u].g, p, p0i);
+//
+//         if u < slen {
+//             let mut x = ft_index + u;
+//             let mut y = gt_index + u;
+//             for v in 0..n {
+//                 tmp[fx_index + v] = tmp[x];
+//                 tmp[gx_index + v] = tmp[y];
+//                 x += slen;
+//                 y += slen;
+//             }
+//             modp_iNTT2_ext_index(tmp, slen, ft_index + u, igm_index, logn, p, p0i);
+//             modp_iNTT2_ext_index(tmp, slen, gt_index + u, igm_index, logn, p, p0i);
+//         } else {
+//             let rx = modp_Rx(slen as u32, p, p0i, r2);
+//             let mut x = ft_index;
+//             let mut y = gt_index;
+//             for v in 0..n {
+//                 tmp[fx_index + v] = zint_mod_small_signed_index(tmp, x, slen,
+//                                                                 p, p0i, r2, rx);
+//                 tmp[gx_index + v] = zint_mod_small_signed_index(tmp, y, slen,
+//                                                                 p, p0i, r2, rx);
+//                 x += slen;
+//                 y += slen;
+//             }
+//             modp_NTT2_index(tmp, fx_index, gm_index, logn, p, p0i);
+//             modp_NTT2_index(tmp, gx_index, gm_index, logn, p, p0i);
+//         }
+//
+//         let Fp_index = gx_index + n;
+//         let Gp_index = Fp_index + hn;
+//         let mut x = Ft_index + u;
+//         let mut y = Gt_index + u;
+//         for v in 0..hn {
+//             tmp[Fp_index + v] = tmp[x];
+//             tmp[Gp_index + v] = tmp[y];
+//             x += llen;
+//             y += llen;
+//         }
+//         modp_NTT2_index(tmp, Fp_index, gm_index, logn - 1, p, p0i);
+//         modp_NTT2_index(tmp, Gp_index, gm_index, logn - 1, p, p0i);
+//
+//         let mut x = Ft_index + u;
+//         let mut y = Gt_index + u;
+//         for v in 0..hn {
+//             let ftA = tmp[fx_index + (v << 1)];
+//             let ftB = tmp[fx_index + (v << 1) + 1];
+//             let gtA = tmp[gx_index + (v << 1)];
+//             let gtB = tmp[gx_index + (v << 1) + 1];
+//             let mFp = modp_montymul(tmp[Fp_index + v], r2, p, p0i);
+//             let mGp = modp_montymul(tmp[Gp_index + v], r2, p, p0i);
+//             tmp[x] = modp_montymul(gtB, mFp, p, p0i);
+//             tmp[x + llen] = modp_montymul(gtA, mFp, p, p0i);
+//             tmp[y] = modp_montymul(ftB, mGp, p, p0i);
+//             tmp[y + llen] = modp_montymul(ftA, mGp, p, p0i);
+//
+//             x += llen << 1;
+//             y += llen << 1;
+//         }
+//         modp_iNTT2_ext_index(tmp, llen, Ft_index + u, igm_index, logn, p, p0i);
+//         modp_iNTT2_ext_index(tmp, llen, Gt_index + u, igm_index, logn, p, p0i);
+//     }
+//
+//     zint_rebuild_CRT_index(tmp, Ft_index, llen, llen, n as u64, &PRIMES, true, t1_index);
+//     zint_rebuild_CRT_index(tmp, Gt_index, llen, llen, n as u64, &PRIMES, true, t1_index);
+//
+//     let (tmp_lower, tmp_upper) = tmp.split_at_mut(t1_index);
+//     let (_, mut rt3, _) = pod_align_to_mut::<u32, u64>(tmp_upper);
+//
+//     let rt4 = 0 + n;
+//     let rt5 = rt4 + n;
+//     let rt1 = rt5 + (n >> 1);
+//     // We multiply with 2 because the index from above is u64 index, so we need to jump 2x for u32
+//     let k_index = rt1 * 2;
+//     let rt2 = 3 * n + (n >> 1);
+//     // if rt2_index < (rt1 + n) {
+//     //     rt2_index = n / 2;
+//     // }
+//     // println!("n {}", n);
+//     // println!("{:?}", rt2);
+//     // println!("hmm {}", rt2[rt2_index]);
+//     // TODO ??
+//     // t1_index = k + n;
+//
+//     let rlen = if slen > 10 { 10 } else { slen };
+//
+//     poly_big_to_fp_index(&mut *rt3, 0, tmp_lower, ft_index + slen - rlen, rlen, slen, logn);
+//     poly_big_to_fp_index(rt3, n, tmp_lower, gt_index + slen - rlen, rlen, slen, logn);
+//     // println!("{:?}", rt3);
+//     let scale_fg = 31 * (slen - rlen) as i32;
+//
+//     let minbl_fg = BITLENGTH[depth as usize].avg - 6 * BITLENGTH[depth as usize].std;
+//     let maxbl_fg = BITLENGTH[depth as usize].avg + 6 * BITLENGTH[depth as usize].std;
+//
+//     fft(rt3, logn);
+//     fft_index(rt3, rt4, logn);
+//     poly_invnorm2_fft_index(rt3, 2 * n, 0, n, logn);
+//     poly_adj_fft(rt3, logn);
+//     poly_adj_fft_index(rt3, n, logn);
+//
+//     let mut FGlen = llen;
+//     let mut maxbl_FG = 31 * llen as i32;
+//
+//     let mut scale_k = maxbl_FG - minbl_fg;
+//     loop {
+//         let mut pt: u64;
+//         let rlen = if FGlen > 10 { 10 } else { FGlen };
+//         let scale_FG = 31 * (FGlen - rlen) as i32;
+//         poly_big_to_fp_index(&mut *rt3, 2 * n + (n >> 1), tmp_lower, Ft_index + FGlen - rlen, rlen, llen, logn);
+//         poly_big_to_fp_index(rt3, 3 * n + (n >> 1), tmp_lower, Gt_index + FGlen - rlen, rlen, llen, logn);
+//
+//         fft_index(rt3, 2 * n + (n >> 1), logn);
+//         fft_index(rt3, 3 * n + (n >> 1), logn);
+//         poly_mul_fft_index(rt3, 2 * n + (n >> 1), 0, logn);
+//         poly_mul_fft_index(rt3, 3 * n + (n >> 1), n, logn);
+//         poly_add_index(rt3, 3 * n + (n >> 1), 2 * n + (n >> 1), logn);
+//         poly_mul_autoadj_fft_index(rt3, 3 * n + (n >> 1), 2 * n, logn);
+//         ifft_index(rt3, 3 * n + (n >> 1), logn);
+//         // println!("{:?}", rt3);
+//
+//         let mut dc = scale_k - scale_FG + scale_fg;
+//         if dc < 0 {
+//             dc -= dc;
+//             pt = FPR_TWO;
+//         } else {
+//             pt = FPR_ONEHALF;
+//         }
+//         let mut pdc = FPR_ONE;
+//         while dc != 0 {
+//             if (dc & 1) != 0 {
+//                 pdc = fpr_mul(pdc, pt);
+//             }
+//             dc >>= 1;
+//             pt = fpr_sqr(pt);
+//         }
+//
+//         let mut rt3_vec: Vec<u64> = vec![0; rt3.len()];
+//         rt3.clone_into(&mut rt3_vec);
+//         let (_, mut k, _) = pod_align_to_mut::<u64, i32>(rt3);
+//         for u in 0..n {
+//             let xv: u64 = fpr_mul(*rt3_vec.get(u + rt2).unwrap(), pdc);
+//
+//             if !(fpr_lt(FPR_MTWO31M1, xv) != 0) || !(fpr_lt(xv, FPR_PTWO31M1) != 0) {
+//                 return 0;
+//             }
+//             k[u + k_index] = fpr_rint(xv) as i32;
+//         }
+//         // let (_, rt3, _) = pod_align_to_mut::<u32, u64>(k);
+//
+//
+//         let sch = (scale_k / 31) as u32;
+//         let scl = (scale_k % 31) as u32;
+//         println!("tmp_lower size {}", tmp_lower.len());
+//         if depth <= DEPTH_INT_FG as u32 {
+//             poly_sub_scaled_ntt_index(tmp_lower, Ft_index, FGlen, llen, ft_index, slen, slen, &mut k, sch, scl, logn, t1_index);
+//             // poly_sub_scaled_ntt_index()
+//         } else {
+//             // poly_sub_scaled()
+//             // poly_sub_scaled()
+//         }
+//
+//         // let new_maxbl_FG = scale_k * maxbl_fg + 10;
+//         // if new_maxbl_FG < maxbl_FG {
+//         //     maxbl_FG = new_maxbl_FG;
+//         //     if (FGlen * 31) as i32 >= maxbl_FG + 31 {
+//         //         FGlen -= 1;
+//         //     }
+//         // }
+//
+//         if scale_k <= 0 {
+//             break;
+//         }
+//         scale_k -= 25;
+//         if scale_k < 0 {
+//             scale_k = 0;
+//         }
+//     }
+//     // if FGlen < slen {
+//     //     for u in 0..n {
+//     //         let mut sw = (!(tmp[Ft_index + FGlen - 1] >> 30) >> 1).wrapping_add(1);
+//     //         for v in FGlen..slen {
+//     //             tmp[Ft_index + v] = sw;
+//     //         }
+//     //         let mut sw = (!(tmp[Gt_index + FGlen - 1] >> 30) >> 1).wrapping_add(1);
+//     //         for v in FGlen..slen {
+//     //             tmp[Gt_index + v] = sw;
+//     //         }
+//     //         Ft_index += llen;
+//     //         Gt_index += llen;
+//     //     }
+//     // }
+//
+//     // // TODO DEATH
+//     // let mut x = 0;
+//     // let mut y = 0;
+//     // for u in 0..(n<< 1) {
+//     //     // memmove(x, y, slen * sizeof *y);
+//     //     x += slen;
+//     //     y += llen;
+//     // }
+//     0
+// }

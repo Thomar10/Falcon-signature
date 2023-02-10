@@ -1,4 +1,3 @@
-use std::ffi::c_void;
 use crate::falcon_c::shake_c::InnerShake256Context;
 
 #[link(name = "keygen", kind = "static")]
@@ -39,8 +38,6 @@ extern "C" {
     pub fn get_rng_u64_func(rng: *const InnerShake256Context) -> u64;
     pub fn mkgauss_func(rng: *const InnerShake256Context, logn: u32) -> i32;
     pub fn poly_small_sqnorm_func(f: *const i8, logn: u32) -> u32;
-    pub fn align_fpr_func(base: *const c_void, data: *const c_void) -> *const u64;
-    pub fn align_u32_func(base: *const c_void, data: *const c_void) -> *const u32;
     pub fn poly_small_to_fp_func(x: *const u64, f: *const i8, logn: u32);
     pub fn make_fg_step_func(data: *const u32, logn: u32, depth: usize, in_ntt: bool, out_ntt: bool);
     pub fn make_fg_func(data: *const u32, f: *const i8, g: *const i8, logn: u32, depth: u32, out_ntt: bool);
