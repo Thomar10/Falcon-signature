@@ -542,7 +542,7 @@ prng_get_u64(prng *p)
 	 */
 	u = p->ptr;
 	if (u >= (sizeof p->buf.d) - 9) {
-		Zf(prng_refill)(p);
+		prng_refill(p);
 		u = 0;
 	}
 	p->ptr = u + 8;
@@ -571,7 +571,7 @@ prng_get_u8(prng *p)
 
 	v = p->buf.d[p->ptr ++];
 	if (p->ptr == sizeof p->buf.d) {
-		Zf(prng_refill)(p);
+		prng_refill(p);
 	}
 	return v;
 }

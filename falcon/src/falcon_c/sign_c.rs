@@ -40,7 +40,7 @@ extern "C" {
     #[allow(dead_code)]
     pub fn BerExp_func(prng: *const Prng, x: fpr, ccs: fpr) -> i32;
     #[allow(dead_code)]
-    pub fn falcon_inner_sampler(ctx: *const c_void, mu: fpr, isigma: fpr) -> i32;
+    pub fn falcon_inner_sampler(ctx: &SamplerContext, mu: fpr, isigma: fpr) -> i32;
     #[allow(dead_code)]
     pub fn falcon_inner_sign_tree(sig: *const i16, rng: *const InnerShake256Context, expanded_key: *const fpr, hm: *const u16, logn: u32, tmp: *const u8);
     #[allow(dead_code)]
@@ -50,4 +50,10 @@ extern "C" {
 #[allow(non_camel_case_types)]
 type fpr = u64;
 #[allow(non_camel_case_types)]
-type samplerZ = extern fn(*const c_void, fpr, fpr) -> i32;
+type samplerZ = unsafe extern fn(&SamplerContext, fpr, fpr) -> i32;
+
+#[repr(C)]
+pub struct SamplerContext {
+    pub p: Prng,
+    pub sigma_min: fpr,
+}

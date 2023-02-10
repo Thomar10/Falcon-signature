@@ -8,6 +8,7 @@ mod fpr;
 mod shake;
 mod rng;
 mod sign;
+mod common;
 
 mod falcon_c {
     pub mod codec_c;

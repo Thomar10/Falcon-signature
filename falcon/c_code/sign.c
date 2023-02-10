@@ -416,7 +416,7 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * Decompose G into LDL. We only need d00 (identical to g00),
 	 * d11, and l10; we do that in place.
 	 */
-	poly_LDL_fft(g00, g01, g11, logn);
+	falcon_inner_poly_LDL_fft(g00, g01, g11, logn);
 
 	/*
 	 * Split d00 and d11 and expand them into half-size quasi-cyclic
@@ -447,7 +447,7 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	falcon_inner_poly_split_fft(z1, z1 + hn, t1, logn);
 	ffSampling_fft_dyntree(samp, samp_ctx, z1, z1 + hn,
 		g11, g11 + hn, g01 + hn, orig_logn, logn - 1, z1 + n);
-	poly_merge_fft(tmp + (n << 1), z1, z1 + hn, logn);
+	falcon_inner_poly_merge_fft(tmp + (n << 1), z1, z1 + hn, logn);
 
 	/*
 	 * Compute tb0 = t0 + (t1 - z1) * l10.
@@ -457,9 +457,9 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * In the end, z1 is written over t1, and tb0 is in t0.
 	 */
 	memcpy(z1, t1, n * sizeof *t1);
-	poly_sub(z1, tmp + (n << 1), logn);
+	falcon_inner_poly_sub(z1, tmp + (n << 1), logn);
 	memcpy(t1, tmp + (n << 1), n * sizeof *tmp);
-	poly_mul_fft(tmp, z1, logn);
+	falcon_inner_poly_mul_fft(tmp, z1, logn);
 	falcon_inner_poly_add(t0, tmp, logn);
 
 	/*
@@ -470,7 +470,7 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	falcon_inner_poly_split_fft(z0, z0 + hn, t0, logn);
 	ffSampling_fft_dyntree(samp, samp_ctx, z0, z0 + hn,
 		g00, g00 + hn, g01, orig_logn, logn - 1, z0 + n);
-	poly_merge_fft(t0, z0, z0 + hn, logn);
+	falcon_inner_poly_merge_fft(t0, z0, z0 + hn, logn);
 }
 
 void
@@ -689,14 +689,14 @@ ffSampling_fft(samplerZ samp, void *samp_ctx,
 	falcon_inner_poly_split_fft(z1, z1 + hn, t1, logn);
 	ffSampling_fft(samp, samp_ctx, tmp, tmp + hn,
 		tree1, z1, z1 + hn, logn - 1, tmp + n);
-	poly_merge_fft(z1, tmp, tmp + hn, logn);
+	falcon_inner_poly_merge_fft(z1, tmp, tmp + hn, logn);
 
 	/*
 	 * Compute tb0 = t0 + (t1 - z1) * L. Value tb0 ends up in tmp[].
 	 */
 	memcpy(tmp, t1, n * sizeof *t1);
-	poly_sub(tmp, z1, logn);
-	poly_mul_fft(tmp, tree, logn);
+	falcon_inner_poly_sub(tmp, z1, logn);
+	falcon_inner_poly_mul_fft(tmp, tree, logn);
 	falcon_inner_poly_add(tmp, t0, logn);
 
 	/*
@@ -705,7 +705,7 @@ ffSampling_fft(samplerZ samp, void *samp_ctx,
 	falcon_inner_poly_split_fft(z0, z0 + hn, tmp, logn);
 	ffSampling_fft(samp, samp_ctx, tmp, tmp + hn,
 		tree0, z0, z0 + hn, logn - 1, tmp + n);
-	poly_merge_fft(z0, tmp, tmp + hn, logn);
+	falcon_inner_poly_merge_fft(z0, tmp, tmp + hn, logn);
 }
 
 void
@@ -766,9 +766,9 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	falcon_inner_FFT(t0, logn);
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
-	poly_mul_fft(t1, b01, logn);
+	falcon_inner_poly_mul_fft(t1, b01, logn);
 	poly_mulconst(t1, fpr_neg(ni), logn);
-	poly_mul_fft(t0, b11, logn);
+	falcon_inner_poly_mul_fft(t0, b11, logn);
 	poly_mulconst(t0, ni, logn);
 
 	tx = t1 + n;
@@ -784,14 +784,14 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 */
 	memcpy(t0, tx, n * sizeof *tx);
 	memcpy(t1, ty, n * sizeof *ty);
-	poly_mul_fft(tx, b00, logn);
-	poly_mul_fft(ty, b10, logn);
+	falcon_inner_poly_mul_fft(tx, b00, logn);
+	falcon_inner_poly_mul_fft(ty, b10, logn);
 	falcon_inner_poly_add(tx, ty, logn);
 	memcpy(ty, t0, n * sizeof *t0);
-	poly_mul_fft(ty, b01, logn);
+	falcon_inner_poly_mul_fft(ty, b01, logn);
 
 	memcpy(t0, tx, n * sizeof *tx);
-	poly_mul_fft(t1, b11, logn);
+	falcon_inner_poly_mul_fft(t1, b11, logn);
 	falcon_inner_poly_add(t1, ty, logn);
 
 	iFFT(t0, logn);
@@ -952,9 +952,9 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	falcon_inner_FFT(t0, logn);
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
-	poly_mul_fft(t1, b01, logn);
+	falcon_inner_poly_mul_fft(t1, b01, logn);
 	poly_mulconst(t1, fpr_neg(ni), logn);
-	poly_mul_fft(t0, b11, logn);
+	falcon_inner_poly_mul_fft(t0, b11, logn);
 	poly_mulconst(t0, ni, logn);
 
 	/*
@@ -1004,14 +1004,14 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 */
 	memcpy(tx, t0, n * sizeof *t0);
 	memcpy(ty, t1, n * sizeof *t1);
-	poly_mul_fft(tx, b00, logn);
-	poly_mul_fft(ty, b10, logn);
+	falcon_inner_poly_mul_fft(tx, b00, logn);
+	falcon_inner_poly_mul_fft(ty, b10, logn);
 	falcon_inner_poly_add(tx, ty, logn);
 	memcpy(ty, t0, n * sizeof *t0);
-	poly_mul_fft(ty, b01, logn);
+	falcon_inner_poly_mul_fft(ty, b01, logn);
 
 	memcpy(t0, tx, n * sizeof *tx);
-	poly_mul_fft(t1, b11, logn);
+	falcon_inner_poly_mul_fft(t1, b11, logn);
 	falcon_inner_poly_add(t1, ty, logn);
 	iFFT(t0, logn);
 	iFFT(t1, logn);
@@ -1130,7 +1130,7 @@ BerExp(prng *p, fpr x, fpr ccs)
 {
 	int s, i;
 	fpr r;
-	uint32_t sw, w;
+	uint32_t sw, w, rhs;
 	uint64_t z;
 
 	/*

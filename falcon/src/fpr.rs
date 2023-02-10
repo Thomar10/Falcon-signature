@@ -1,7 +1,5 @@
-#[allow(dead_code)]
-static FPR_LOG2: u64 = 4604418534313441775;
-#[allow(dead_code)]
-static FPR_INV_LOG2: u64 = 4609176140021203710;
+pub static FPR_LOG2: u64 = 4604418534313441775;
+pub static FPR_INV_LOG2: u64 = 4609176140021203710;
 #[allow(dead_code)]
 static FPR_BNORM_MAX: u64 = 4670353323383631276;
 pub static FPR_ZERO: u64 = 0;
@@ -29,10 +27,8 @@ static FPR_PTWO63: u64 = 4890909195324358656;
 
 #[allow(dead_code)]
 static FPR_Q: u64 = 4667981563525332992;
-#[allow(dead_code)]
-static FPR_INVERSE_OF_Q: u64 = 4545632735260551042;
-#[allow(dead_code)]
-static FPR_INV_2SQRSIGMA0: u64 = 4594603506513722306;
+pub static FPR_INVERSE_OF_Q: u64 = 4545632735260551042;
+pub static FPR_INV_2SQRSIGMA0: u64 = 4594603506513722306;
 
 pub static FPR_INV_SIGMA: [u64; 11] = [
 0,  /* unused */
@@ -49,7 +45,7 @@ pub static FPR_INV_SIGMA: [u64; 11] = [
 ];
 
 #[allow(dead_code)]
-static FPR_SIGMA_MIN: [u64; 11] = [
+pub static FPR_SIGMA_MIN: [u64; 11] = [
 0,  /* unused */
 4607707126469777035,
 4607777455861499430,

@@ -178,3 +178,35 @@ pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
 
     return output;
 }
+
+#[inline(always)]
+pub fn prng_get_u64(p: &mut Prng) -> u64 {
+    let mut u: usize = p.ptr;
+
+    if u >= p.buf.len() - 9 {
+        prng_refill(p);
+        u = 0;
+    }
+    p.ptr = u + 8;
+
+    return (p.buf[u + 0] as u64)
+        | (p.buf[u + 1] as u64) << 8
+        | (p.buf[u + 2] as u64) << 16
+        | (p.buf[u + 3] as u64) << 24
+        | (p.buf[u + 4] as u64) << 32
+        | (p.buf[u + 5] as u64) << 40
+        | (p.buf[u + 6] as u64) << 48
+        | (p.buf[u + 7] as u64) << 56
+}
+
+pub fn prng_get_u8(p: &mut Prng) -> u8 {
+    let v: u8 = p.buf[p.ptr];
+
+    p.ptr += 1;
+
+    if p.ptr == p.buf.len() {
+        prng_refill(p);
+    }
+
+    return v;
+}
