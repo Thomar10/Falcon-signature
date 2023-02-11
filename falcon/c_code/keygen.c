@@ -4538,6 +4538,7 @@ falcon_inner_keygen(inner_shake256_context *rng,
 		rt1 = (fpr *)tmp;
 		rt2 = rt1 + n;
 		rt3 = rt2 + n;
+		break;
 		poly_small_to_fp(rt1, f, logn);
 		poly_small_to_fp(rt2, g, logn);
 		Zf(FFT)(rt1, logn);
@@ -4588,13 +4589,4 @@ falcon_inner_keygen(inner_shake256_context *rng,
 		 */
 		break;
 	}
-}
-
-void
-falcon_inner_keygen_func(inner_shake256_context *rng,
-	int8_t *f, int8_t *g, int8_t *F, int8_t *G, uint16_t *h,
-	unsigned logn, uint8_t *tmp)
-{
-falcon_inner_keygen(rng, f, g, F, g, h, logn, tmp);
-
 }

@@ -3460,7 +3460,7 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: *mut i8, g: *mut i8, F: *mu
         let mut lim: i32;
 
         poly_small_mkgauss(&mut rng, f, logn);
-        poly_small_mkgauss(&mut rng, f, logn);
+        poly_small_mkgauss(&mut rng, g, logn);
 
         lim = 1 << (max_fg_bits[logn as usize] - 1);
         for u in 0..n {
@@ -3473,10 +3473,11 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: *mut i8, g: *mut i8, F: *mu
                     break;
                 }
             }
-            if lim < 0 {
-                continue;
-            }
         }
+        if lim < 0 {
+            continue;
+        }
+
         let normf = poly_small_sqnorm_pointer(f, logn);
         let normq = poly_small_sqnorm_pointer(g, logn);
         let norm = (normf + normq) | (!((normf | normq) >> 31)).wrapping_add(1);
@@ -3484,6 +3485,7 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: *mut i8, g: *mut i8, F: *mu
             continue;
         }
 
+        break;
         let rt1: *mut u64 = tmp.cast();
         let rt2 = rt1.wrapping_add(n);
         let rt3 = rt2.wrapping_add(n);

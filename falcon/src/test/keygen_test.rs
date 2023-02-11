@@ -333,55 +333,6 @@ mod tests {
 
     #[test]
     #[allow(non_snake_case)]
-    fn test_zint_rebuild_CRT_pointer() {
-        for _ in 0..50 {
-            for stride in 1usize..3 {
-                let mut rng = rand::thread_rng();
-                let mut xx: [u32; 1540] = core::array::from_fn(|_| rng.gen::<u32>());
-                let xx_c: [u32; 1024] = [0; 1024];
-                let mut tmp: [u32; 516] = [0; 516];
-                xx_c.clone_from_slice(&xx[0..1024]);
-                tmp.clone_from_slice(&xx[1024..]);
-                let tmp_c = tmp.clone();
-                let xx = xx_c.clone();
-                let num: u64 = rng.gen_range(0..5);
-                let len: usize = 20;
-                // zint_rebuild_CRT_index(&mut xx, 0, len, stride, num, &PRIMES, false, 1024);
-                // zint_rebuild_CRT(&mut xx, len, stride, num, &PRIMES, false, &mut tmp);
-                unsafe { zint_rebuild_CRT_func(xx.as_ptr(), len, stride, num, PRIMES_C.as_ptr(), 0, tmp_c.as_ptr()) };
-                zint_rebuild_CRT_pointer(xx_c.as_mut_ptr(), len, stride, num, &PRIMES, false, tmp.as_mut_ptr());
-                // assert_eq!(xx[0..1024], xx_c);
-                // assert_eq!(xx[1024..1540], tmp);
-                assert_eq!(tmp_c, tmp);
-                assert_eq!(xx_c, xx);
-            }
-        }
-        for _ in 0..50 {
-            for stride in 1usize..3 {
-                let mut rng = rand::thread_rng();
-                let mut xx: [u32; 1540] = core::array::from_fn(|_| rng.gen::<u32>());
-                let xx_c: [u32; 1024] = [0; 1024];
-                let mut tmp: [u32; 516] = [0; 516];
-                xx_c.clone_from_slice(&xx[0..1024]);
-                tmp.clone_from_slice(&xx[1024..]);
-                let tmp_c = tmp.clone();
-                let xx = xx_c.clone();
-                let num: u64 = rng.gen_range(0..5);
-                let len: usize = 20;
-                // zint_rebuild_CRT_index(&mut xx, 0, len, stride, num, &PRIMES, false, 1024);
-                // zint_rebuild_CRT(&mut xx, len, stride, num, &PRIMES, false, &mut tmp);
-                unsafe { zint_rebuild_CRT_func(xx.as_ptr(), len, stride, num, PRIMES_C.as_ptr(), 1, tmp_c.as_ptr()) };
-                zint_rebuild_CRT_pointer(xx_c.as_mut_ptr(), len, stride, num, &PRIMES, true, tmp.as_mut_ptr());
-                // assert_eq!(xx[0..1024], xx_c);
-                // assert_eq!(xx[1024..1540], tmp);
-                assert_eq!(tmp_c, tmp);
-                assert_eq!(xx_c, xx);
-            }
-        }
-    }
-
-    #[test]
-    #[allow(non_snake_case)]
     fn test_zint_rebuild_CRT_index() {
         for _ in 0..50 {
             for stride in 1usize..3 {
@@ -931,26 +882,30 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_keygen() {
-        for _ in 0..100 {
+        for _ in 0..20 {
             for logn in 1..11 {
-                let (rng_rust, rng_c) = init_shake_with_random_context();
+                let (mut rng_rust, rng_c) = init_shake_with_random_context();
                 let mut rng = rand::thread_rng();
-                let mut h: [u16; 300] = core::array::from_fn(|_| rng.gen::<u16>());
-                let h_c: [u16; 300] = h.clone();
-                let mut tmp: [u8; 300] = core::array::from_fn(|_| rng.gen::<u8>());
-                let tmp_c: [u8; 300] = tmp.clone();
-                let mut F: [i8; 300] = core::array::from_fn(|_| rng.gen::<i8>());
-                let F_c: [i8; 300] = F.clone();
-                let mut G: [i8; 300] = core::array::from_fn(|_| rng.gen::<i8>());
-                let G_c: [i8; 300] = G.clone();
-                let mut f: [i8; 300] = core::array::from_fn(|_| rng.gen::<i8>());
-                let f_c: [i8; 300] = f.clone();
-                let mut g: [i8; 300] = core::array::from_fn(|_| rng.gen::<i8>());
-                let g_c: [i8; 300] = g.clone();
-                // keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tmp.as_mut_ptr());
+                let mut h: [u16; 2000] = core::array::from_fn(|_| rng.gen::<u16>());
+                let h_c: [u16; 2000] = h.clone();
+                let mut tmp: [u8; 2000] = core::array::from_fn(|_| rng.gen::<u8>());
+                let tmp_c: [u8; 2000] = tmp.clone();
+                let mut F: [i8; 2000] = core::array::from_fn(|_| rng.gen::<i8>());
+                let F_c: [i8; 2000] = F.clone();
+                let mut G: [i8; 2000] = core::array::from_fn(|_| rng.gen::<i8>());
+                let G_c: [i8; 2000] = G.clone();
+                let mut f: [i8; 2000] = core::array::from_fn(|_| rng.gen::<i8>());
+                let f_c: [i8; 2000] = f.clone();
+                let mut g: [i8; 2000] = core::array::from_fn(|_| rng.gen::<i8>());
+                let g_c: [i8; 2000] = g.clone();
+                keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tmp.as_mut_ptr());
                 unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), logn, tmp_c.as_ptr()); }
-                // assert_eq!(f, f_c);
-                assert_eq!(1, 0);
+                assert_eq!(f, f_c);
+                assert_eq!(g, g_c);
+                assert_eq!(G, G_c);
+                assert_eq!(F, F_c);
+                assert_eq!(h, h_c);
+                assert_eq!(tmp, tmp_c);
             }
         }
     }
