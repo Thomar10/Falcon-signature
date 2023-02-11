@@ -3485,7 +3485,6 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: *mut i8, g: *mut i8, F: *mu
             continue;
         }
 
-        break;
         let rt1: *mut u64 = tmp.cast();
         let rt2 = rt1.wrapping_add(n);
         let rt3 = rt2.wrapping_add(n);

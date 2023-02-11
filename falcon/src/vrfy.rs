@@ -12,9 +12,9 @@ pub fn mq_conv_small(x: i32) -> u32 {
 
 #[inline(always)]
 pub fn mq_montymul(x: u32, y: u32) -> u32 {
-    let mut z = x * y;
+    let mut z = x.wrapping_mul(y);
     let w = ((z.wrapping_mul(Q0I)) & 0xFFFF) * Q;
-    z = (z + w) >> 16;
+    z = (z .wrapping_add(w)) >> 16;
     z = z.wrapping_sub(Q);
     z = z.wrapping_add(Q & (!(z >> 31)).wrapping_add(1));
     z
@@ -28,15 +28,13 @@ pub fn mq_montysqr(x: u32) -> u32 {
 #[inline(always)]
 pub fn mq_add(x: u32, y: u32) -> u32 {
     let mut d = x.wrapping_add(y).wrapping_sub(Q);
-    d = d.wrapping_add(Q & (!(d >> 31)).wrapping_add(1));
-    d
+    d.wrapping_add(Q & (!(d >> 31)).wrapping_add(1))
 }
 
 #[inline(always)]
 pub fn mq_sub(x: u32, y: u32) -> u32 {
-    let mut d = x + y;
-    d += Q & (!(d >> 31)).wrapping_add(1);
-    d
+    let mut d = x.wrapping_sub(y);
+    d.wrapping_add(Q & (!(d >> 31)).wrapping_add(1))
 }
 
 #[inline(always)]

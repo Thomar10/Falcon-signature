@@ -4538,7 +4538,6 @@ falcon_inner_keygen(inner_shake256_context *rng,
 		rt1 = (fpr *)tmp;
 		rt2 = rt1 + n;
 		rt3 = rt2 + n;
-		break;
 		poly_small_to_fp(rt1, f, logn);
 		poly_small_to_fp(rt2, g, logn);
 		Zf(FFT)(rt1, logn);
@@ -4573,7 +4572,7 @@ falcon_inner_keygen(inner_shake256_context *rng,
 			tmp2 = (uint16_t *)tmp;
 		}
 		if (!Zf(compute_public)(h2, f, g, logn, (uint8_t *)tmp2)) {
-			continue;
+	  	continue;
 		}
 
 		/*
