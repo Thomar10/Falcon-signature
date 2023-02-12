@@ -2,6 +2,7 @@ use crate::keygen::keygen;
 use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};
 use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context, St};
 use std::time::Instant;
+use crate::gen_kat::genkat512;
 
 mod main_test;
 mod fft;
@@ -11,6 +12,9 @@ mod keygen;
 mod falcon;
 mod codec;
 mod vrfy;
+mod gen_kat;
+mod katrng;
+mod nist;
 
 mod falcon_c {
     pub mod codec_c;
@@ -33,10 +37,12 @@ mod test {
 }
 
 
-
 fn main() {
+    unsafe { genkat512(); }
+}
 
-    println!("Hello, world falcon!");
+/*
+println!("Hello, world falcon!");
     let now = Instant::now();
     for _ in 0..20 {
         for logn in 1..11 {
@@ -72,19 +78,4 @@ fn main() {
     }
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
-}
-
-fn init_shake_with_random_context() -> (InnerShake256Context, InnerShake256ContextC) {
-    let random_state: [u64; 25] = rand::random();
-    let random_dptr: u64 = rand::random();
-    let st = St { a: random_state };
-    let mut sc_rust = InnerShake256Context { st, dptr: random_dptr };
-    let sc_c = InnerShake256ContextC { st: StC { a: random_state.clone() }, dptr: random_dptr };
-    unsafe { falcon_inner_i_shake256_init(&sc_c as *const InnerShake256ContextC) }
-    i_shake256_init(&mut sc_rust);
-    let input_rust: [u8; 25] = rand::random();
-    let input_c: [u8; 25] = input_rust.clone();
-    i_shake256_inject(&mut sc_rust, &input_rust);
-    unsafe { falcon_inner_i_shake256_inject(&sc_c as *const InnerShake256ContextC, input_c.as_ptr(), input_c.len() as u64) }
-    (sc_rust, sc_c)
-}
+ */

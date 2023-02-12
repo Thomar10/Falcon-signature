@@ -137,55 +137,60 @@ AES256_ECB(unsigned char *key, unsigned char *ctr, unsigned char *buffer)
 }
 #endif
 
-void
-randombytes_init(unsigned char *entropy_input,
-                 unsigned char *personalization_string,
-                 int security_strength)
-{
-    unsigned char   seed_material[48];
-    
-    (void)security_strength;
-    memcpy(seed_material, entropy_input, 48);
-    if (personalization_string)
-        for (int i=0; i<48; i++)
-            seed_material[i] ^= personalization_string[i];
-    memset(DRBG_ctx.Key, 0x00, 32);
-    memset(DRBG_ctx.V, 0x00, 16);
-    AES256_CTR_DRBG_Update(seed_material, DRBG_ctx.Key, DRBG_ctx.V);
-    DRBG_ctx.reseed_counter = 1;
+void randombytes_init(unsigned char *entropy_input,
+                      unsigned char *personalization_string,
+                      int security_strength) {
+  unsigned char seed_material[48];
+
+  (void)security_strength;
+  memcpy(seed_material, entropy_input, 48);
+  if (personalization_string)
+    for (int i = 0; i < 48; i++)
+      seed_material[i] ^= personalization_string[i];
+  memset(DRBG_ctx.Key, 0x00, 32);
+  memset(DRBG_ctx.V, 0x00, 16);
+  AES256_CTR_DRBG_Update(seed_material, DRBG_ctx.Key, DRBG_ctx.V);
+  DRBG_ctx.reseed_counter = 1;
 }
 
-int
-randombytes(unsigned char *x, unsigned long long xlen)
-{
-    unsigned char   block[16];
-    int             i = 0;
-    
-    while ( xlen > 0 ) {
-        //increment V
-        for (int j=15; j>=0; j--) {
-            if ( DRBG_ctx.V[j] == 0xff )
-                DRBG_ctx.V[j] = 0x00;
-            else {
-                DRBG_ctx.V[j]++;
-                break;
-            }
-        }
-        AES256_ECB(DRBG_ctx.Key, DRBG_ctx.V, block);
-        if ( xlen > 15 ) {
-            memcpy(x+i, block, 16);
-            i += 16;
-            xlen -= 16;
-        }
-        else {
-            memcpy(x+i, block, xlen);
-            xlen = 0;
-        }
-    }
-    AES256_CTR_DRBG_Update(NULL, DRBG_ctx.Key, DRBG_ctx.V);
-    DRBG_ctx.reseed_counter++;
+void randombytes_init_func(unsigned char *entropy_input,
+                           unsigned char *personalization_string,
+                           int security_strength) {
+  randombytes_init(entropy_input, personalization_string, security_strength);
+}
 
-    return RNG_SUCCESS;
+int randombytes(unsigned char *x, unsigned long long xlen) {
+  unsigned char block[16];
+  int i = 0;
+
+  while (xlen > 0) {
+    // increment V
+    for (int j = 15; j >= 0; j--) {
+      if (DRBG_ctx.V[j] == 0xff)
+        DRBG_ctx.V[j] = 0x00;
+      else {
+        DRBG_ctx.V[j]++;
+        break;
+      }
+    }
+    AES256_ECB(DRBG_ctx.Key, DRBG_ctx.V, block);
+    if (xlen > 15) {
+      memcpy(x + i, block, 16);
+      i += 16;
+      xlen -= 16;
+    } else {
+      memcpy(x + i, block, xlen);
+      xlen = 0;
+    }
+  }
+  AES256_CTR_DRBG_Update(NULL, DRBG_ctx.Key, DRBG_ctx.V);
+  DRBG_ctx.reseed_counter++;
+
+  return RNG_SUCCESS;
+}
+
+int randombytes_func(unsigned char *x, unsigned long long xlen) {
+  return randombytes(x, xlen);
 }
 
 void

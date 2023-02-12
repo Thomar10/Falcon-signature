@@ -2,9 +2,9 @@
 
 extern "C" {
     #[allow(dead_code)]
-    pub fn randombytes_init(entropy_input: *const u8, personalization_string: *const u8, security_strength: i32);
+    pub fn randombytes_init_func(entropy_input: *const u8, personalization_string: *const u8, security_strength: i32);
     #[allow(dead_code)]
-    pub fn randombytes(x: *const u8, xlen: u64);
+    pub fn randombytes_func(x: *const u16, xlen: u64);
     #[allow(dead_code)]
     pub fn crypto_sign_keypair(pk: *const u8, sk: *const u8);
     #[allow(dead_code)]
