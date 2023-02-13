@@ -3,16 +3,13 @@ use crate::falcon_c::shake_c::InnerShake256Context;
 
 #[link(name = "rng", kind = "static")]
 extern "C" {
-    #[allow(dead_code)]
-    pub fn prng_init(p: *const prng, src: *const InnerShake256Context);
-    #[allow(dead_code)]
-    pub fn prng_refill(p: *const prng);
-    #[allow(dead_code)]
-    pub fn prng_get_bytes(p: *const prng, dst: *const c_void, len: u64);
+    pub fn prng_init(p: *const Prng, src: *const InnerShake256Context);
+    pub fn prng_refill(p: *const Prng);
+    pub fn prng_get_bytes(p: *const Prng, dst: *const c_void, len: u64);
 }
 
 #[repr(C)]
-pub struct prng {
+pub struct Prng {
     pub buf: Buf,
     pub ptr: u64,
     pub state: State,

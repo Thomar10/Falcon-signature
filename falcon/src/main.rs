@@ -1,3 +1,5 @@
+extern crate core;
+
 use crate::keygen::keygen;
 use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};
 use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context, St};
@@ -11,6 +13,7 @@ mod keygen;
 mod falcon;
 mod codec;
 mod vrfy;
+mod rng;
 
 mod falcon_c {
     pub mod codec_c;
@@ -28,6 +31,7 @@ mod test {
     pub mod fft_test;
     pub mod fpr_test;
     pub mod shake_test;
+    pub mod rng_test;
     pub mod keygen_test;
     pub mod vrfy_test;
 }
