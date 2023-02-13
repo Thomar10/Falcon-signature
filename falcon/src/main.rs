@@ -53,7 +53,7 @@ fn main() {
     }
     println!("{:?}", seed);
     println!("{:?}", seed2);*/
-    //unsafe { genkat512(); }
+    unsafe { genkat512(); }
 }
 
 /*

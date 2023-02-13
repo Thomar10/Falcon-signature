@@ -212,10 +212,9 @@ falcon_inner_trim_i16_decode(
 /* see inner.h */
 size_t
 falcon_inner_trim_i8_encode(
-	uint16_t *out, size_t max_out_len,
+	void *out, size_t max_out_len,
 	const int8_t *x, unsigned logn, unsigned bits)
 {
-  printf("%d \n", out[0]);
 	size_t n, u, out_len;
 	int minv, maxv;
 	uint8_t *buf;

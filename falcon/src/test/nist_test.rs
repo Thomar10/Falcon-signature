@@ -11,8 +11,8 @@ mod tests {
         let sk_c = [0; 1281];
         let res = crypto_sign_keypair(&mut pk, &mut sk);
         let res_c = unsafe { crypto_sign_keypair_func(pk_c.as_ptr(), sk_c.as_ptr()) };
-        //assert_eq!(res, res_c != 0);
+        assert_eq!(res, res_c == 0);
         assert_eq!(sk, sk_c);
-        //assert_eq!(pk, pk_c);
+        assert_eq!(pk, pk_c);
     }
 }
