@@ -44,7 +44,7 @@ pub fn trim_i8_encode(out: &mut [u16], out_index: usize, max_out: usize, x: &mut
     if out_len > max_out {
         return 0;
     }
-    let index = out_index;
+    let mut index = out_index;
     let mut acc = 0;
     let mut acc_len = 0;
     let mask = (1u32 << bits) - 1;
@@ -53,10 +53,12 @@ pub fn trim_i8_encode(out: &mut [u16], out_index: usize, max_out: usize, x: &mut
         acc_len += bits;
         while acc_len >= 8 {
             acc_len -= 8;
+            index += 1;
             out[index] = (acc >> acc_len) as u8 as u16;
         }
     }
     if acc_len > 0 {
+        index += 1;
         out[index] = (acc << (8 - acc_len)) as u8 as u16;
     }
     out_len

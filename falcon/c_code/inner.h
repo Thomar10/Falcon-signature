@@ -202,7 +202,7 @@ size_t falcon_inner_modq_encode(void *out, size_t max_out_len,
 	const uint16_t *x, unsigned logn);
 size_t falcon_inner_trim_i16_encode(void *out, size_t max_out_len,
 	const int16_t *x, unsigned logn, unsigned bits);
-size_t falcon_inner_trim_i8_encode(void *out, size_t max_out_len,
+size_t falcon_inner_trim_i8_encode(uint16_t *out, size_t max_out_len,
 	const int8_t *x, unsigned logn, unsigned bits);
 size_t falcon_inner_comp_encode(void *out, size_t max_out_len,
 	const int16_t *x, unsigned logn);

@@ -2,7 +2,10 @@ use crate::keygen::keygen;
 use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};
 use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context, St};
 use std::time::Instant;
+use crate::falcon_c::katrng2::randombytes2;
+use crate::falcon_c::nist_c::{randombytes_func, randombytes_init_func};
 use crate::gen_kat::genkat512;
+use crate::katrng::randombytes;
 
 mod main_test;
 mod fft;
@@ -26,6 +29,7 @@ mod falcon_c {
     pub mod common_c;
     pub mod vrfy_c;
     pub mod keygen_c;
+    pub mod katrng2;
 }
 
 mod test {
@@ -34,11 +38,22 @@ mod test {
     pub mod shake_test;
     pub mod keygen_test;
     pub mod vrfy_test;
+    pub mod codec_test;
+    pub mod nist_test;
+    pub mod katrng;
 }
 
 
 fn main() {
-    unsafe { genkat512(); }
+    /*let mut seed: [u16; 48] = [0; 48];
+    let mut seed2: [u16; 48] = [0; 48];
+    unsafe {
+        randombytes_func(seed.as_ptr(), 96);
+        randombytes2(seed2.as_ptr(), 96);
+    }
+    println!("{:?}", seed);
+    println!("{:?}", seed2);*/
+    //unsafe { genkat512(); }
 }
 
 /*

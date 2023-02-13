@@ -147,14 +147,14 @@ mod tests {
     //     assert_eq!(prng.ptr, 0);
     // }
 
-    use crate::falcon_c::nist_c::crypto_sign_keypair;
+    use crate::falcon_c::nist_c::{crypto_sign_keypair_func};
 
     #[test]
     fn create_keypair() {
-        let pk = [0u8; 2000];
-        let sk = [0u8; 2000];
+        let pk = [0u16; 2000];
+        let sk = [0u16; 2000];
 
-        unsafe { crypto_sign_keypair(pk.as_ptr(), sk.as_ptr()); }
-        assert_eq!(pk, [0u8; 2000]);
+        unsafe { crypto_sign_keypair_func(pk.as_ptr(), sk.as_ptr()); }
+        assert_eq!(pk, [0u16; 2000]);
     }
 }

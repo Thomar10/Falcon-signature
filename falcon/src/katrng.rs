@@ -3,7 +3,7 @@ use aes::cipher::{Block, BlockEncrypt, KeyInit};
 use aes::cipher::generic_array::GenericArray;
 
 const context: Aes256Drbg = Aes256Drbg {
-    key: [0; 25],
+    key: [0; 32],
     v: [0; 16],
     reseed_counter: 0,
 };
@@ -23,9 +23,8 @@ pub fn randombytes_init(entropy: &mut [u16], ps: &mut [u16], security: i32) {
     context.reseed_counter = 1; */
 }
 
-/*
+
 pub fn randombytes(x: &mut [u16]) -> bool {
-    let block: [u16; 16] = [0; 16];
     let mut i: i32 = 0;
     let mut xlen = x.len();
 
@@ -38,7 +37,7 @@ pub fn randombytes(x: &mut [u16]) -> bool {
                 break;
             }
         }
-        aes_ecb()
+        aes_ecb(&mut context.key, &mut context.v);
         if xlen > 15 {
             //memcpy(x+i, block, 16);
             i += 16;
@@ -52,17 +51,17 @@ pub fn randombytes(x: &mut [u16]) -> bool {
     true
 }
 
-fn aes_ecb(mut key: &mut [u8; 32], mut ctr: &mut [u8; 16], buffer: &mut [u8; 16]) {
-    let aes_key = GenericArray::from_slice(key);
+fn aes_ecb(mut key: &mut [u8; 32], mut ctr: &mut [u8; 16]) {
+  /*  let aes_key = GenericArray::from_slice(key);
     let cipher = Aes256::new(&aes_key);
-    let mut block = GenericArray::from_mut_slice(buffer);
+    let mut block = GenericArray::from_mut_slice(&mut [0u8; 16]);
     cipher.encrypt_block(&mut block);
-    ctr.copy_from_slice(block.as_slice());
+    ctr.copy_from_slice(block.as_slice()); */
 }
-*/
+
 
 pub(crate) struct Aes256Drbg {
-    pub(crate) key: [u16; 25],
-    pub(crate) v: [u16; 16],
+    pub(crate) key: [u8; 32],
+    pub(crate) v: [u8; 16],
     pub(crate) reseed_counter: i32,
 }

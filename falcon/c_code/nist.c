@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "api.h"
 #include "inner.h"
@@ -49,24 +50,32 @@ crypto_sign_keypair(unsigned char *pk, unsigned char *sk)
 	inner_shake256_inject(&rng, seed, sizeof seed);
 	inner_shake256_flip(&rng);
 	falcon_inner_keygen(&rng, f, g, F, NULL, h, 9, tmp.b);
-
-
-	/*
-	 * Encode private key.
-	 */
 	sk[0] = 0x50 + 9;
 	u = 1;
 	v = falcon_inner_trim_i8_encode(sk + u, CRYPTO_SECRETKEYBYTES - u,
 		f, 9, Zf(max_fg_bits)[9]);
+		printf("v %d\n", v);
+			int i;
+  return -1;
+        printf("sk \n");
+        printf("[");
+        for (i = 0; i < 512; i++)
+        {
+          printf("%d, ", sk[i]);
+        }
+        printf("]");
 	if (v == 0) {
 		return -1;
 	}
+/*
 	u += v;
 	v = falcon_inner_trim_i8_encode(sk + u, CRYPTO_SECRETKEYBYTES - u,
 		g, 9, Zf(max_fg_bits)[9]);
 	if (v == 0) {
 		return -1;
 	}
+
+
 	u += v;
 	v = falcon_inner_trim_i8_encode(sk + u, CRYPTO_SECRETKEYBYTES - u,
 		F, 9, Zf(max_FG_bits)[9]);
@@ -78,16 +87,19 @@ crypto_sign_keypair(unsigned char *pk, unsigned char *sk)
 		return -1;
 	}
 
-	/*
-	 * Encode public key.
-	 */
+
 	pk[0] = 0x00 + 9;
 	v = falcon_inner_modq_encode(pk + 1, CRYPTO_PUBLICKEYBYTES - 1, h, 9);
 	if (v != CRYPTO_PUBLICKEYBYTES - 1) {
 		return -1;
 	}
-
+  */
 	return 0;
+}
+int
+crypto_sign_keypair_func(unsigned char *pk, unsigned char *sk)
+{
+  return crypto_sign_keypair(pk, sk);
 }
 
 int
