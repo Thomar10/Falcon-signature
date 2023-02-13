@@ -27,13 +27,13 @@ pub fn mq_montysqr(x: u32) -> u32 {
 
 #[inline(always)]
 pub fn mq_add(x: u32, y: u32) -> u32 {
-    let mut d = x.wrapping_add(y).wrapping_sub(Q);
+    let d = x.wrapping_add(y).wrapping_sub(Q);
     d.wrapping_add(Q & (!(d >> 31)).wrapping_add(1))
 }
 
 #[inline(always)]
 pub fn mq_sub(x: u32, y: u32) -> u32 {
-    let mut d = x.wrapping_sub(y);
+    let d = x.wrapping_sub(y);
     d.wrapping_add(Q & (!(d >> 31)).wrapping_add(1))
 }
 

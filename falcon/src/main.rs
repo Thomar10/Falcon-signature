@@ -7,7 +7,6 @@ use crate::falcon_c::nist_c::{randombytes_func, randombytes_init_func};
 use crate::gen_kat::genkat512;
 use crate::katrng::randombytes;
 
-mod main_test;
 mod fft;
 mod fpr;
 mod shake;
@@ -18,6 +17,7 @@ mod vrfy;
 mod gen_kat;
 mod katrng;
 mod nist;
+mod rng;
 
 mod falcon_c {
     pub mod codec_c;
@@ -36,6 +36,7 @@ mod test {
     pub mod fft_test;
     pub mod fpr_test;
     pub mod shake_test;
+    pub mod rng_test;
     pub mod keygen_test;
     pub mod vrfy_test;
     pub mod codec_test;
