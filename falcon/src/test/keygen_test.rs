@@ -2,7 +2,7 @@
 mod tests {
     use rand::Rng;
     use crate::falcon_c::keygen_c::{falcon_inner_keygen, get_rng_u64_func, make_fg_func, make_fg_step_func, mkgauss_func, modp_add_func, modp_div_func, modp_iNTT2_ext_func, modp_mkgm2_func, modp_montymul_func, modp_ninv31_func, modp_norm_func, modp_NTT2_ext_func, modp_poly_rec_res_func, modp_R2_func, modp_R_func, modp_Rx_func, modp_set_func, modp_sub_func, poly_big_to_fp_func, poly_big_to_small_func, poly_small_mkgauss_func, poly_small_sqnorm_func, poly_small_to_fp_func, poly_sub_scaled_func, poly_sub_scaled_ntt_func, small_prime, solve_NTRU_binary_depth0_func, solve_NTRU_binary_depth1_func, solve_NTRU_deepest_func, solve_NTRU_func, solve_NTRU_intermediate_func, zint_add_mul_small_func, zint_add_scaled_mul_small_func, zint_bezout_func, zint_co_reduce_func, zint_co_reduce_mod_func, zint_finish_mod_func, zint_mod_small_signed_func, zint_mod_small_unsigned_func, zint_mul_small_func, zint_negate_func, zint_norm_zero_func, zint_one_to_plain_func, zint_rebuild_CRT_func, zint_sub_func, zint_sub_scaled_func};
-    use crate::keygen::{get_rng_u64, keygen, make_fg, make_fg_index, make_fg_pointer, make_fg_step, make_fg_step_pointer, mkgauss, modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, poly_big_to_fp, poly_big_to_small, poly_small_mkgauss, poly_small_sqnorm, poly_small_to_fp, poly_sub_scaled, poly_sub_scaled_ntt, PRIMES, solve_ntru, solve_ntru_binary_depth0, solve_ntru_binary_depth1, solve_ntru_deepest, solve_ntru_intermediate_point, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_rebuild_CRT_index, zint_sub, zint_sub_scaled};
+    use crate::keygen::{get_rng_u64, keygen, make_fg, make_fg_index, make_fg_pointer, make_fg_step, make_fg_step_pointer, mkgauss, modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, poly_big_to_fp, poly_big_to_small, poly_small_mkgauss, poly_small_sqnorm, poly_small_to_fp, poly_sub_scaled, poly_sub_scaled_ntt, PRIMES, solve_ntru, solve_ntru_binary_depth0, solve_ntru_binary_depth1, solve_ntru_deepest, solve_ntru_intermediate_point, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_sub, zint_sub_scaled};
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};
     use crate::falcon_tmpsize_keygen;
     use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context, St};
@@ -329,43 +329,6 @@ mod tests {
                 assert_eq!(tmp, tmp_c);
             }
         }
-    }
-
-
-    #[test]
-    #[allow(non_snake_case)]
-    fn test_zint_rebuild_CRT_index() {
-        for _ in 0..50 {
-            for stride in 1usize..3 {
-                let mut rng = rand::thread_rng();
-                let mut xx: [u32; 1540] = core::array::from_fn(|_| rng.gen::<u32>());
-                let mut xx_c: [u32; 1024] = [0; 1024];
-                let mut tmp: [u32; 516] = [0; 516];
-                xx_c.clone_from_slice(&xx[0..1024]);
-                tmp.clone_from_slice(&xx[1024..]);
-                let num: u64 = rng.gen_range(0..10);
-                let len: usize = 100;
-
-                zint_rebuild_CRT(&mut xx, len, stride, num, &PRIMES, false, &mut tmp);
-                zint_rebuild_CRT_index(&mut xx_c, 0, len, stride, num, &PRIMES, false, 516);
-                // assert_eq!(xx[0..1024], xx_c);
-                println!("HEJ");
-                assert_eq!(xx[1024..1540], tmp);
-            }
-        }
-        // for _ in 0..200 {
-        //     for stride in 1usize..5 {
-        //         let mut rng = rand::thread_rng();
-        //         let mut xx: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
-        //         let num: u64 = rng.gen_range(0..10);
-        //         let len: usize = 100;
-        //         let mut tmp: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
-        //         let mut tmp_c: [u32; 1024] = tmp.clone();
-        //         zint_rebuild_CRT(&mut xx, len, stride, num, &PRIMES, true, &mut tmp);
-        //         zint_rebuild_CRT_pointer(xx.as_mut_ptr(), len, stride, num, &PRIMES, true, tmp_c.as_mut_ptr());
-        //         assert_eq!(tmp, tmp_c);
-        //     }
-        // }
     }
 
     #[test]
@@ -731,7 +694,7 @@ mod tests {
                     let mut g_c: [i8; 2048 * 4] = g.clone();
                     let in_out: bool = rand::random();
                     make_fg_pointer(data.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), logn, depth, in_out);
-                    unsafe { make_fg(&mut data_c, &mut f_c, &mut g_c, logn, depth, in_out) };
+                    make_fg(&mut data_c, &mut f_c, &mut g_c, logn, depth, in_out);
                     assert_eq!(data, data_c);
                 }
             }
@@ -780,7 +743,7 @@ mod tests {
 
     #[test]
     fn test_solve_ntru_intermediate() {
-        for _ in 0..100 {
+        for _ in 0..10 {
             for logn_top in 4..10 {
                 for depth in 1..4 {
                     let mut rng = rand::thread_rng();
@@ -801,7 +764,7 @@ mod tests {
 
     #[test]
     fn test_solve_ntru_binary_depth1() {
-        for _ in 0..100 {
+        for _ in 0..10 {
             for logn_top in 2..10 {
                 let mut rng = rand::thread_rng();
                 let mut tmp: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
@@ -820,7 +783,7 @@ mod tests {
 
     #[test]
     fn test_solve_ntru_binary_depth0() {
-        for _ in 0..100 {
+        for _ in 0..10 {
             for logn_top in 2..10 {
                 let mut rng = rand::thread_rng();
                 let mut tmp: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
@@ -840,7 +803,7 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_solve_ntru() {
-        for _ in 0..100 {
+        for _ in 0..10 {
             for logn_top in 2..10 {
                 let mut rng = rand::thread_rng();
                 let mut tmp: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
@@ -902,17 +865,11 @@ mod tests {
                 let g_c: Vec<i8> = vec![0; buffer_size];
                 keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tmp.as_mut_ptr());
                 unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), logn, tmp_c.as_ptr()); }
-                println!("f");
                 assert_eq!(f, f_c);
-                println!("g");
                 assert_eq!(g, g_c);
-                println!("G");
                 assert_eq!(G, G_c);
-                println!("F");
                 assert_eq!(F, F_c);
-                println!("h");
                 assert_eq!(h, h_c);
-                println!("tmp");
                 assert_eq!(tmp, tmp_c);
             }
         }

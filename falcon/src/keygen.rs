@@ -877,6 +877,7 @@ pub fn zint_rebuild_CRT_pointer(xx: *mut u32, xlen: usize, xstride: usize, num: 
     }
 }
 
+#[allow(dead_code)]
 #[allow(non_snake_case)]
 pub fn zint_rebuild_CRT_index(xx: &mut [u32], xx_index: usize, xlen: usize, xstride: usize, num: u64, primes: &[SmallPrimes; 522], normalized_signed: bool, tmp_index: usize) {
     let mut xIndex;
@@ -1030,6 +1031,7 @@ pub fn zint_co_reduce_index(a: &mut [u32], a_index: usize, b_index: usize, len: 
     nega | (negb << 1)
 }
 
+#[allow(dead_code)]
 pub fn zint_co_reduce_index_tmp(a: &mut [u32], a_index: usize, b_index: usize, tmp_index: usize, len: usize, xa: i64, xb: i64, ya: i64, yb: i64) -> u32 {
     let mut cca: i64 = 0;
     let mut ccb: i64 = 0;
@@ -1101,6 +1103,7 @@ pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &mut [u32], neg: u32) {
     }
 }
 
+#[allow(dead_code)]
 pub fn zint_finish_mod_index_m(a: &mut [u32], a_index: usize, len: usize, m_index: usize, neg: u32) {
     let mut cc = 0;
     for u in 0..len {
@@ -1241,6 +1244,7 @@ pub fn zint_co_reduce_mod_index(a: &mut [u32], a_index: usize, b: &mut [u32], b_
     zint_finish_mod_index(b, b_index, len, m, ((ccb as u64) >> 63) as u32);
 }
 
+#[allow(dead_code)]
 pub fn zint_co_reduce_mod_index_tmp(a: &mut [u32], a_index: usize, b_index: usize, m_index: usize, len: usize, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64) {
     let mut cca: i64 = 0;
     let mut ccb: i64 = 0;
@@ -1273,6 +1277,7 @@ pub fn zint_co_reduce_mod_index_tmp(a: &mut [u32], a_index: usize, b_index: usiz
     zint_finish_mod_index_m(a, b_index, len, m_index, ((ccb as u64) >> 63) as u32);
 }
 
+#[allow(dead_code)]
 pub fn zint_bezout_index(data: &mut [u32], u_index: usize, v_index: usize, x_index: usize, y_index: usize, len: usize, tmp_index: usize) -> bool {
     let (u1_index, v1_index, a_index, b_index): (usize, usize, usize, usize);
     let (x0i, y0i): (u32, u32);
@@ -1888,6 +1893,7 @@ pub fn poly_big_to_fp(d: &mut [u64], f: &mut [u32], flen: usize, fstride: usize,
     }
 }
 
+#[allow(dead_code)]
 pub fn poly_big_to_fp_index(d: &mut [u64], d_index: usize, f: &mut [u32], ff_index: usize, flen: usize, fstride: usize, logn: u32) {
     let n = mkn!(logn);
     if flen == 0 {
@@ -2640,8 +2646,8 @@ pub fn make_fg_pointer(data: *mut u32, f: *mut i8, g: *mut i8, logn: u32, depth:
         gt = gt.wrapping_add(1);
     }
 
-    let mut ft = data;
-    let mut gt = ft.wrapping_add(n);
+    let ft = data;
+    let gt = ft.wrapping_add(n);
     if depth == 0 && out_ntt {
         let p = PRIMES[0].p;
         let p0i = modp_ninv31(p);
