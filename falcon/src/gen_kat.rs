@@ -1,12 +1,8 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::num::ParseIntError;
 use std::path::Path;
-use std::ptr::{null, null_mut};
+use std::ptr::{null};
 use crate::falcon_c::katrng2::randombytes_init2;
-use crate::falcon_c::nist_c::randombytes_init_func;
-use crate::katrng::randombytes_init;
-use crate::keygen;
 use crate::nist::crypto_sign_keypair;
 
 pub unsafe fn genkat512() {
@@ -23,7 +19,7 @@ pub unsafe fn genkat512() {
     let mut pk_hex: String = String::new();
     let mut sk_hex: String = String::new();
     for line in buf_reader.lines() {
-        let mut string = line.unwrap();
+        let string = line.unwrap();
         if string.contains("seed") {
             seedu8 = hex::decode(string.split_at(7).1).unwrap();
             randombytes_init2(seedu8.as_ptr(), null(), 256);
@@ -40,11 +36,5 @@ pub unsafe fn genkat512() {
             let x = string.split_at(5).1;
             assert_eq!(sk_hex, x);
         }
-    }
-}
-
-fn byte_to_short(input: Vec<u8>, res: &mut [u16]) {
-    for (i, byte) in input.iter().enumerate() {
-        res[i] = *byte as u16;
     }
 }

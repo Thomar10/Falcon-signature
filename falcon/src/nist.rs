@@ -1,13 +1,14 @@
-use std::mem;
-use std::ptr::{null, null_mut, slice_from_raw_parts_mut};
+use std::ptr::null_mut;
 use crate::codec::{max_fg_bits, max_FG_bits, trim_i8_encode};
 use crate::falcon_c::nist_c::randombytes_func;
 use crate::falcon_c::shake_c::{falcon_inner_i_shake256_flip, falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, falcon_inner_i_shake256_inject2, InnerShake256Context as InnerShake256ContextC, St as StC};
-use crate::{keygen, randombytes2};
 use crate::falcon_c::codec_c::{falcon_inner_modq_encode, falcon_inner_trim_i8_encode};
+use crate::falcon_c::katrng2::randombytes2;
+use crate::keygen::keygen;
 use crate::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
 
-pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8]) -> bool {
+#[allow(non_snake_case)]
+pub fn crypto_sign_keypair(pk: &mut [u8], sk: &mut [u8]) -> bool {
     let mut tmp: [u8; 14336] = [0; 14336];
     let mut f: [i8; 512] = [0; 512];
     let mut g: [i8; 512] = [0; 512];
@@ -72,5 +73,8 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8]) -> bool {
         let x: *const u8 = pk.as_ptr().cast();
         falcon_inner_modq_encode(x.add(1).cast(), crypto_publickey_bytes - 1, h.as_ptr(), 9)
     };
+    if v != crypto_publickey_bytes - 1 {
+        return false;
+    }
     return true;
 }

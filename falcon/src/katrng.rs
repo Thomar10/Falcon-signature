@@ -1,13 +1,10 @@
-use aes::Aes256;
-use aes::cipher::{Block, BlockEncrypt, KeyInit};
-use aes::cipher::generic_array::GenericArray;
-
-const context: Aes256Drbg = Aes256Drbg {
+const CONTEXT: Aes256Drbg = Aes256Drbg {
     key: [0; 32],
     v: [0; 16],
     reseed_counter: 0,
 };
 
+#[allow(dead_code)]
 pub fn randombytes_init(entropy: &mut [u16], ps: &mut [u16], security: i32) {
     /*let mut seed: [u16; 48] = [0; 48];
     seed.copy_from_slice(entropy);
@@ -30,14 +27,14 @@ pub fn randombytes(x: &mut [u16]) -> bool {
 
     while xlen > 0 {
         for j in (0..=15).rev() {
-            if context.v[j] == 0xff {
-                context.v[j] = 0x00;
+            if CONTEXT.v[j] == 0xff {
+                CONTEXT.v[j] = 0x00;
             } else {
-                context.v[j] += 1;
+                CONTEXT.v[j] += 1;
                 break;
             }
         }
-        aes_ecb(&mut context.key, &mut context.v);
+        aes_ecb(&mut CONTEXT.key, &mut CONTEXT.v);
         if xlen > 15 {
             //memcpy(x+i, block, 16);
             i += 16;
@@ -47,11 +44,12 @@ pub fn randombytes(x: &mut [u16]) -> bool {
             xlen = 0;
         }
     }
-    context.reseed_counter += 1;
+    CONTEXT.reseed_counter += 1;
     true
 }
 
-fn aes_ecb(mut key: &mut [u8; 32], mut ctr: &mut [u8; 16]) {
+#[allow(dead_code)]
+fn aes_ecb(key: &mut [u8; 32], ctr: &mut [u8; 16]) {
   /*  let aes_key = GenericArray::from_slice(key);
     let cipher = Aes256::new(&aes_key);
     let mut block = GenericArray::from_mut_slice(&mut [0u8; 16]);
