@@ -70,6 +70,13 @@ pub fn mq_div_12289(x: u32, y: u32) -> u32 {
     mq_montymul(y18, x)
 }
 
+pub fn mq_poly_tomonty(f: &mut [u16], logn: u32) {
+    let n = 1usize << logn;
+    for u in 0..n  {
+        f[u] = mq_montymul(f[u] as u32, R2) as u16;
+    }
+}
+
 
 pub fn mq_ntt(a: *mut u16, logn: u32) {
     let n = 1usize << logn;
@@ -153,6 +160,11 @@ pub fn compute_public(h: *mut u16, f: *mut i8, g: *mut i8, logn: u32, tmp: *mut 
     }
     mq_innt(h, logn);
     true
+}
+
+pub fn to_ntt_monty(h: &mut [u16], logn: u32) {
+    mq_ntt(h.as_mut_ptr(), 32);
+    mq_poly_tomonty(h, logn);
 }
 
 #[allow(non_upper_case_globals)]
