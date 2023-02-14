@@ -35,7 +35,7 @@ mod test {
     pub mod vrfy_test;
     pub mod codec_test;
     pub mod nist_test;
-    pub mod katrng;
+    pub mod katrng_test;
 }
 
 

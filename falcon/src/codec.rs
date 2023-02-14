@@ -94,7 +94,6 @@ pub fn trim_i8_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut 
     }
     if acc_len > 0 {
         out[index] = (acc << (8 - acc_len)) as u8;
-        index += 1;
     }
     out_len
 }

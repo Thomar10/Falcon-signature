@@ -141,7 +141,6 @@ void randombytes_init(unsigned char *entropy_input,
                       unsigned char *personalization_string,
                       int security_strength) {
   unsigned char seed_material[48];
-
   (void)security_strength;
   memcpy(seed_material, entropy_input, 48);
   if (personalization_string)
@@ -449,6 +448,7 @@ aes256_encrypt(const uint32_t *skey, void *data)
 void
 AES256_ECB(unsigned char *key, unsigned char *ctr, unsigned char *buffer)
 {
+  int i;
 	uint32_t skey[60];
 
 	aes256_keysched(skey, key);

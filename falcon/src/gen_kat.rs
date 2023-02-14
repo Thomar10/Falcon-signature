@@ -1,8 +1,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::ptr::{null};
-use crate::falcon_c::katrng2::randombytes_init2;
+use crate::katrng::randombytes_init;
 use crate::nist::crypto_sign_keypair;
 
 pub unsafe fn genkat512() {
@@ -22,7 +21,7 @@ pub unsafe fn genkat512() {
         let string = line.unwrap();
         if string.contains("seed") {
             seedu8 = hex::decode(string.split_at(7).1).unwrap();
-            randombytes_init2(seedu8.as_ptr(), null(), 256);
+            randombytes_init(&mut seedu8);
             let res = crypto_sign_keypair(&mut pk, &mut sk);
             assert_eq!(res, true);
             pk_hex = hex::encode_upper(pk);

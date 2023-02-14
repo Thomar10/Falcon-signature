@@ -1,7 +1,6 @@
 use std::ptr::null_mut;
 use crate::codec::{max_fg_bits, max_FG_bits, modq_encode, trim_i8_encode};
-use crate::falcon_c::nist_c::randombytes_func;
-use crate::falcon_c::katrng2::randombytes2;
+use crate::katrng::randombytes;
 use crate::keygen::keygen;
 use crate::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
 
@@ -17,7 +16,7 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8]) -> bool {
         st: St { a: [0u64; 25] },
         dptr: 0,
     };
-    unsafe { randombytes2(seed.as_ptr(), 48); }
+    randombytes(&mut seed);
     i_shake256_init(&mut rng);
     i_shake256_inject(&mut rng, &mut seed);
     i_shake256_flip(&mut rng);
