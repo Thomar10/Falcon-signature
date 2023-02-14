@@ -12,6 +12,7 @@ mod gen_kat;
 mod katrng;
 mod nist;
 mod rng;
+mod common;
 
 mod falcon_c {
     pub mod codec_c;

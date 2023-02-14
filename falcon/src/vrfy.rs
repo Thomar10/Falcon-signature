@@ -1,3 +1,6 @@
+use crate::falcon_c::common_c::is_short;
+use crate::falcon_c::vrfy_c::{mq_poly_montymul_ntt, mq_poly_sub};
+
 pub const Q: u32 = 12289;
 pub const Q0I: u32 = 12287;
 pub const R: u32 = 4091;
@@ -14,7 +17,7 @@ pub fn mq_conv_small(x: i32) -> u32 {
 pub fn mq_montymul(x: u32, y: u32) -> u32 {
     let mut z = x.wrapping_mul(y);
     let w = ((z.wrapping_mul(Q0I)) & 0xFFFF) * Q;
-    z = (z .wrapping_add(w)) >> 16;
+    z = (z.wrapping_add(w)) >> 16;
     z = z.wrapping_sub(Q);
     z = z.wrapping_add(Q & (!(z >> 31)).wrapping_add(1));
     z
@@ -72,7 +75,7 @@ pub fn mq_div_12289(x: u32, y: u32) -> u32 {
 
 pub fn mq_poly_tomonty(f: &mut [u16], logn: u32) {
     let n = 1usize << logn;
-    for u in 0..n  {
+    for u in 0..n {
         f[u] = mq_montymul(f[u] as u32, R2) as u16;
     }
 }
@@ -165,6 +168,36 @@ pub fn compute_public(h: *mut u16, f: *mut i8, g: *mut i8, logn: u32, tmp: *mut 
 pub fn to_ntt_monty(h: &mut [u16], logn: u32) {
     mq_ntt(h.as_mut_ptr(), logn);
     mq_poly_tomonty(h, logn);
+}
+
+pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp: &mut [u8]) -> bool {
+    let n = 1usize << logn;
+    let tt: *mut u16 = tmp.as_mut_ptr().cast();
+
+    for u in 0..n {
+        let mut w: u32 = s2[u] as u32;
+        w += Q & (!(w >> 31)).wrapping_add(1);
+        unsafe { *tt.wrapping_add(u) = w as u16; }
+    }
+
+    mq_ntt(tt, logn);
+    unsafe { mq_poly_montymul_ntt(tt, h.as_mut_ptr(), logn); }
+    mq_innt(tt, logn);
+    unsafe { mq_poly_sub(tt, c0.as_ptr(), logn); }
+
+    for u in 0..n {
+        let mut w: i32;
+        unsafe { w = *tt.wrapping_add(u) as i32 }
+        w -= (Q & (!(((Q >> 1) - (w as u32)) >> 31)).wrapping_add(1)) as i32;
+        unsafe {
+            let x: *mut i16 = tt.wrapping_add(u).cast();
+            *x = w as i16;
+        }
+    }
+    let tt_int: *mut i16 = tt.cast();
+    let res: i32;
+    unsafe { res = is_short(tt_int, s2.as_ptr(), logn); }
+    res != 0
 }
 
 #[allow(non_upper_case_globals)]
