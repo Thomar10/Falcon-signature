@@ -163,7 +163,7 @@ pub fn compute_public(h: *mut u16, f: *mut i8, g: *mut i8, logn: u32, tmp: *mut 
 }
 
 pub fn to_ntt_monty(h: &mut [u16], logn: u32) {
-    mq_ntt(h.as_mut_ptr(), 32);
+    mq_ntt(h.as_mut_ptr(), logn);
     mq_poly_tomonty(h, logn);
 }
 

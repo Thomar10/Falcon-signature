@@ -1,5 +1,5 @@
 use std::ptr::null_mut;
-use crate::codec::{max_fg_bits, max_FG_bits, modq_encode, trim_i8_encode};
+use crate::codec::{comp_decode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i8_encode};
 use crate::katrng::randombytes;
 use crate::keygen::keygen;
 use crate::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
@@ -68,7 +68,7 @@ pub fn crypto_sign_open(msg: &mut [u8], signature: &mut [u8], slen: usize, pk: &
     let mut b: [u8; 1024] = [0; 1024];
     let mut h: [u16; 512] = [0; 512];
     let hm: [u16; 512] = [0; 512];
-    let sig: [u16; 512] = [0; 512];
+    let mut sig: [i16; 512] = [0; 512];
     let mut rng = InnerShake256Context {
         st: St { a: [0u64; 25] },
         dptr: 0,
@@ -76,38 +76,37 @@ pub fn crypto_sign_open(msg: &mut [u8], signature: &mut [u8], slen: usize, pk: &
     if pk[0] != 0x00 + 9 {
         return (false, 0);
     }
-    // if modq_decode(h, 9, pk, 1, CRYPTO_PUBLICKEYBYTES - 1) != CRYPTO_PUBLICKEYBYTES - 1 {
-    //     return false;
-    // }
-
+    if modq_decode(&mut h, 9, pk, 1, (CRYPTO_PUBLICKEYBYTES - 1) as usize) != (CRYPTO_PUBLICKEYBYTES - 1) as usize {
+        return (false, 0);
+    }
     to_ntt_monty(&mut h, 9);
 
     if slen < 2usize + NONCE {
         return (false, 0);
     }
-    let sig_len: usize = ((signature[0] as usize) << 8 | signature[1] as usize);
+    let sig_len: usize = (((signature[0] as usize) << 8) | signature[1] as usize);
     if sig_len > slen - 2usize - NONCE {
         return (false, 0);
     }
     let msg_len = slen - 2 - NONCE - sig_len;
-    let esig_index = slen + 2 + NONCE + msg_len;
+    let esig_index = 2 + NONCE + msg_len;
     if sig_len < 1 || signature[esig_index] != 0x20 + 9 {
         return (false, 0);
     }
-    // if comp_decode {
-    //  return (false, 0);
-    // }
+    if comp_decode(&mut sig, 9, signature, esig_index + 1, sig_len - 1) != sig_len - 1 {
+     return (false, 0);
+    }
 
-    i_shake256_init(&mut rng);
-    // i_shake256_inject(&mut rng, signature)
-    i_shake256_flip(&mut rng);
-
-    // hash_to_point_vartime(&mut rng, hm, 9);
-
-    // if !verify_raw(hm, sig, h, 9, b) {
-    //     return (false, 0);
-    // }
-    // move message into msg argument
-
+    // i_shake256_init(&mut rng);
+    // // i_shake256_inject(&mut rng, signature)
+    // i_shake256_flip(&mut rng);
+    //
+    // // hash_to_point_vartime(&mut rng, hm, 9);
+    //
+    // // if !verify_raw(hm, sig, h, 9, b) {
+    // //     return (false, 0);
+    // // }
+    // // move message into msg argument
+    //
     (true, msg_len)
 }

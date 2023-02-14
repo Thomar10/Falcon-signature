@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use crate::codec::{max_fg_bits, max_FG_bits, modq_encode, trim_i8_encode};
-    use crate::falcon_c::codec_c::{falcon_inner_modq_encode, falcon_inner_trim_i8_encode};
+    use crate::codec::{max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i8_encode};
+    use crate::falcon_c::codec_c::{falcon_inner_modq_decode, falcon_inner_modq_encode, falcon_inner_trim_i8_encode};
 
     #[test]
     fn test_trim_i8_encode() {
@@ -77,5 +77,38 @@ mod tests {
         assert_eq!(pk, pk_c);
         assert_eq!(v_c, v_r);
         assert_eq!(v_r, 896);
+    }
+
+    #[test]
+    fn test_modq_decode() {
+        let mut pk: [u8; 1281] = [0; 1281];
+        let mut pk_c: [u8; 1281] = [0; 1281];
+        let mut rng = rand::thread_rng();
+
+        // Using u8 because values must be below 12289, then cast it to u16
+        let h: [u8; 512] = core::array::from_fn(|_| rng.gen::<u8>());
+        let mut binding = h.iter().map(|x| *x as u16).collect::<Vec<u16>>();
+        let mut h_input = binding.as_mut_slice();
+        pk[0] = 0x00 + 9;
+        pk_c[0] = 0x00 + 9;
+        let v_c = unsafe {
+            let x: *const u8 = pk_c.as_ptr().add(1);
+            falcon_inner_modq_encode(x.cast(), 897 - 1, h_input.as_ptr(), 9)
+        };
+        let v_r = modq_encode(&mut pk, 1, 897 - 1, &mut h_input, 9);
+        assert_eq!(pk, pk_c);
+        assert_eq!(v_c, v_r);
+        assert_eq!(v_r, 896);
+
+        let mut h_ret: [u16; 512] = [0; 512];
+        let h_ret_c: [u16; 512] = [0; 512];
+        let dr = modq_decode(&mut h_ret, 9, &mut pk, 1, 897 - 1);
+        let dc = unsafe {
+            let inn = pk_c.as_ptr().add(1);
+            falcon_inner_modq_decode(h_ret_c.as_ptr(), 9, inn.cast(), 897 - 1)
+        };
+        assert_eq!(h_ret, h_ret_c);
+        assert_eq!(dr, dc);
+        assert_eq!(dr, 896);
     }
 }

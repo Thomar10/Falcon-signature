@@ -2,7 +2,7 @@
 extern "C" {
     pub fn falcon_inner_modq_encode(out: *const (), max_out_len: usize, x: *const u16, logn: u32) -> usize;
     #[allow(dead_code)]
-    pub fn falcon_inner_modq_decode(x: *const u16, logn: u16, inn: *const (), max_in_len: usize);
+    pub fn falcon_inner_modq_decode(x: *const u16, logn: u16, inn: *const (), max_in_len: usize) -> usize;
     #[allow(dead_code)]
     pub fn falcon_inner_trim_i16_encode(out: *const (), max_out_len: usize, x: *const i16, logn: u32, bits: u32);
     #[allow(dead_code)]

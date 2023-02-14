@@ -54,8 +54,8 @@ pub unsafe fn genkat512() {
             m1 = msg.clone();
             m1.fill(0);
             let signature_length = sm.len();
-            // let (res, length) = crypto_sign_open(m1.as_mut_slice(), sm.as_mut_slice(), signature_length, &mut pk);
-            // assert_eq!(res, true);
+            let (res, length) = crypto_sign_open(m1.as_mut_slice(), sm.as_mut_slice(), signature_length, &mut pk);
+            assert_eq!(res, true);
             // assert_eq!(m1, msg);
             // assert_eq!(length, msg.len());
         }
