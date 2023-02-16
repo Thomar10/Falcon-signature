@@ -14,7 +14,7 @@ extern "C" {
     pub fn falcon_inner_to_ntt_monty_func(a: *const u16, logn: u32);
     pub fn falcon_inner_verify_raw_func(c0: *const u16, s2: *const i16, h: *const u16, logn: u32, tmp: *const u8) -> i32;
     pub fn falcon_inner_compute_public_func(h: *const u16, f: *const i8, g: *const i8, logn: u32, tmp: *const u8) -> i32;
-    pub fn falcon_inner_complete_private_func(f: *const i32, g: *const i32, F: *const i32, logn: u32, tmp: *const u8) -> i32;
+    pub fn falcon_inner_complete_private_func(G: *const i8, f: *const i8, g: *const i8, F: *const i8, logn: u32, tmp: *const u8) -> i32;
     pub fn falcon_inner_is_invertible_func(s2: *const i16, logn: u32, tmp: *const u8) -> i32;
     pub fn falcon_inner_verify_recover_func(h: *const u16, c0: *const u16, s1: *const i16, s2: *const i16, logn: u32, tmp: *const u8) -> i32;
     pub fn falcon_inner_count_nttzero_func(sig: *const i16, logn: u32, tmp: *const u8) -> i32;

@@ -873,6 +873,7 @@ falcon_inner_is_invertible(
 	for (u = 0; u < n; u ++) {
 		r |= (uint32_t)(tt[u] - 1);
 	}
+
 	return (int)(1u - (r >> 31));
 }
 int

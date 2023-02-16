@@ -1,3 +1,4 @@
+use std::slice::{from_raw_parts_mut};
 use crate::common::is_short;
 
 pub const Q: u32 = 12289;
@@ -210,25 +211,107 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
         }
     }
     let tt_int: *mut i16 = tt.cast();
-    is_short(tt_int, s2, logn)
+    is_short(tt_int, s2, logn) != 0
 }
 
 #[allow(non_snake_case)]
-pub fn complete_private(f: &mut [i32], g: &mut [i32], F: &mut [i32], logn: u32, tmp: &mut [u8]) -> bool {
-    false
+pub fn complete_private(G: &mut [i8], f: &mut [i8], g: &mut [i8], F: &mut [i8], logn: u32, tmp: &mut [u8]) -> bool {
+    let n = 1usize << logn;
+
+    let t1: *mut u16 = tmp.as_mut_ptr().cast();
+    let t2: *mut u16 = t1.wrapping_add(n);
+    let t1s: &mut [u16];
+    let t2s: &mut [u16];
+    unsafe {
+        t1s = from_raw_parts_mut(t1, tmp.len() / 2);
+        t2s = from_raw_parts_mut(t2, tmp.len() / 2 - n);
+    }
+    for u in 0..n {
+        unsafe { *t1.wrapping_add(u) = mq_conv_small(g[u] as i32) as u16; }
+        unsafe { *t2.wrapping_add(u) = mq_conv_small(F[u] as i32) as u16; }
+    }
+    mq_ntt(t1, logn);
+    mq_ntt(t2, logn);
+    mq_poly_tomonty(t1s, logn);
+    mq_poly_montymul_ntt(t1, t2s, logn);
+    for u in 0..n {
+        unsafe { *t2.wrapping_add(u) = mq_conv_small(f[u] as i32) as u16; }
+    }
+    mq_ntt(t2, logn);
+    for u in 0..n {
+        unsafe {
+            if *t2.wrapping_add(u) == 0 {
+                return false;
+            }
+            *t1.wrapping_add(u) = mq_div_12289(*t1.wrapping_add(u) as u32, *t2.wrapping_add(u) as u32) as u16;
+        }
+    }
+    mq_innt(t1, logn);
+    for u in 0..n {
+        let mut w: u32;
+        let gi: i32;
+
+        unsafe { w = *t1.wrapping_add(u) as u32 }
+        w = w.wrapping_sub(Q & !(!((w.wrapping_sub(Q >> 1)) >> 31)).wrapping_add(1));
+        gi = w as i32;
+        if gi < -127 || gi > 127 {
+            return false;
+        }
+        G[u] = gi as i8;
+    }
+    true
 }
 
 pub fn is_invertible(s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
-    false
+    let n = 1usize << logn;
+    let tt: *mut u16 = tmp.as_mut_ptr().cast();
+    for u in 0..n {
+        let mut w: u32 = s2[u] as u32;
+        w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
+        unsafe { (*tt.wrapping_add(u)) = w as u16; }
+    }
+    mq_ntt(tt, logn);
+    let mut r: u32 = 0;
+    for u in 0..n {
+        r |= unsafe { (*tt.wrapping_add(u) as u32).wrapping_sub(1) }
+    }
+    (1 - (r >> 31)) != 0
 }
 
 pub fn verify_recover(h: &mut [u16], c0: &mut [u16], s1: &mut [i16], s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
-    false
+    let n = 1usize << logn;
+    let tt: *mut u16 = tmp.as_mut_ptr().cast();
+    let tts: &mut [u16];
+    unsafe {
+        tts = from_raw_parts_mut(tt, tmp.len() / 2);
+    }
+    for u in 0..n {
+        let mut w: u32 = s2[u] as u32;
+        w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
+        tts[u] = w as u16;
+
+        w = s1[u] as u32;
+        w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
+        w = mq_sub(c0[u] as u32, w);
+        h[u] = w as u16;
+    }
+
+    mq_ntt(tt, logn);
+    mq_ntt(h.as_mut_ptr(), logn);
+    let mut r = 0;
+    for u in 0..n {
+        r |= (tts[u] as u32).wrapping_sub(1);
+        h[u] = mq_div_12289(h[u] as u32, tts[u] as u32) as u16;
+    }
+    mq_innt(h.as_mut_ptr(), logn);
+
+    r = !r & (-is_short(s1.as_mut_ptr(), s2, logn)) as u32;
+    (r >> 31) != 0
 }
 
 pub fn count_nttzero(sig: &mut [i16], logn: u32, tmp: &mut [u8]) -> i32 {
     let n = 1usize << logn;
-    let mut s2: *mut u16 = tmp.as_mut_ptr().cast();
+    let s2: *mut u16 = tmp.as_mut_ptr().cast();
     for u in 0..n {
         let mut w: u32 = sig[u] as u32;
         w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
@@ -239,7 +322,7 @@ pub fn count_nttzero(sig: &mut [i16], logn: u32, tmp: &mut [u8]) -> i32 {
     for u in 0..n {
         let w: u32;
         unsafe { w = ((*s2.wrapping_add(u)) as u32).wrapping_sub(1); }
-        r += (w >> 31);
+        r += w >> 31;
     }
 
     r as i32

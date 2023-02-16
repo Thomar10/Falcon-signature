@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use crate::falcon_c::vrfy_c::{mq_add_func, mq_sub_func, mq_montymul_func, mq_rshift1_func, mq_montysqr_func, mq_div_12289_func, mq_NTT_func, mq_iNTT_func, mq_poly_tomonty_func, mq_poly_montymul_ntt_func, mq_poly_sub_func, falcon_inner_to_ntt_monty_func, falcon_inner_verify_raw_func, falcon_inner_compute_public_func, falcon_inner_count_nttzero_func, falcon_inner_is_invertible_func};
+    use crate::falcon_c::vrfy_c::{mq_add_func, mq_sub_func, mq_montymul_func, mq_rshift1_func, mq_montysqr_func, mq_div_12289_func, mq_NTT_func, mq_iNTT_func, mq_poly_tomonty_func, mq_poly_montymul_ntt_func, mq_poly_sub_func, falcon_inner_to_ntt_monty_func, falcon_inner_verify_raw_func, falcon_inner_compute_public_func, falcon_inner_count_nttzero_func, falcon_inner_is_invertible_func, falcon_inner_complete_private_func, falcon_inner_verify_recover_func};
     use crate::falcon_tmpsize_keygen;
     use crate::keygen::keygen;
     use crate::shake::{InnerShake256Context, St};
-    use crate::vrfy::{compute_public, count_nttzero, is_invertible, mq_add, mq_div_12289, mq_innt, mq_montymul, mq_montysqr, mq_ntt, mq_poly_montymul_ntt, mq_poly_sub, mq_poly_tomonty, mq_rshift1, mq_sub, to_ntt_monty, verify_raw};
+    use crate::vrfy::{complete_private, compute_public, count_nttzero, is_invertible, mq_add, mq_div_12289, mq_innt, mq_montymul, mq_montysqr, mq_ntt, mq_poly_montymul_ntt, mq_poly_sub, mq_poly_tomonty, mq_rshift1, mq_sub, to_ntt_monty, verify_raw, verify_recover};
 
     #[test]
     fn test_monty_mul() {
@@ -186,9 +186,8 @@ mod tests {
         for _ in 0..10 {
             for logn in 1..11 {
                 let buffer_size = falcon_tmpsize_keygen!(logn);
-                let random_state: [u64; 25] = [0; 25];
                 let mut rng_rust = InnerShake256Context {
-                    st: St { a: random_state },
+                    st: St { a: [0; 25] },
                     dptr: 10,
                 };
                 let mut h: Vec<u16> = vec![0u16; buffer_size];
@@ -207,13 +206,33 @@ mod tests {
     }
 
     #[test]
+    #[allow(non_snake_case)]
     fn test_complete_private() {
-        for _ in 0..100 {
-            let x: u32 = rand::random();
-            let y: u32 = rand::random();
-            let res = mq_sub(x, y);
-            let res_c = unsafe { mq_sub_func(x, y) };
-            assert_eq!(res, res_c);
+        for _ in 0..10 {
+            for logn in 1..11 {
+                let buffer_size = falcon_tmpsize_keygen!(logn);
+                let mut rng_rust = InnerShake256Context {
+                    st: St { a: [0; 25] },
+                    dptr: 10,
+                };
+                let mut h: Vec<u16> = vec![0u16; buffer_size];
+                let mut tmp_gen: Vec<u8> = vec![0; buffer_size * 4];
+                let mut tmp: Vec<u8> = vec![0; buffer_size * 4];
+                let tmp_c = tmp.clone();
+                let mut F: Vec<i8> = vec![0; buffer_size];
+                let mut G_gen: Vec<i8> = vec![0; buffer_size];
+                let mut G: Vec<i8> = vec![0; buffer_size];
+                let G_c = G.clone();
+                let mut f: Vec<i8> = vec![0; buffer_size];
+                let mut g: Vec<i8> = vec![0; buffer_size];
+                keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G_gen.as_mut_ptr(), h.as_mut_ptr(), logn, tmp_gen.as_mut_ptr());
+                let res = complete_private(&mut G, &mut f, &mut g, &mut F, logn, &mut tmp);
+                let res_c = unsafe { falcon_inner_complete_private_func(G_c.as_ptr(), f.as_ptr(), g.as_ptr(), F.as_ptr(), logn, tmp_c.as_ptr()) };
+                assert_eq!(res, res_c != 0);
+                assert_eq!(G, G_c);
+                assert_eq!(G, G_gen);
+                assert_eq!(tmp, tmp_c);
+            }
         }
     }
 
@@ -224,24 +243,40 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut tmp: [u8; 1024] = [0; 1024];
                 let tmp_c = tmp.clone();
-                let mut sig: [i16; 1024] = core::array::from_fn(|_| rng.gen::<i16>());
-                let sig_c = sig.clone();
-                let res = is_invertible(&mut sig, logn, &mut tmp);
-                let res_c = unsafe { falcon_inner_is_invertible_func(sig_c.as_ptr(), logn, tmp_c.as_ptr()) };
+                let mut s2: [i16; 1024] = core::array::from_fn(|_| rng.gen::<i16>());
+                let s2_c = s2.clone();
+                let res = is_invertible(&mut s2, logn, &mut tmp);
+                let res_c = unsafe { falcon_inner_is_invertible_func(s2_c.as_ptr(), logn, tmp_c.as_ptr()) };
                 assert_eq!(res, res_c != 0);
                 assert_eq!(tmp, tmp_c);
             }
         }
     }
 
+    // TODO this test should probably rely on a correct signature to be fully correct test
+    // However the test run through all the code, yet no guarantee that h is correct
+    // as this is something the caller should check
     #[test]
     fn test_verify_recover() {
         for _ in 0..100 {
-            let x: u32 = rand::random();
-            let y: u32 = rand::random();
-            let res = mq_sub(x, y);
-            let res_c = unsafe { mq_sub_func(x, y) };
-            assert_eq!(res, res_c);
+            for logn in 1..10 {
+                let mut rng = rand::thread_rng();
+                let mut tmp: [u8; 1024] = [0; 1024];
+                let tmp_c = tmp.clone();
+                let mut h: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
+                let h_c = h.clone();
+                let mut c0: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
+                let c0_c = c0.clone();
+                let mut s1: [i16; 512] = core::array::from_fn(|_| rng.gen::<i16>());
+                let s1_c = s1.clone();
+                let mut s2: [i16; 512] = core::array::from_fn(|_| rng.gen::<i16>());
+                let s2_c = s2.clone();
+                let res = verify_recover(&mut h, &mut c0, &mut s1, &mut s2, logn, &mut tmp);
+                let res_c = unsafe { falcon_inner_verify_recover_func(h_c.as_ptr(), c0_c.as_ptr(), s1_c.as_ptr(), s2_c.as_ptr(), logn, tmp_c.as_ptr()) };
+                assert_eq!(res, res_c != 0);
+                assert_eq!(tmp, tmp_c);
+                assert_eq!(h, h_c);
+            }
         }
     }
 
