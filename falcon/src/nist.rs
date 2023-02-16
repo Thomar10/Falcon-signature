@@ -107,7 +107,6 @@ pub fn crypto_sign_open(msg: &mut [u8], signature: &mut [u8], slen: usize, pk: &
     if !verify_raw(&mut hm, &mut sig, &mut h, 9, &mut b) {
         return (false, 0);
     }
-    // move message into msg argument
-
+    msg.copy_from_slice(&mut signature[2 + NONCE..2 + NONCE + msg_len]);
     (true, msg_len)
 }

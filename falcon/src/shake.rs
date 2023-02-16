@@ -580,6 +580,7 @@ pub fn i_shake256_flip(sc: &mut InnerShake256Context) -> () {
 /* Rust doesn't support arrays of arbitrary length, as such we return
  * a vector which can then be converted to an array... I think :)
  */
+// TODO accept a buffer to mutate?
 pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<u8> {
     let mut dptr: usize = sc.dptr as usize;
 

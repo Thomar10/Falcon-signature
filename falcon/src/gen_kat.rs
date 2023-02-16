@@ -20,7 +20,7 @@ pub unsafe fn genkat512() {
     let mut mlen = 0;
     let mut msg: Vec<u8> = vec![0; 0];
     let mut m1: Vec<u8>;
-    let mut smlen = 0;
+    //let mut smlen = 0;
     let mut sm: Vec<u8>;
     for line in buf_reader.lines() {
         let string = line.unwrap();
@@ -47,7 +47,7 @@ pub unsafe fn genkat512() {
             assert_eq!(sk_hex, x);
         }
         if string.contains("smlen") {
-            smlen = string.split_at(8).1.parse().unwrap();
+            //smlen = string.split_at(8).1.parse().unwrap();
         }
         if string.contains("sm") && !string.contains("len") {
             sm = hex::decode(string.split_at(5).1).unwrap();
@@ -56,8 +56,8 @@ pub unsafe fn genkat512() {
             let signature_length = sm.len();
             let (res, length) = crypto_sign_open(m1.as_mut_slice(), sm.as_mut_slice(), signature_length, &mut pk);
             assert_eq!(res, true);
-            // assert_eq!(m1, msg);
-            // assert_eq!(length, msg.len());
+            assert_eq!(length, mlen);
+            assert_eq!(m1, msg);
         }
     }
 }
