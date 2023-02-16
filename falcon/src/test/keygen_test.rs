@@ -875,7 +875,7 @@ mod tests {
     }
 
 
-    fn init_shake_with_random_context() -> (InnerShake256Context, InnerShake256ContextC) {
+    pub fn init_shake_with_random_context() -> (InnerShake256Context, InnerShake256ContextC) {
         let random_state: [u64; 25] = rand::random();
         let random_dptr: u64 = rand::random();
         let st = St { a: random_state };
