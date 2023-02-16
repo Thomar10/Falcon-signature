@@ -848,7 +848,6 @@ mod tests {
     fn test_keygen() {
         for _ in 0..5 {
             for logn in 1..11 {
-                println!("logn {}", logn);
                 let buffer_size = falcon_tmpsize_keygen!(logn);
                 let (mut rng_rust, rng_c) = init_shake_with_random_context();
                 let mut h: Vec<u16> = vec![0u16; buffer_size];

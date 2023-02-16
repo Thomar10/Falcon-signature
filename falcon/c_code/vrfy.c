@@ -398,6 +398,12 @@ mq_rshift1(uint32_t x)
 	return (x >> 1);
 }
 
+uint32_t
+mq_rshift1_func(uint32_t x)
+{
+return mq_rshift1(x);
+}
+
 /*
  * Montgomery multiplication modulo q. If we set R = 2^16 mod q, then
  * this function computes: x * y / R mod q
@@ -448,6 +454,12 @@ static inline uint32_t
 mq_montysqr(uint32_t x)
 {
 	return mq_montymul(x, x);
+}
+
+uint32_t
+mq_montysqr_func(uint32_t x)
+{
+return mq_montysqr(x);
 }
 
 /*
@@ -516,6 +528,12 @@ mq_div_12289(uint32_t x, uint32_t y)
 	return mq_montymul(y18, x);
 }
 
+uint32_t
+mq_div_12289_func(uint32_t x, uint32_t y)
+{
+return mq_div_12289(x,y);
+}
+
 /*
  * Compute NTT on a ring element.
  */
@@ -547,6 +565,12 @@ mq_NTT(uint16_t *a, unsigned logn)
 		}
 		t = ht;
 	}
+}
+
+void
+mq_NTT_func(uint16_t *a, unsigned logn)
+{
+mq_NTT(a, logn);
 }
 
 /*
@@ -605,6 +629,12 @@ mq_iNTT(uint16_t *a, unsigned logn)
 	}
 }
 
+void
+mq_iNTT_func(uint16_t *a, unsigned logn)
+{
+mq_iNTT(a, logn);
+}
+
 /*
  * Convert a polynomial (mod q) to Montgomery representation.
  */
@@ -617,6 +647,11 @@ mq_poly_tomonty(uint16_t *f, unsigned logn)
 	for (u = 0; u < n; u ++) {
 		f[u] = (uint16_t)mq_montymul(f[u], R2);
 	}
+}
+void
+mq_poly_tomonty_func(uint16_t *f, unsigned logn)
+{
+mq_poly_tomonty(f, logn);
 }
 
 /*
@@ -633,6 +668,11 @@ mq_poly_montymul_ntt(uint16_t *f, const uint16_t *g, unsigned logn)
 		f[u] = (uint16_t)mq_montymul(f[u], g[u]);
 	}
 }
+void
+mq_poly_montymul_ntt_func(uint16_t *f, const uint16_t *g, unsigned logn)
+{
+mq_poly_montymul_ntt(f, g, logn);
+}
 
 /*
  * Subtract polynomial g from polynomial f.
@@ -648,6 +688,12 @@ mq_poly_sub(uint16_t *f, const uint16_t *g, unsigned logn)
 	}
 }
 
+void
+mq_poly_sub_func(uint16_t *f, const uint16_t *g, unsigned logn)
+{
+mq_poly_sub(f, g, logn);
+}
+
 /* ===================================================================== */
 
 /* see inner.h */
@@ -656,6 +702,11 @@ falcon_inner_to_ntt_monty(uint16_t *h, unsigned logn)
 {
 	mq_NTT(h, logn);
 	mq_poly_tomonty(h, logn);
+}
+
+void falcon_inner_to_ntt_monty_func(uint16_t *h, unsigned logn)
+{
+return falcon_inner_to_ntt_monty(h, logn);
 }
 
 /* see inner.h */
@@ -705,6 +756,12 @@ falcon_inner_verify_raw(const uint16_t *c0, const int16_t *s2,
 	 */
 	return is_short((int16_t *)tt, s2, logn);
 }
+int
+falcon_inner_verify_raw_func(const uint16_t *c0, const int16_t *s2,
+	const uint16_t *h, unsigned logn, uint8_t *tmp)
+{
+return falcon_inner_verify_raw(c0, s2, h, logn, tmp);
+}
 
 /* see inner.h */
 int
@@ -730,6 +787,13 @@ falcon_inner_compute_public(uint16_t *h,
 	}
 	mq_iNTT(h, logn);
 	return 1;
+}
+
+int
+falcon_inner_compute_public_func(uint16_t *h,
+	const int8_t *f, const int8_t *g, unsigned logn, uint8_t *tmp)
+{
+return falcon_inner_compute_public(h, f, g, logn, tmp);
 }
 
 /* see inner.h */
@@ -778,6 +842,14 @@ falcon_inner_complete_private(int8_t *G,
 	return 1;
 }
 
+int
+falcon_inner_complete_private_func(int8_t *G,
+	const int8_t *f, const int8_t *g, const int8_t *F,
+	unsigned logn, uint8_t *tmp)
+{
+return falcon_inner_complete_private(G, f, g, F, logn, tmp);
+}
+
 /* see inner.h */
 int
 falcon_inner_is_invertible(
@@ -802,6 +874,12 @@ falcon_inner_is_invertible(
 		r |= (uint32_t)(tt[u] - 1);
 	}
 	return (int)(1u - (r >> 31));
+}
+int
+falcon_inner_is_invertible_func(
+	const int16_t *s2, unsigned logn, uint8_t *tmp)
+{
+return falcon_inner_is_invertible(s2, logn, tmp);
 }
 
 /* see inner.h */
@@ -860,6 +938,14 @@ falcon_inner_verify_recover(uint16_t *h,
 	return (int)(r >> 31);
 }
 
+int
+falcon_inner_verify_recover_func(uint16_t *h,
+	const uint16_t *c0, const int16_t *s1, const int16_t *s2,
+	unsigned logn, uint8_t *tmp)
+{
+return falcon_inner_verify_recover(h, c0, s1, s2, logn, tmp);
+}
+
 /* see inner.h */
 int
 falcon_inner_count_nttzero(const int16_t *sig, unsigned logn, uint8_t *tmp)
@@ -886,4 +972,10 @@ falcon_inner_count_nttzero(const int16_t *sig, unsigned logn, uint8_t *tmp)
 		r += (w >> 31);
 	}
 	return (int)r;
+}
+
+int
+falcon_inner_count_nttzero_func(const int16_t *sig, unsigned logn, uint8_t *tmp)
+{
+return falcon_inner_count_nttzero(sig, logn, tmp);
 }

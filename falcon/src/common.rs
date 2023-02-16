@@ -28,10 +28,10 @@ pub fn is_short(s1: *mut i16, s2: &mut [i16], logn: u32) -> bool {
     for u in 0..n {
         let mut z: i32;
         unsafe { z = *s1 as i32; }
-        s += (z * z) as u32;
+        s = s.wrapping_add((z * z) as u32);
         ng |= s;
         z = s2[u] as i32;
-        s += (z*z) as u32;
+        s = s.wrapping_add((z * z) as u32);
         ng |= s;
         s1 = s1.wrapping_add(1);
     }

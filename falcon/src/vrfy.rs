@@ -191,7 +191,7 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
 
     for u in 0..n {
         let mut w: u32 = s2[u] as u32;
-        w += Q & (!(w >> 31)).wrapping_add(1);
+        w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
         unsafe { *tt.wrapping_add(u) = w as u16; }
     }
 
@@ -203,7 +203,7 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
     for u in 0..n {
         let mut w: i32;
         unsafe { w = *tt.wrapping_add(u) as i32 }
-        w -= (Q & (!(((Q >> 1) - (w as u32)) >> 31)).wrapping_add(1)) as i32;
+        w -= (Q & (!(((Q >> 1).wrapping_sub(w as u32)) >> 31)).wrapping_add(1)) as i32;
         unsafe {
             let x: *mut i16 = tt.wrapping_add(u).cast();
             *x = w as i16;
@@ -212,6 +212,39 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
     let tt_int: *mut i16 = tt.cast();
     is_short(tt_int, s2, logn)
 }
+
+#[allow(non_snake_case)]
+pub fn complete_private(f: &mut [i32], g: &mut [i32], F: &mut [i32], logn: u32, tmp: &mut [u8]) -> bool {
+    false
+}
+
+pub fn is_invertible(s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
+    false
+}
+
+pub fn verify_recover(h: &mut [u16], c0: &mut [u16], s1: &mut [i16], s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
+    false
+}
+
+pub fn count_nttzero(sig: &mut [i16], logn: u32, tmp: &mut [u8]) -> i32 {
+    let n = 1usize << logn;
+    let mut s2: *mut u16 = tmp.as_mut_ptr().cast();
+    for u in 0..n {
+        let mut w: u32 = sig[u] as u32;
+        w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
+        unsafe { *s2.wrapping_add(u) = w as u16; }
+    }
+    mq_ntt(s2, logn);
+    let mut r = 0;
+    for u in 0..n {
+        let w: u32;
+        unsafe { w = ((*s2.wrapping_add(u)) as u32).wrapping_sub(1); }
+        r += (w >> 31);
+    }
+
+    r as i32
+}
+
 
 #[allow(non_upper_case_globals)]
 const GMb: [u16; 1024] = [
