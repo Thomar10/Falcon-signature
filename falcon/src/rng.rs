@@ -14,7 +14,7 @@ pub struct Prng {
     pub(crate) buf: [u8; 512],
     pub(crate) ptr: usize,
     pub(crate) state: State,
-    pub(crate) typ: i32
+    pub(crate) typ: i32,
 }
 
 pub fn prng_init(p: &mut Prng, src: &mut InnerShake256Context) -> () {
@@ -59,7 +59,6 @@ pub fn prng_refill(p: &mut Prng) -> () {
         0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
     ];
 
-
     let mut cc: u64;
     unsafe {
         cc = p.state.d64[6];
@@ -87,7 +86,7 @@ pub fn prng_refill(p: &mut Prng) -> () {
         state[15] ^= (cc >> 32) as u32;
 
         for _ in 0..10 {
-            macro_rules! qround{
+            macro_rules! qround {
                 ($a:expr, $b:expr, $c:expr, $d:expr)=>{
                     state[$a] = state[$a].wrapping_add(state[$b]);
                     state[$d] ^= state[$a];
@@ -115,11 +114,11 @@ pub fn prng_refill(p: &mut Prng) -> () {
         }
 
         for v in 0..4 {
-           state[v] = state[v].wrapping_add(CW[v]);
+            state[v] = state[v].wrapping_add(CW[v]);
         }
 
         for v in 4..14 {
-           //state[v] += u32::from_ne_bytes(p.state.d[(v - 4)*4..v*4].try_into().unwrap());
+            //state[v] += u32::from_ne_bytes(p.state.d[(v - 4)*4..v*4].try_into().unwrap());
             unsafe {
                 state[v] = state[v].wrapping_add(p.state.d32[v - 4]);
             }
@@ -154,7 +153,6 @@ pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
     let mut output: Vec<u8> = Vec::with_capacity(len);
 
     while len > 0 {
-
         let mut clen: usize;
 
         clen = p.buf.len() - p.ptr;
@@ -177,4 +175,34 @@ pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
     }
 
     return output;
+}
+
+#[inline(always)]
+pub fn prng_get_u64(p: &mut Prng) -> u64 {
+    let mut u = p.ptr;
+    if u >= p.buf.len() - 9 {
+        prng_refill(p);
+        u = 0;
+    }
+    p.ptr = u + 8;
+
+
+    (p.buf[u] as u64)
+        | ((p.buf[u + 1] as u64) << 8)
+        | ((p.buf[u + 2] as u64) << 16)
+        | ((p.buf[u + 3] as u64) << 24)
+        | ((p.buf[u + 4] as u64) << 32)
+        | ((p.buf[u + 5] as u64) << 40)
+        | ((p.buf[u + 6] as u64) << 48)
+        | ((p.buf[u + 7] as u64) << 56)
+}
+
+#[inline(always)]
+pub fn prng_get_u8(p: &mut Prng) -> u8 {
+    let mut v = p.buf[p.ptr];
+    p.ptr += 1;
+    if p.ptr == p.buf.len() {
+        prng_refill(p);
+    }
+    v
 }
