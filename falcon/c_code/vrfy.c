@@ -358,6 +358,13 @@ mq_add(uint32_t x, uint32_t y)
 	return d;
 }
 
+uint32_t
+mq_add_func(uint32_t x, uint32_t y)
+{
+  return mq_add(x, y);
+}
+
+
 /*
  * Subtraction modulo q. Operands must be in the 0..q-1 range.
  */
@@ -373,6 +380,12 @@ mq_sub(uint32_t x, uint32_t y)
 	d = x - y;
 	d += Q & -(d >> 31);
 	return d;
+}
+
+uint32_t
+mq_sub_func(uint32_t x, uint32_t y)
+{
+  return mq_sub(x, y);
 }
 
 /*
@@ -421,6 +434,11 @@ mq_montymul(uint32_t x, uint32_t y)
 	z -= Q;
 	z += Q & -(z >> 31);
 	return z;
+}
+uint32_t
+mq_montymul_func(uint32_t x, uint32_t y)
+{
+  return mq_montymul(x, y);
 }
 
 /*

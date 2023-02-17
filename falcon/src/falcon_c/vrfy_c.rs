@@ -1,13 +1,11 @@
 #[link(name = "vrfy", kind = "static")]
 extern "C" {
+
+    pub fn mq_add_func(x: u32, y: u32) -> u32;
+    pub fn mq_sub_func(x: u32, y: u32) -> u32;
     #[allow(dead_code)]
-    pub fn mq_add(x: u32, y: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn mq_sub(x: u32, y: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn mq_rshift1(x: u32) -> u32;
-    #[allow(dead_code)]
-    pub fn mq_montymul(x: u32, y: u32) -> u32;
+    pub fn mq_rshift1_func(x: u32) -> u32;
+    pub fn mq_montymul_func(x: u32, y: u32) -> u32;
     #[allow(dead_code)]
     pub fn mq_montysqr(x: u32) -> u32;
     #[allow(dead_code)]

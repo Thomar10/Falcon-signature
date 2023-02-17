@@ -56,6 +56,49 @@ fn fpc_inv(a_re: u64, a_im: u64) -> (u64, u64) {
     (fpct_d_re, fpct_d_im)
 }
 
+pub fn fft_pointer(f: *mut u64, logn: u32) {
+    let mut u: u32 = 1;
+    let mut m: usize = 2;
+    let (mut t, n, hn): (usize, usize, usize);
+
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    t = hn;
+    while u < logn {
+        let (ht, hm, mut i1, mut j1): (usize, usize, usize, usize);
+        ht = t >> 1;
+        hm = m >> 1;
+        i1 = 0;
+        j1 = 0;
+        while i1 < hm {
+            let (mut j, j2): (usize, usize);
+            j2 = j1 + ht;
+            let (s_re, s_im): (u64, u64);
+            s_re = FPR_GM_TAB[((m + i1) << 1) + 0];
+            s_im = FPR_GM_TAB[((m + i1) << 1) + 1];
+            j = j1;
+            // TODO Keep mutated pointers for real and im parts?
+            while j < j2 {
+                let (x_re, x_im, mut y_re, mut y_im): (u64, u64, u64, u64);
+                unsafe { x_re = *f.wrapping_add(j); }
+                unsafe { x_im = *f.wrapping_add(j + hn); }
+                unsafe { y_re = *f.wrapping_add(j + ht); }
+                unsafe { y_im = *f.wrapping_add(j + ht + hn); }
+                (y_re, y_im) = fpc_mul(y_re, y_im, s_re, s_im);
+                unsafe { (*f.wrapping_add(j), *f.wrapping_add(j + hn)) = fpc_add(x_re, x_im, y_re, y_im); }
+                unsafe { (*f.wrapping_add(j + ht), *f.wrapping_add(j + ht + hn)) = fpc_sub(x_re, x_im, y_re, y_im); }
+
+                j += 1;
+            }
+            i1 += 1;
+            j1 += t;
+        }
+        u += 1;
+        m <<= 1;
+        t = ht;
+    }
+}
+
 pub fn fft(f: &mut [u64], logn: u32) {
     let mut u: u32 = 1;
     let mut m: usize = 2;
@@ -149,6 +192,57 @@ pub fn ifft(f: &mut [u64], logn: u32) {
     }
 }
 
+pub fn ifft_pointer(f: *mut u64, logn: u32) {
+    let (mut u, n, hn, mut t, mut m): (u32, usize, usize, usize, usize);
+    n = (1 as usize) << logn;
+    t = 1;
+    m = n;
+    hn = n >> 1;
+    u = logn;
+    while u > 1 {
+        let (hm, dt, mut i1, mut j1): (usize, usize, usize, usize);
+        hm = m >> 1;
+        dt = t << 1;
+
+        i1 = 0;
+        j1 = 0;
+        while j1 < hn {
+            let (mut j, j2): (usize, usize);
+            j2 = j1 + t;
+
+            let (s_re, s_im): (u64, u64);
+            s_re = FPR_GM_TAB[((hm + i1) << 1) + 0];
+            s_im = fpr_neg(FPR_GM_TAB[((hm + i1) << 1) + 1]);
+            j = j1;
+            while j < j2 {
+                let (mut x_re, mut x_im, y_re, y_im): (u64, u64, u64, u64);
+                unsafe { x_re = *f.wrapping_add(j); }
+                unsafe { x_im = *f.wrapping_add(j + hn); }
+                unsafe { y_re = *f.wrapping_add(j + t); }
+                unsafe { y_im = *f.wrapping_add(j + t + hn); }
+                unsafe { (*f.wrapping_add(j), *f.wrapping_add(j + hn)) = fpc_add(x_re, x_im, y_re, y_im); }
+                (x_re, x_im) = fpc_sub(x_re, x_im, y_re, y_im);
+                unsafe { (*f.wrapping_add(j + t), *f.wrapping_add(j + hn + t)) = fpc_mul(x_re, x_im, s_re, s_im); }
+                j += 1;
+            }
+            i1 += 1;
+            j1 += dt;
+        }
+        t = dt;
+        m = hm;
+        u -= 1;
+    }
+
+    if logn > 0 {
+        let ni = FPR_P2_TAB[logn as usize];
+        let mut u = 0;
+        while u < n {
+            unsafe { *f.wrapping_add(u) = fpr_mul(*f.wrapping_add(u), ni); }
+            u += 1;
+        }
+    }
+}
+
 pub fn poly_add(a: &mut [u64], b: &mut [u64], logn: u32) {
     let n: usize;
 
@@ -158,12 +252,30 @@ pub fn poly_add(a: &mut [u64], b: &mut [u64], logn: u32) {
     }
 }
 
+pub fn poly_add_pointer(a: *mut u64, b: *mut u64, logn: u32) {
+    let n: usize;
+
+    n = (1 as usize) << logn;
+    for u in 0..n {
+        unsafe { *a.wrapping_add(u) = fpr_add(*a.wrapping_add(u), *b.wrapping_add(u)); }
+    }
+}
+
 pub fn poly_sub(a: &mut [u64], b: &mut [u64], logn: u32) {
     let n: usize;
 
     n = (1 as usize) << logn;
     for u in 0..n {
         a[u] = fpr_sub(a[u], b[u]);
+    }
+}
+
+pub fn poly_sub_pointer(a: *mut u64, b: *mut u64, logn: u32) {
+    let n: usize;
+
+    n = (1 as usize) << logn;
+    for u in 0..n {
+        unsafe { *a.wrapping_add(u) = fpr_sub(*a.wrapping_add(u), *b.wrapping_add(u)); }
     }
 }
 
@@ -182,6 +294,28 @@ pub fn poly_adj_fft(a: &mut [u64], logn: u32) {
     n = (1 as usize) << logn;
     for u in (n >> 1)..n {
         a[u] = fpr_neg(a[u]);
+    }
+}
+
+pub fn poly_adj_fft_pointer(a: *mut u64, logn: u32) {
+    let n: usize;
+
+    n = (1 as usize) << logn;
+    for u in (n >> 1)..n {
+        unsafe { *a.wrapping_add(u) = fpr_neg(*a.wrapping_add(u)); }
+    }
+}
+
+pub fn poly_mul_fft_pointer(a: *mut u64, b: *mut u64, logn: u32) {
+    let (n, hn): (usize, usize);
+
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    for u in 0..hn {
+        unsafe {
+            (*a.wrapping_add(u), *a.wrapping_add(u + hn)) =
+                fpc_mul(*a.wrapping_add(u), *a.wrapping_add(u + hn), *b.wrapping_add(u), *b.wrapping_add(u + hn));
+        }
     }
 }
 
@@ -225,6 +359,15 @@ pub fn poly_mulconst(a: &mut [u64], x: u64, logn: u32) {
     }
 }
 
+pub fn poly_mulconst_pointer(a: *mut u64, x: u64, logn: u32) {
+    let n: usize;
+
+    n = (1 as usize) << logn;
+    for u in 0..n {
+        unsafe { *a.wrapping_add(u) = fpr_mul(*a.wrapping_add(u), x); }
+    }
+}
+
 pub fn poly_div_fft(a: &mut [u64], b: &mut [u64], logn: u32) {
     let (n, hn): (usize, usize);
 
@@ -245,6 +388,38 @@ pub fn poly_invnorm2_fft(d: &mut [u64], a: &mut [u64], b: &mut [u64], logn: u32)
         d[u] = fpr_inv(fpr_add(
             fpr_add(fpr_sqr(a[u]), fpr_sqr(a[u + hn])),
             fpr_add(fpr_sqr(b[u]), fpr_sqr(b[u + hn]))));
+    }
+}
+
+pub fn poly_invnorm2_fft_pointer(d: *mut u64, a: *mut u64, b: *mut u64, logn: u32) {
+    let (n, hn): (usize, usize);
+
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+
+    for u in 0..hn {
+        unsafe {
+            *d.wrapping_add(u) = fpr_inv(fpr_add(
+                fpr_add(fpr_sqr(*a.wrapping_add(u)), fpr_sqr(*a.wrapping_add(u + hn))),
+                fpr_add(fpr_sqr(*b.wrapping_add(u)), fpr_sqr(*b.wrapping_add(u + hn)))));
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn poly_add_muladj_fft_pointer(d: *mut u64, F: *mut u64, G: *mut u64, f: *mut u64, g: *mut u64, logn: u32) {
+    let (n, hn): (usize, usize);
+
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+
+    unsafe {
+        for u in 0..hn {
+            let (a_re, a_im) = fpc_mul(*F.wrapping_add(u), *F.wrapping_add(u + hn), *f.wrapping_add(u), fpr_neg(*f.wrapping_add(u + hn)));
+            let (b_re, b_im) = fpc_mul(*G.wrapping_add(u), *G.wrapping_add(u + hn), *g.wrapping_add(u), fpr_neg(*g.wrapping_add(u + hn)));
+            *d.wrapping_add(u) = fpr_add(a_re, b_re);
+            *d.wrapping_add(u + hn) = fpr_add(a_im, b_im);
+        }
     }
 }
 
@@ -271,6 +446,16 @@ pub fn poly_mul_autoadj_fft(a: &mut [u64], b: &mut [u64], logn: u32) {
     }
 }
 
+pub fn poly_mul_autoadj_fft_pointer(a: *mut u64, b: *mut u64, logn: u32) {
+    let (n, hn): (usize, usize);
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    for u in 0..hn {
+        unsafe { *a.wrapping_add(u) = fpr_mul(*a.wrapping_add(u), *b.wrapping_add(u)); }
+        unsafe { *a.wrapping_add(u + hn) = fpr_mul(*a.wrapping_add(u + hn), *b.wrapping_add(u)); }
+    }
+}
+
 pub fn poly_div_autoadj_fft(a: &mut [u64], b: &mut [u64], logn: u32) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
@@ -279,6 +464,17 @@ pub fn poly_div_autoadj_fft(a: &mut [u64], b: &mut [u64], logn: u32) {
         let ib = fpr_inv(b[u]);
         a[u] = fpr_mul(a[u], ib);
         a[u + hn] = fpr_mul(a[u + hn], ib);
+    }
+}
+
+pub unsafe fn poly_div_autoadj_fft_pointer(a: *mut u64, b: *mut u64, logn: u32) {
+    let (n, hn): (usize, usize);
+    n = (1 as usize) << logn;
+    hn = n >> 1;
+    for u in 0..hn {
+        let ib = fpr_inv(*b.wrapping_add(u));
+        *a.wrapping_add(u) = fpr_mul(*a.wrapping_add(u), ib);
+        *a.wrapping_add(u + hn) = fpr_mul(*a.wrapping_add(u + hn), ib);
     }
 }
 

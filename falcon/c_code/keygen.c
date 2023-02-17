@@ -637,6 +637,12 @@ modp_set(int32_t x, uint32_t p)
 	return w;
 }
 
+uint32_t modp_set_func(int32_t x, uint32_t p)
+{
+  return modp_set(x, p);
+}
+
+
 /*
  * Normalize a modular integer around 0.
  */
@@ -645,6 +651,12 @@ modp_norm(uint32_t x, uint32_t p)
 {
 	return (int32_t)(x - (p & (((x - ((p + 1) >> 1)) >> 31) - 1)));
 }
+
+int32_t modp_norm_func(uint32_t x, uint32_t p)
+{
+  return modp_norm(x, p);
+}
+
 
 /*
  * Compute -1/p mod 2^31. This works for all odd integers p that fit
@@ -663,6 +675,12 @@ modp_ninv31(uint32_t p)
 	return (uint32_t)0x7FFFFFFF & -y;
 }
 
+uint32_t modp_ninv31_func(uint32_t p)
+{
+  return modp_ninv31(p);
+}
+
+
 /*
  * Compute R = 2^31 mod p.
  */
@@ -674,6 +692,11 @@ modp_R(uint32_t p)
 	 * 2^31 - p.
 	 */
 	return ((uint32_t)1 << 31) - p;
+}
+
+uint32_t modp_R_func(uint32_t p)
+{
+  return modp_R(p);
 }
 
 /*
@@ -689,6 +712,11 @@ modp_add(uint32_t a, uint32_t b, uint32_t p)
 	return d;
 }
 
+uint32_t modp_add_func(uint32_t a, uint32_t b, uint32_t p)
+{
+  return modp_add(a, b, p);
+}
+
 /*
  * Subtraction modulo p.
  */
@@ -700,6 +728,11 @@ modp_sub(uint32_t a, uint32_t b, uint32_t p)
 	d = a - b;
 	d += p & -(d >> 31);
 	return d;
+}
+
+uint32_t modp_sub_func(uint32_t a, uint32_t b, uint32_t p)
+{
+  return modp_sub(a, b, p);
 }
 
 /*
@@ -731,6 +764,12 @@ modp_montymul(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i)
 	return d;
 }
 
+uint32_t modp_montymul_func(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i)
+{
+  return modp_montymul(a, b, p, p0i);
+}
+
+
 /*
  * Compute R2 = 2^62 mod p.
  */
@@ -745,7 +784,6 @@ modp_R2(uint32_t p, uint32_t p0i)
 	 */
 	z = modp_R(p);
 	z = modp_add(z, z, p);
-
 	/*
 	 * Square it five times to obtain 2^32 in Montgomery representation
 	 * (i.e. 2^63 mod p).
@@ -761,6 +799,11 @@ modp_R2(uint32_t p, uint32_t p0i)
 	 */
 	z = (z + (p & -(z & 1))) >> 1;
 	return z;
+}
+
+uint32_t
+modp_R2_func(uint32_t p, uint32_t p0i) {
+  return modp_R2(p, p0i);
 }
 
 /*
@@ -789,6 +832,12 @@ modp_Rx(unsigned x, uint32_t p, uint32_t p0i, uint32_t R2)
 		r = modp_montymul(r, r, p, p0i);
 	}
 	return z;
+}
+
+uint32_t
+modp_Rx_func(unsigned x, uint32_t p, uint32_t p0i, uint32_t R2)
+{
+  return modp_Rx(x, p, p0i, R2);
 }
 
 /*
@@ -830,6 +879,12 @@ modp_div(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i, uint32_t R)
 	 */
 	z = modp_montymul(z, 1, p, p0i);
 	return modp_montymul(a, z, p, p0i);
+}
+
+uint32_t
+modp_div_func(uint32_t a, uint32_t b, uint32_t p, uint32_t p0i, uint32_t R)
+{
+  return modp_div(a, b, p, p0i, R);
 }
 
 /*
@@ -971,6 +1026,12 @@ modp_mkgm2(uint32_t *restrict gm, uint32_t *restrict igm, unsigned logn,
 	}
 }
 
+void modp_mkgm2_func(uint32_t *restrict gm, uint32_t *restrict igm, unsigned logn,
+	uint32_t g, uint32_t p, uint32_t p0i)
+{
+  modp_mkgm2(gm, igm, logn, g, p, p0i);
+}
+
 /*
  * Compute the NTT over a polynomial (binary case). Polynomial elements
  * are a[0], a[stride], a[2 * stride]...
@@ -1009,6 +1070,13 @@ modp_NTT2_ext(uint32_t *a, size_t stride, const uint32_t *gm, unsigned logn,
 		}
 		t = ht;
 	}
+}
+
+void
+modp_NTT2_ext_func(uint32_t *a, size_t stride, const uint32_t *gm, unsigned logn,
+	uint32_t p, uint32_t p0i)
+{
+  modp_NTT2_ext(a, stride, gm, logn, p, p0i);
 }
 
 /*
@@ -1064,6 +1132,12 @@ modp_iNTT2_ext(uint32_t *a, size_t stride, const uint32_t *igm, unsigned logn,
 	}
 }
 
+void
+modp_iNTT2_ext_func(uint32_t *a, size_t stride, const uint32_t *igm, unsigned logn,
+	uint32_t p, uint32_t p0i) {
+	modp_iNTT2_ext(a, stride, igm, logn, p, p0i);
+}
+
 /*
  * Simplified macros for NTT and iNTT (binary case) when the elements
  * are consecutive in RAM.
@@ -1100,6 +1174,13 @@ modp_poly_rec_res(uint32_t *f, unsigned logn,
 		f[u] = modp_montymul(modp_montymul(w0, w1, p, p0i), R2, p, p0i);
 	}
 }
+
+void
+modp_poly_rec_res_func(uint32_t *f, unsigned logn,
+	uint32_t p, uint32_t p0i, uint32_t R2) {
+	modp_poly_rec_res(f, logn,
+  	p, p0i, R2);
+	}
 
 /* ==================================================================== */
 /*
@@ -1163,6 +1244,11 @@ zint_sub(uint32_t *restrict a, const uint32_t *restrict b, size_t len,
 	return cc;
 }
 
+uint32_t zint_sub_func(uint32_t *restrict a, const uint32_t *restrict b, size_t len,
+	uint32_t ctl) {
+	return zint_sub(a, b, len, ctl);
+	}
+
 /*
  * Mutiply the provided big integer m with a small value x.
  * This function assumes that x < 2^31. The carry word is returned.
@@ -1182,6 +1268,11 @@ zint_mul_small(uint32_t *m, size_t mlen, uint32_t x)
 		cc = (uint32_t)(z >> 31);
 	}
 	return cc;
+}
+uint32_t
+zint_mul_small_func(uint32_t *m, size_t mlen, uint32_t x)
+{
+return zint_mul_small(m, mlen, x);
 }
 
 /*
@@ -1209,7 +1300,7 @@ zint_mod_small_unsigned(const uint32_t *d, size_t dlen,
 	x = 0;
 	u = dlen;
 	while (u -- > 0) {
-		uint32_t w;
+	uint32_t w;
 
 		x = modp_montymul(x, R2, p, p0i);
 		w = d[u] - p;
@@ -1217,6 +1308,13 @@ zint_mod_small_unsigned(const uint32_t *d, size_t dlen,
 		x = modp_add(x, w, p);
 	}
 	return x;
+}
+
+uint32_t
+zint_mod_small_unsigned_func(const uint32_t *d, size_t dlen,
+	uint32_t p, uint32_t p0i, uint32_t R2)
+{
+  return zint_mod_small_unsigned(d, dlen, p, p0i, R2);
 }
 
 /*
@@ -1236,6 +1334,13 @@ zint_mod_small_signed(const uint32_t *d, size_t dlen,
 	z = modp_sub(z, Rx & -(d[dlen - 1] >> 30), p);
 	return z;
 }
+uint32_t
+zint_mod_small_signed_func(const uint32_t *d, size_t dlen,
+	uint32_t p, uint32_t p0i, uint32_t R2, uint32_t Rx)
+{
+return zint_mod_small_signed(d, dlen, p, p0i, R2, Rx);
+}
+
 
 /*
  * Add y*s to x. x and y initially have length 'len' words; the new x
@@ -1261,6 +1366,12 @@ zint_add_mul_small(uint32_t *restrict x,
 		cc = (uint32_t)(z >> 31);
 	}
 	x[len] = cc;
+}
+
+zint_add_mul_small_func(uint32_t *restrict x,
+	const uint32_t *restrict y, size_t len, uint32_t s)
+{
+zint_add_mul_small(x, y, len, s);
 }
 
 /*
@@ -1313,6 +1424,12 @@ zint_norm_zero(uint32_t *restrict x, const uint32_t *restrict p, size_t len)
 	 * do the subtraction only if r = -1.
 	 */
 	zint_sub(x, p, len, r >> 31);
+}
+
+void
+zint_norm_zero_func(uint32_t *restrict x, const uint32_t *restrict p, size_t len)
+{
+zint_norm_zero(x, p, len);
 }
 
 /*
@@ -1370,6 +1487,7 @@ zint_rebuild_CRT(uint32_t *restrict xx, size_t xlen, size_t xstride,
 			 * New value is (x mod q) + q * (s * (xp - xq) mod p)
 			 */
 			xr = modp_montymul(s, modp_sub(xp, xq, p), p, p0i);
+
 			zint_add_mul_small(x, tmp, u, xr);
 		}
 
@@ -1387,6 +1505,14 @@ zint_rebuild_CRT(uint32_t *restrict xx, size_t xlen, size_t xstride,
 			zint_norm_zero(x, tmp, xlen);
 		}
 	}
+}
+
+void
+zint_rebuild_CRT_func(uint32_t *restrict xx, size_t xlen, size_t xstride,
+	size_t num, const small_prime *primes, int normalize_signed,
+	uint32_t *restrict tmp)
+{
+zint_rebuild_CRT(xx, xlen, xstride, num, primes, normalize_signed, tmp);
 }
 
 /*
@@ -1414,6 +1540,12 @@ zint_negate(uint32_t *a, size_t len, uint32_t ctl)
 		a[u] = aw & 0x7FFFFFFF;
 		cc = aw >> 31;
 	}
+}
+
+void
+zint_negate_func(uint32_t *a, size_t len, uint32_t ctl)
+{
+zint_negate(a, len, ctl);
 }
 
 /*
@@ -1465,6 +1597,14 @@ zint_co_reduce(uint32_t *a, uint32_t *b, size_t len,
 	return nega | (negb << 1);
 }
 
+uint32_t
+zint_co_reduce_func(uint32_t *a, uint32_t *b, size_t len,
+	int64_t xa, int64_t xb, int64_t ya, int64_t yb)
+{
+return zint_co_reduce(a, b, len, xa, xb, ya, yb);
+
+}
+
 /*
  * Finish modular reduction. Rules on input parameters:
  *
@@ -1514,6 +1654,12 @@ zint_finish_mod(uint32_t *a, size_t len, const uint32_t *m, uint32_t neg)
 	}
 }
 
+void
+zint_finish_mod_func(uint32_t *a, size_t len, const uint32_t *m, uint32_t neg)
+{
+zint_finish_mod(a, len, m, neg);
+}
+
 /*
  * Replace a with (a*xa+b*xb)/(2^31) mod m, and b with
  * (a*ya+b*yb)/(2^31) mod m. Modulus m must be odd; m0i = -1/m[0] mod 2^31.
@@ -1539,6 +1685,7 @@ zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
 
 		wa = a[u];
 		wb = b[u];
+
 		za = wa * (uint64_t)xa + wb * (uint64_t)xb
 			+ m[u] * (uint64_t)fa + (uint64_t)cca;
 		zb = wa * (uint64_t)ya + wb * (uint64_t)yb
@@ -1563,6 +1710,13 @@ zint_co_reduce_mod(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
 	 */
 	zint_finish_mod(a, len, m, (uint32_t)((uint64_t)cca >> 63));
 	zint_finish_mod(b, len, m, (uint32_t)((uint64_t)ccb >> 63));
+}
+
+zint_co_reduce_mod_func(uint32_t *a, uint32_t *b, const uint32_t *m, size_t len,
+	uint32_t m0i, int64_t xa, int64_t xb, int64_t ya, int64_t yb)
+{
+zint_co_reduce_mod(a, b, m, len, m0i, xa, xb, ya, yb);
+
 }
 
 /*
@@ -1737,7 +1891,7 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	 * Each input operand may be as large as 31*len bits, and we
 	 * reduce the total length by at least 30 bits at each iteration.
 	 */
-	for (num = 62 * (uint32_t)len + 30; num >= 30; num -= 30) {
+	for (num = 62 * (uint32_t)len + 30;  num >= 30; num -= 30) {
 		uint32_t c0, c1;
 		uint32_t a0, a1, b0, b1;
 		uint64_t a_hi, b_hi;
@@ -1893,6 +2047,16 @@ zint_bezout(uint32_t *restrict u, uint32_t *restrict v,
 	return (int)((1 - ((rc | -rc) >> 31)) & x[0] & y[0]);
 }
 
+int
+zint_bezout_func(uint32_t *restrict u, uint32_t *restrict v,
+	const uint32_t *restrict x, const uint32_t *restrict y,
+	size_t len, uint32_t *restrict tmp)
+{
+return zint_bezout(u, v, x, y, len ,tmp);
+
+}
+
+
 /*
  * Add k*y*2^sc to x. The result is assumed to fit in the array of
  * size xlen (truncation is applied if necessary).
@@ -1953,6 +2117,13 @@ zint_add_scaled_mul_small(uint32_t *restrict x, size_t xlen,
 		cc = *(int32_t *)&ccu;
 	}
 }
+void
+zint_add_scaled_mul_small_func(uint32_t *restrict x, size_t xlen,
+	const uint32_t *restrict y, size_t ylen, int32_t k,
+	uint32_t sch, uint32_t scl)
+{
+zint_add_scaled_mul_small(x, xlen, y, ylen, k, sch, scl);
+}
 
 /*
  * Subtract y*2^sc from x. The result is assumed to fit in the array of
@@ -1998,6 +2169,13 @@ zint_sub_scaled(uint32_t *restrict x, size_t xlen,
 	}
 }
 
+void
+zint_sub_scaled_func(uint32_t *restrict x, size_t xlen,
+	const uint32_t *restrict y, size_t ylen, uint32_t sch, uint32_t scl)
+{
+zint_sub_scaled(x, xlen, y, ylen, sch ,scl);
+}
+
 /*
  * Convert a one-word signed big integer into a signed value.
  */
@@ -2009,6 +2187,12 @@ zint_one_to_plain(const uint32_t *x)
 	w = x[0];
 	w |= (w & 0x40000000) << 1;
 	return *(int32_t *)&w;
+}
+
+int32_t
+zint_one_to_plain_func(const uint32_t *x)
+{
+return zint_one_to_plain(x);
 }
 
 /* ==================================================================== */
@@ -2065,6 +2249,12 @@ poly_big_to_fp(fpr *d, const uint32_t *f, size_t flen, size_t fstride,
 	}
 }
 
+void
+poly_big_to_fp_func(fpr *d, const uint32_t *f, size_t flen, size_t fstride,
+	unsigned logn) {
+	poly_big_to_fp(d, f, flen, fstride, logn);
+	}
+
 /*
  * Convert a polynomial to small integers. Source values are supposed
  * to be one-word integers, signed over 31 bits. Returned value is 0
@@ -2091,6 +2281,11 @@ poly_big_to_small(int8_t *d, const uint32_t *s, int lim, unsigned logn)
 		d[u] = (int8_t)z;
 	}
 	return 1;
+}
+int
+poly_big_to_small_func(int8_t *d, const uint32_t *s, int lim, unsigned logn)
+{
+  return poly_big_to_small(d, s, lim, logn);
 }
 
 /*
@@ -2133,6 +2328,12 @@ poly_sub_scaled(uint32_t *restrict F, size_t Flen, size_t Fstride,
 		}
 	}
 }
+
+void poly_sub_scaled_func(uint32_t *restrict F, size_t Flen, size_t Fstride,
+     	const uint32_t *restrict f, size_t flen, size_t fstride,
+     	const int32_t *restrict k, uint32_t sch, uint32_t scl, unsigned logn) {
+     	poly_sub_scaled(F, Flen, Fstride, f, flen, fstride, k, sch, scl, logn);
+     	}
 
 /*
  * Subtract k*f from F. Coefficients of polynomial k are small integers
@@ -2177,11 +2378,13 @@ poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
 			t1[v] = modp_set(k[v], p);
 		}
 		modp_NTT2(t1, gm, logn, p, p0i);
+
 		for (v = 0, y = f, x = fk + u;
 			v < n; v ++, y += fstride, x += tlen)
 		{
 			*x = zint_mod_small_signed(y, flen, p, p0i, R2, Rx);
 		}
+
 		modp_NTT2_ext(fk + u, tlen, gm, logn, p, p0i);
 		for (v = 0, x = fk + u; v < n; v ++, x += tlen) {
 			*x = modp_montymul(
@@ -2203,6 +2406,16 @@ poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
 	}
 }
 
+void
+poly_sub_scaled_ntt_func(uint32_t *restrict F, size_t Flen, size_t Fstride,
+	const uint32_t *restrict f, size_t flen, size_t fstride,
+	const int32_t *restrict k, uint32_t sch, uint32_t scl, unsigned logn,
+	uint32_t *restrict tmp)
+{
+poly_sub_scaled_ntt(F, Flen, Fstride, f, flen, fstride, k, sch, scl, logn, tmp);
+
+}
+
 /* ==================================================================== */
 
 
@@ -2216,6 +2429,26 @@ poly_sub_scaled_ntt(uint32_t *restrict F, size_t Flen, size_t Fstride,
  */
 static inline uint64_t
 get_rng_u64(inner_shake256_context *rng)
+{
+	/*
+	 * We enforce little-endian representation.
+	 */
+
+	uint8_t tmp[8];
+
+	inner_shake256_extract(rng, tmp, sizeof tmp);
+	return (uint64_t)tmp[0]
+		| ((uint64_t)tmp[1] << 8)
+		| ((uint64_t)tmp[2] << 16)
+		| ((uint64_t)tmp[3] << 24)
+		| ((uint64_t)tmp[4] << 32)
+		| ((uint64_t)tmp[5] << 40)
+		| ((uint64_t)tmp[6] << 48)
+		| ((uint64_t)tmp[7] << 56);
+}
+
+uint64_t
+get_rng_u64_func(inner_shake256_context *rng)
 {
 	/*
 	 * We enforce little-endian representation.
@@ -2334,6 +2567,12 @@ mkgauss(RNG_CONTEXT *rng, unsigned logn)
 	}
 	return val;
 }
+int
+mkgauss_func(RNG_CONTEXT *rng, unsigned logn)
+{
+ return mkgauss(rng, logn);
+}
+
 
 /*
  * The MAX_BL_SMALL[] and MAX_BL_LARGE[] contain the lengths, in 31-bit
@@ -2450,6 +2689,12 @@ poly_small_sqnorm(const int8_t *f, unsigned logn)
 	return s | -(ng >> 31);
 }
 
+uint32_t
+poly_small_sqnorm_func(const int8_t *f, unsigned logn)
+{
+  return poly_small_sqnorm(f, logn);
+}
+
 /*
  * Align (upwards) the provided 'data' pointer with regards to 'base'
  * so that the offset is a multiple of the size of 'fpr'.
@@ -2468,6 +2713,12 @@ align_fpr(void *base, void *data)
 		k += (sizeof(fpr)) - km;
 	}
 	return (fpr *)(cb + k);
+}
+
+fpr *
+align_fpr_func(void *base, void *data)
+{
+align_fpr(base, data);
 }
 
 /*
@@ -2490,6 +2741,12 @@ align_u32(void *base, void *data)
 	return (uint32_t *)(cb + k);
 }
 
+uint32_t *
+align_u32_func(void *base, void *data)
+{
+align_u32(base, data);
+}
+
 /*
  * Convert a small vector to floating point.
  */
@@ -2502,6 +2759,12 @@ poly_small_to_fp(fpr *x, const int8_t *f, unsigned logn)
 	for (u = 0; u < n; u ++) {
 		x[u] = fpr_of(f[u]);
 	}
+}
+
+void
+poly_small_to_fp_func(fpr *x, const int8_t *f, unsigned logn)
+{
+poly_small_to_fp(x, f, logn);
 }
 
 /*
@@ -2646,6 +2909,12 @@ make_fg_step(uint32_t *data, unsigned logn, unsigned depth,
 		}
 	}
 }
+void
+make_fg_step_func(uint32_t *data, unsigned logn, unsigned depth,
+	int in_ntt, int out_ntt)
+{
+make_fg_step(data, logn, depth, in_ntt, out_ntt);
+}
 
 /*
  * Compute f and g at a specific depth, in RNS notation.
@@ -2695,6 +2964,12 @@ make_fg(uint32_t *data, const int8_t *f, const int8_t *g,
 		make_fg_step(data, logn - d, d,
 			d != 0, (d + 1) < depth || out_ntt);
 	}
+}
+void
+make_fg_func(uint32_t *data, const int8_t *f, const int8_t *g,
+	unsigned logn, unsigned depth, int out_ntt)
+{
+make_fg(data, f, g, logn, depth, out_ntt);
 }
 
 /*
@@ -2757,6 +3032,13 @@ solve_NTRU_deepest(unsigned logn_top,
 	}
 
 	return 1;
+}
+
+int
+solve_NTRU_deepest_func(unsigned logn_top,
+	const int8_t *f, const int8_t *g, uint32_t *tmp)
+{
+return solve_NTRU_deepest(logn_top, f, g, tmp);
 }
 
 /*
@@ -2827,6 +3109,7 @@ solve_NTRU_intermediate(unsigned logn_top,
 	Ft = tmp;
 	Gt = Ft + n * llen;
 	t1 = Gt + n * llen;
+
 	memmove(t1, ft, 2 * n * slen * sizeof *ft);
 	ft = t1;
 	gt = ft + slen * n;
@@ -3058,15 +3341,18 @@ solve_NTRU_intermediate(unsigned logn_top,
 	 * source array tmp[] is supposed to be already aligned).
 	 */
 
+
 	rt3 = align_fpr(tmp, t1);
 	rt4 = rt3 + n;
 	rt5 = rt4 + n;
 	rt1 = rt5 + (n >> 1);
 	k = (int32_t *)align_u32(tmp, rt1);
 	rt2 = align_fpr(tmp, k + n);
+
 	if (rt2 < (rt1 + n)) {
 		rt2 = rt1 + n;
 	}
+
 	t1 = (uint32_t *)k + n;
 
 	/*
@@ -3082,6 +3368,8 @@ solve_NTRU_intermediate(unsigned logn_top,
 	rlen = (slen > 10) ? 10 : slen;
 	poly_big_to_fp(rt3, ft + slen - rlen, rlen, slen, logn);
 	poly_big_to_fp(rt4, gt + slen - rlen, rlen, slen, logn);
+
+
 
 	/*
 	 * Values in rt3 and rt4 are downscaled by 2^(scale_fg).
@@ -3211,7 +3499,6 @@ solve_NTRU_intermediate(unsigned logn_top,
 			fpr xv;
 
 			xv = fpr_mul(rt2[u], pdc);
-
 			/*
 			 * Sometimes the values can be out-of-bounds if
 			 * the algorithm fails; we must not call
@@ -3308,6 +3595,13 @@ solve_NTRU_intermediate(unsigned logn_top,
 		memmove(x, y, slen * sizeof *y);
 	}
 	return 1;
+}
+
+int
+solve_NTRU_intermediate_func(unsigned logn_top,
+	const int8_t *f, const int8_t *g, unsigned depth, uint32_t *tmp)
+{
+return solve_NTRU_intermediate(logn_top, f, g, depth, tmp);
 }
 
 /*
@@ -3690,6 +3984,13 @@ solve_NTRU_binary_depth1(unsigned logn_top,
 	return 1;
 }
 
+int
+solve_NTRU_binary_depth1_func(unsigned logn_top,
+	const int8_t *f, const int8_t *g, uint32_t *tmp)
+{
+return solve_NTRU_binary_depth1(logn_top, f, g, tmp);
+}
+
 /*
  * Solving the NTRU equation, top level. Upon entry, the F and G
  * from the previous level should be in the tmp[] array.
@@ -3953,6 +4254,12 @@ solve_NTRU_binary_depth0(unsigned logn,
 
 	return 1;
 }
+int
+solve_NTRU_binary_depth0_func(unsigned logn,
+	const int8_t *f, const int8_t *g, uint32_t *tmp)
+{
+return solve_NTRU_binary_depth0(logn, f, g, tmp);
+}
 
 /*
  * Solve the NTRU equation. Returned value is 1 on success, 0 on error.
@@ -4066,6 +4373,12 @@ solve_NTRU(unsigned logn, int8_t *F, int8_t *G,
 
 	return 1;
 }
+int
+solve_NTRU_func(unsigned logn, int8_t *F, int8_t *G,
+	const int8_t *f, const int8_t *g, int lim, uint32_t *tmp)
+{
+return solve_NTRU(logn, F, G, f, g, lim, tmp);
+}
 
 /*
  * Generate a random polynomial with a Gaussian distribution. This function
@@ -4109,6 +4422,11 @@ poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 		}
 		f[u] = (int8_t)s;
 	}
+}
+void
+poly_small_mkgauss_func(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
+{
+poly_small_mkgauss(rng, f, logn);
 }
 
 /* see falcon.h */
@@ -4254,7 +4572,7 @@ falcon_inner_keygen(inner_shake256_context *rng,
 			tmp2 = (uint16_t *)tmp;
 		}
 		if (!Zf(compute_public)(h2, f, g, logn, (uint8_t *)tmp2)) {
-			continue;
+	  	continue;
 		}
 
 		/*
