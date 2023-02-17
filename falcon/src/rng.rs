@@ -1,3 +1,4 @@
+use std::ptr;
 use crate::shake::{i_shake256_extract, InnerShake256Context};
 
 //TODO maybe we don't need a union and can avoid using unsafe?
@@ -180,26 +181,24 @@ pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
 #[inline(always)]
 pub fn prng_get_u64(p: &mut Prng) -> u64 {
     let mut u = p.ptr;
-    if u >= p.buf.len() - 9 {
+    if u >= p.buf.len() * 8 - 9 {
         prng_refill(p);
         u = 0;
     }
     p.ptr = u + 8;
-
-
-    (p.buf[u] as u64)
+    return (p.buf[u] as u64)
         | ((p.buf[u + 1] as u64) << 8)
         | ((p.buf[u + 2] as u64) << 16)
         | ((p.buf[u + 3] as u64) << 24)
         | ((p.buf[u + 4] as u64) << 32)
         | ((p.buf[u + 5] as u64) << 40)
         | ((p.buf[u + 6] as u64) << 48)
-        | ((p.buf[u + 7] as u64) << 56)
+        | ((p.buf[u + 7] as u64) << 56);
 }
 
 #[inline(always)]
 pub fn prng_get_u8(p: &mut Prng) -> u8 {
-    let mut v = p.buf[p.ptr];
+    let v = p.buf[p.ptr];
     p.ptr += 1;
     if p.ptr == p.buf.len() {
         prng_refill(p);
