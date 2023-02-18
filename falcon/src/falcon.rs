@@ -1,20 +1,23 @@
 use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
+
 use crate::codec::{max_fg_bits, max_FG_bits, modq_encode, trim_i8_encode};
 use crate::keygen::keygen;
 use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context};
 use crate::vrfy::compute_public;
+
 #[macro_export]
 macro_rules! falcon_tmpsize_keygen {
     ($arg:expr) => {
-        if $arg <= 3 {272} else {(28 << $arg) + (3 << $arg + 7)}
+        if $arg <= 3 {272 + ((3 << $arg) + 7)}
+        else {(28 << $arg) + ((3 << $arg )+ 7)}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_privatekey_size {
     ($arg:expr) => {
-        if $arg <= 3 {3 << $arg}
+        if $arg <= 3 {(3 << $arg)  + 1}
         else {((10 - (($arg) >> 1)) << (($arg) - 2)) + (1 << ($arg)) + 1}
     }
 }
@@ -22,35 +25,69 @@ macro_rules! falcon_privatekey_size {
 #[macro_export]
 macro_rules! falcon_publickey_size {
     ($arg:expr) => {
-        if $arg <= 1 {3 << $arg}
-        else {((10 - (($arg) >> 1)) << (($arg) - 2)) + (1 << ($arg))} + 1
+        if $arg <= 1 {5}
+        else {(7 << ($arg - 2))  + 1}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_makepub {
-    ($arg:expr) => {(78u << $arg) + 7}
+    ($arg:expr) => {(6 << $arg) + 1}
 }
 
 #[macro_export]
+macro_rules! falcon_tmpsize_signdyn {
+    ($arg:expr) => {(78 << $arg) + 7}
+}
+
+
+#[macro_export]
 macro_rules! falcon_tmpsize_signtree {
-    ($arg:expr) => {(50u << $arg) + 7}
+    ($arg:expr) => {(50 << $arg) + 7}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expandprivate {
-    ($arg:expr) => {(52u << $arg) + 7}
+    ($arg:expr) => {(52 << $arg) + 7}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expanded_key_size {
-    ($arg:expr) => {((8u * $arg + 40) << $arg) + 8}
+    ($arg:expr) => {((8 * $arg + 40) << $arg) + 8}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_verify {
-    ($arg:expr) => {(8u << $arg) + 1}
+    ($arg:expr) => {(8 << $arg) + 1}
 }
+
+#[macro_export]
+macro_rules! falcon_sig_compressed_maxsize {
+    ($arg:expr) => {
+        (((11 << $arg) + (101 >> (10 - $arg)) + 7) >> 3) + 41
+    }
+}
+
+#[macro_export]
+macro_rules! falcon_sig_padded_size {
+    ($arg:expr) => {
+        (44 + 3 * (256 >> (10 - $arg))) + 2 * ( 128 >> (10 - $arg))
+        + 3 * (64 >> (10 - $arg)) + 2 * (16 >> (10 - $arg))
+        - 2 * (2 >> (10 - $arg)) - 8 * (1 >> (10 - $arg))
+    }
+}
+
+#[macro_export]
+macro_rules! falcon_sig_ct_size {
+    ($arg:expr) => {
+        if $arg == 3 {
+            (3 << ($arg - 1)) + 40
+        } else {
+            (3 << ($arg - 1)) + 41
+        }
+    }
+}
+
 
 
 pub fn shake256_init(rng: &mut InnerShake256Context) {
@@ -164,11 +201,22 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
     0
 }
 
-// pub fn falcon_make_public(private_key: &mut [u8], private_len: usize,
-//                           public_key: &mut [u8], public_len: usize,
-//                           tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
+pub fn falcon_get_logn(key: &mut [u8], len: usize) -> i32 {
+    if len == 0 {
+        return -1;
+    }
+    let logn: i32 = (key[0] & 0x0F) as i32;
+    if logn < 1 || logn > 10 {
+        return -1;
+    }
+    logn
+}
+
+pub fn falcon_make_public(private_key: &mut [u8], private_len: usize,
+                          public_key: &mut [u8], public_len: usize,
+                          tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}
 //
 // pub fn falcon_get_logn(obj: &mut [u8], len: usize) -> i32 {
 //     0

@@ -2,8 +2,10 @@
 
 use std::slice::from_raw_parts_mut;
 
+use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
 use crate::codec::{comp_decode, comp_encode, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::hash_to_point_vartime;
+use crate::falcon::{falcon_get_logn, falcon_keygen_make, falcon_make_public, shake_init_prng_from_seed};
 use crate::keygen::keygen;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
@@ -21,9 +23,82 @@ pub fn run_falcon_tests() {
     // test_sampler();
     // test_sign();
     test_keygen();
-    // test_external_API();
+    test_external_api();
     // test_nist_KAT(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
     // test_nist_KAT(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
+}
+
+pub(crate) fn test_external_api() {
+    print!("Test external API: ");
+    let mut rng: InnerShake256Context = InnerShake256Context {
+        st: St { a: [0; 25] },
+        dptr: 0,
+    };
+    let mut x = String::from("external");
+    let mut seed = unsafe {
+        x.as_bytes_mut()
+    };
+    shake_init_prng_from_seed(&mut rng, &mut seed, 8);
+    for logn in 1..=10 {
+        test_external_api_inner(logn, &mut rng);
+    }
+    println!(" done. ");
+}
+
+fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
+    print!("[{}]", logn);
+    let pk_len = falcon_publickey_size!(logn as usize);
+    let sk_len = falcon_privatekey_size!(logn as usize);
+    let sig_len = falcon_sig_compressed_maxsize!(logn as usize);
+    let sigpad_len = falcon_sig_padded_size!(logn as usize);
+    let sigct_len = falcon_sig_ct_size!(logn as usize);
+    let expkey_len = falcon_tmpsize_expanded_key_size!(logn as usize);
+
+    let mut pk: Vec<u8> = vec![0; pk_len];
+    let mut pk2: Vec<u8> = vec![0; pk_len];
+    let mut sk: Vec<u8> = vec![0; sk_len];
+    let mut sig: Vec<u8> = vec![0; sig_len];
+    let mut sigpad: Vec<u8> = vec![0; sigpad_len];
+    let mut sigct: Vec<u8> = vec![0; sigct_len];
+    let mut expkey: Vec<u8> = vec![0; expkey_len];
+
+
+    let tmpkg_len = falcon_tmpsize_keygen!(logn);
+    let tmpmp_len = falcon_tmpsize_makepub!(logn);
+    let tmpsd_len = falcon_tmpsize_signdyn!(logn);
+    let tmpst_len = falcon_tmpsize_signtree!(logn);
+    let tmpvv_len = falcon_tmpsize_verify!(logn);
+    let tmpek_len = falcon_tmpsize_expandprivate!(logn);
+
+    let mut tmpkg: Vec<u8> = vec![0; tmpkg_len];
+    let mut tmpmp: Vec<u8> = vec![0; tmpmp_len];
+    let mut tmpsd: Vec<u8> = vec![0; tmpsd_len];
+    let mut tmpst: Vec<u8> = vec![0; tmpst_len];
+    let mut tmpvv: Vec<u8> = vec![0; tmpvv_len];
+    let mut tmpek: Vec<u8> = vec![0; tmpek_len];
+
+    for _ in 0..12 {
+        pk.fill(0);
+        sk.fill(0);
+        // let mut r = falcon_keygen_make(&mut rng, logn,
+        //                                sk.as_mut_slice(), sk_len,
+        //                                pk.as_mut_slice(), pk_len,
+        //                                tmpkg.as_mut_slice(), tmpkg_len);
+        // if r != 0 {
+        //     panic!("keygen failed: {}", r);
+        // }
+        // pk2.fill(0xFF);
+        // r = falcon_make_public(pk2.as_mut_slice(), pk_len, sk.as_mut_slice(), pk_len, tmpmp.as_mut_slice(), tmpmp_len);
+        // if r != 0 {
+        //     panic!("makepub failed: {}", r);
+        // }
+        // assert_eq!(pk, pk2, "pub / repub");
+
+        // r = falcon_get_logn(pk.as_mut_slice(), pk_len);
+        // if r != logn as i32 {
+        //     panic!("get_logn failed: {}", r);
+        // }
+    }
 }
 
 pub(crate) fn test_keygen() {
@@ -43,12 +118,13 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     };
     print!("[{}]", logn);
     let mut string = String::from("keygen 0");
-    let mut buf:&mut [u8] = unsafe {
-        string.as_bytes_mut() };
+    let mut buf: &mut [u8] = unsafe {
+        string.as_bytes_mut()
+    };
     buf[7] = "0".as_bytes()[0] + logn as u8;
 
     i_shake256_init(&mut rng);
-    i_shake256_inject(&mut rng,buf);
+    i_shake256_inject(&mut rng, buf);
     i_shake256_flip(&mut rng);
     let n: usize = 1 << logn;
     let fp: *mut i8 = tmp.as_mut_ptr().cast();
