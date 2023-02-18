@@ -80,13 +80,13 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
     for _ in 0..12 {
         pk.fill(0);
         sk.fill(0);
-        // let mut r = falcon_keygen_make(&mut rng, logn,
-        //                                sk.as_mut_slice(), sk_len,
-        //                                pk.as_mut_slice(), pk_len,
-        //                                tmpkg.as_mut_slice(), tmpkg_len);
-        // if r != 0 {
-        //     panic!("keygen failed: {}", r);
-        // }
+        let mut r = falcon_keygen_make(&mut rng, logn,
+                                       sk.as_mut_slice(), sk_len,
+                                       pk.as_mut_slice(), pk_len,
+                                       tmpkg.as_mut_slice(), tmpkg_len);
+        if r != 0 {
+            panic!("keygen failed: {}", r);
+        }
         // pk2.fill(0xFF);
         // r = falcon_make_public(pk2.as_mut_slice(), pk_len, sk.as_mut_slice(), pk_len, tmpmp.as_mut_slice(), tmpmp_len);
         // if r != 0 {
@@ -94,10 +94,12 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
         // }
         // assert_eq!(pk, pk2, "pub / repub");
 
-        // r = falcon_get_logn(pk.as_mut_slice(), pk_len);
-        // if r != logn as i32 {
-        //     panic!("get_logn failed: {}", r);
-        // }
+        r = falcon_get_logn(pk.as_mut_slice(), pk_len);
+        if r != logn as i32 {
+            panic!("get_logn failed: {}", r);
+        }
+
+        print!(".");
     }
 }
 

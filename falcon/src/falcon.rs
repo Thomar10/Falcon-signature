@@ -159,27 +159,27 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
     let sk_len = falcon_privatekey_size!(logn) as usize;
     let mut u = 1;
     let mut v = trim_i8_encode(&mut sk, u, sk_len - u,
-                               &mut f_slice, 9, max_fg_bits[9] as u32);
+                               &mut f_slice, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
-        return -6;
+        return -10;
     }
     u += v;
     v = trim_i8_encode(sk, u, sk_len - u,
-                       &mut g_slice, 9, max_fg_bits[9] as u32);
+                       &mut g_slice, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
-        return -6;
+        return -9;
     }
 
     u += v;
     v = trim_i8_encode(sk, u, sk_len - u,
-                       &mut F_slice, 9, max_FG_bits[9] as u32);
+                       &mut F_slice, logn, max_FG_bits[logn as usize] as u32);
 
     if v == 0 {
-        return -6;
+        return -8;
     }
     u += v;
     if u != sk_len {
-        return -6;
+        return -7;
     }
     if public_key.len() > 0 {
         let mut h: *mut u16 = g.cast();
@@ -190,9 +190,9 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
             return -6;
         }
         let pk = public_key;
-        pk[0] = 0x00 + 9;
+        pk[0] = (0x00 + logn) as u8;
         let pk_len = falcon_publickey_size!(logn) as usize;
-        v = modq_encode(pk, 1, pk_len - 1, &mut h_slice, 9);
+        v = modq_encode(pk, 1, pk_len - 1, &mut h_slice, logn);
         if v != pk_len - 1 {
             return -6;
         }
