@@ -1,10 +1,15 @@
 use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 
-use crate::codec::{max_fg_bits, max_FG_bits, modq_encode, trim_i8_encode};
+use crate::codec::{max_fg_bits, max_FG_bits, modq_encode, trim_i8_decode, trim_i8_encode};
 use crate::keygen::keygen;
 use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context};
 use crate::vrfy::compute_public;
+
+// type FALCON_SIG_TYPE = i32;
+pub const FALCON_SIG_COMPRESS: i32 = 1;
+pub const FALCON_SIG_PADDED: i32 = 2;
+pub const FALCON_SIG_CT: i32 = 3;
 
 #[macro_export]
 macro_rules! falcon_tmpsize_keygen {
@@ -150,24 +155,24 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
     let F = g.wrapping_add(n);
     let mut F_slice;
     unsafe { F_slice = from_raw_parts_mut(F.cast(), n); };
-    // TODO alignment problems maybe?
     let mut atmp: *mut u8 = F.wrapping_add(n);
 
     keygen(rng, f.cast(), g.cast(), F.cast(), null_mut(), null_mut(), logn, atmp);
 
     let mut sk = private_key;
     let sk_len = falcon_privatekey_size!(logn) as usize;
+    sk[0] = (0x50 + logn) as u8;
     let mut u = 1;
     let mut v = trim_i8_encode(&mut sk, u, sk_len - u,
                                &mut f_slice, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
-        return -10;
+        return -6;
     }
     u += v;
     v = trim_i8_encode(sk, u, sk_len - u,
                        &mut g_slice, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
-        return -9;
+        return -6;
     }
 
     u += v;
@@ -175,17 +180,16 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
                        &mut F_slice, logn, max_FG_bits[logn as usize] as u32);
 
     if v == 0 {
-        return -8;
+        return -6;
     }
     u += v;
     if u != sk_len {
-        return -7;
+        return -6;
     }
     if public_key.len() > 0 {
-        let mut h: *mut u16 = g.cast();
-        h = h.wrapping_add(n);
+        let mut h: *mut u16 = g.wrapping_add(n).cast();
         let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
-        atmp = h.wrapping_add(n).cast();
+        let mut atmp: *mut u8 = h.wrapping_add(n).cast();
         if !compute_public(h, f.cast(), g.cast(), logn, atmp) {
             return -6;
         }
@@ -212,71 +216,115 @@ pub fn falcon_get_logn(key: &mut [u8], len: usize) -> i32 {
     logn
 }
 
-pub fn falcon_make_public(private_key: &mut [u8], private_len: usize,
-                          public_key: &mut [u8], public_len: usize,
+pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
+                          mut pk: &mut [u8], public_len: usize,
                           tmp: &mut [u8], tmp_len: usize) -> i32 {
+    if private_len == 0 {
+        return -6;
+    }
+    if (sk[0] & 0xF0) != 0x50 {
+        return -6;
+    }
+    let logn = (sk[0] & 0x0F) as usize;
+    if logn < 1 || logn > 10 {
+        return -6;
+    }
+    if private_len != falcon_privatekey_size!(logn) as usize {
+        return -6;
+    }
+    if public_len < falcon_publickey_size!(logn) || tmp_len < falcon_tmpsize_makepub!(logn) {
+        return -6;
+    }
+    let n: usize = 1 << logn;
+    let fp: *mut i8 = tmp.as_mut_ptr().cast();
+    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
+    let gp = fp.wrapping_add(n);
+    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
+    let mut u = 1;
+    let mut v = trim_i8_decode(f, logn as u32, max_fg_bits[logn] as u32,
+                               &mut sk, u, private_len - u);
+    if v == 0 {
+        return -6;
+    }
+    u += v;
+    v = trim_i8_decode(g, logn as u32, max_fg_bits[logn] as u32,
+                       &mut sk, u, private_len - u);
+    if v == 0 {
+        return -6;
+    }
+    let mut h: *mut u16 = gp.wrapping_add(n).cast();
+    let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
+    let mut atmp: *mut u8 = h.wrapping_add(n).cast();
+    if !compute_public(h, fp, gp, logn as u32, atmp) {
+        return -7;
+    }
+
+
+    pk[0] = (0x00 + logn) as u8;
+    let pk_len = falcon_publickey_size!(logn) as usize;
+    v = modq_encode(pk, 1, pk_len - 1, &mut h_slice, logn as u32);
+    if v != pk_len - 1 {
+        return -8;
+    }
     0
 }
-//
-// pub fn falcon_get_logn(obj: &mut [u8], len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_sign_dyn(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-//                        signature_type: i32, private_key: &mut [u8],
-//                        private_len: usize, public_key: &mut [u8], public_len: usize,
-//                        tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
-//                                 private_key: &mut [u8], private_len: usize,
-//                                 tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_sign_tree(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-//                         signature_type: i32, expanded_key: &mut [u8],
-//                         expanded_len: usize, data: &mut [u8], data_len: usize,
-//                         tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_sign_start(rng: &mut InnerShake256Context, nonce: &mut [u8],
-//                          hash_data: &mut InnerShake256Context) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_sign_dyn_finish(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-//                               signature_type: i32, private_key: &mut [u8],
-//                               private_len: usize,
-//                               hash_data: &mut InnerShake256Context, nonce: &mut [u8],
-//                               tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_sign_tree_finish(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-//                                signature_type: i32, expanded_key: &mut [u8],
-//                                hash_data: &mut InnerShake256Context,
-//                                nonce: &mut [u8],
-//                                tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_verify(signature: &mut [u8], signature_len: usize, signature_type: i32,
-//                      public_key: &mut [u8], public_len: usize,
-//                      data: &mut [u8], data_len: usize,
-//                      tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_verify_start(hash_data: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize) -> i32 {
-//     0
-// }
-//
-// pub fn falcon_verify_finish(signature: &mut [u8], signature_len: usize, signature_type: i32,
-//                             public_key: &mut [u8], public_len: usize,
-//                             hash_data: &mut InnerShake256Context,
-//                             tmp: &mut [u8], tmp_len: usize) -> i32 {
-//     0
-// }
+
+
+pub fn falcon_sign_dyn(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+                       signature_type: i32, private_key: &mut [u8],
+                       private_len: usize, data: &mut [u8], data_len: usize,
+                       tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}
+
+pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
+                                private_key: &mut [u8], private_len: usize,
+                                tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}
+
+pub fn falcon_sign_tree(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+                        signature_type: i32, expanded_key: &mut [u8],
+                        data: &mut [u8], data_len: usize,
+                        tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}
+
+pub fn falcon_sign_start(rng: &mut InnerShake256Context, nonce: &mut [u8],
+                         hash_data: &mut InnerShake256Context) -> i32 {
+    0
+}
+
+pub fn falcon_sign_dyn_finish(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+                              signature_type: i32, private_key: &mut [u8],
+                              private_len: usize,
+                              hash_data: &mut InnerShake256Context, nonce: &mut [u8],
+                              tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}
+
+pub fn falcon_sign_tree_finish(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+                               signature_type: i32, expanded_key: &mut [u8],
+                               hash_data: &mut InnerShake256Context,
+                               nonce: &mut [u8],
+                               tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}
+
+pub fn falcon_verify(signature: &mut [u8], signature_len: usize, signature_type: i32,
+                     public_key: &mut [u8], public_len: usize,
+                     data: &mut [u8], data_len: usize,
+                     tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}
+
+pub fn falcon_verify_start(hash_data: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize) -> i32 {
+    0
+}
+
+pub fn falcon_verify_finish(signature: &mut [u8], signature_len: usize, signature_type: i32,
+                            public_key: &mut [u8], public_len: usize,
+                            hash_data: &mut InnerShake256Context,
+                            tmp: &mut [u8], tmp_len: usize) -> i32 {
+    0
+}

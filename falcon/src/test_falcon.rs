@@ -3,9 +3,9 @@
 use std::slice::from_raw_parts_mut;
 
 use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
-use crate::codec::{comp_decode, comp_encode, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
+use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::hash_to_point_vartime;
-use crate::falcon::{falcon_get_logn, falcon_keygen_make, falcon_make_public, shake_init_prng_from_seed};
+use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, shake_init_prng_from_seed};
 use crate::keygen::keygen;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
@@ -24,8 +24,133 @@ pub fn run_falcon_tests() {
     // test_sign();
     test_keygen();
     test_external_api();
-    // test_nist_KAT(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
+    test_nist_kat(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
     // test_nist_KAT(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
+}
+
+pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
+    print!("Test NIST KAT {}: ", logn);
+
+    let mut entropy_input = [0u8; 48];
+    hash_bytes = hex::decode(srefhash);
+    let sk_len = if logn == 9 { 1281 } else { 2305 };
+    let pk_len = if logn == 9 { 897 } else { 1793 };
+    let over_len = if logn == 9 { 690 } else { 1330 };
+    let mut msg: Vec<u8> = vec![0; 3300];
+    let mut sk: Vec<u8> = vec![0; sk_len];
+    let mut pk: Vec<u8> = vec![0; pk_len];
+    let mut sm: Vec<u8> = vec![0; 3300 + over_len];
+    let mut tmp: Vec<u8> = vec![0; 84 << logn];
+    let mut esk: Vec<u8> = vec![0; ((8 * logn + 40) << logn) as usize];
+    for i in 0..48 {
+        entropy_input[i] = i as u8;
+    }
+    let mut rng: InnerShake256Context = InnerShake256Context {
+        st: St { a: [0; 25] },
+        dptr: 0,
+    };
+    // nist_randombytes_init(&mut entropy_input);
+    for i in 0..100 {
+        let mut seed = [0u8; 48];
+        let mut seed2 = [0u8; 48];
+        let mut nonce = [0u8; 40];
+        let mut drbg_sav = [0u8; 48];
+        let fp: *mut i8 = tmp.as_mut_ptr().wrapping_add(72 << logn).cast();
+        let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
+        let gp: *mut i8 = fp.wrapping_add(n);
+        let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
+        let Fp: *mut i8 = fp.wrapping_add(n);
+        let F: &mut [i8] = unsafe { from_raw_parts_mut(Fp, n) };
+        let Gp: *mut i8 = fp.wrapping_add(n);
+        let G: &mut [i8] = unsafe { from_raw_parts_mut(Gp, n) };
+        let hp: *mut u16 = Gp.wrapping_add(n).cast();
+        let h: &mut [u16] = unsafe { from_raw_parts_mut(hp, n) };
+        let hm: *mut u16 = hp.wrapping_add(n);
+        let hm: &mut [u16] = unsafe { from_raw_parts_mut(hm, n) };
+        let sigp: *mut i16 = hm.wrapping_add(n).cast();
+        let sig: &mut [i16] = unsafe { from_raw_parts_mut(sigp, n) };
+        let sig2p: *mut i16 = sigp.wrapping_add(n).cast();
+        let sig2: &mut [i16] = unsafe { from_raw_parts_mut(sig2p, n) };
+
+        // nist_randombytes(&mut seed, 48);
+        let mlen = 33 * (i + 1);
+        // nist_randombytes(&mut msg, mlen);
+        // Do like in katrng for random bytes
+        nist_randombytes_init(&mut seed);
+
+        nist_randombytes(&mut seed2, 48);
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut seed2);
+        i_shake256_flip(&mut rng);
+        keygen(&mut rng, fp, gp, Fp, Gp, hp, logn, tmp.as_mut_ptr());
+        sk[0] = (0x50 + logn) as u8;
+        let mut u = 1;
+        let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+                                   f, logn, max_fg_bits[logn as usize] as u32);
+        if v == 0 {
+            panic!("Error encoding sk(f)");
+        }
+        u += v;
+        let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+                                   g, logn, max_fg_bits[logn as usize] as u32);
+        if v == 0 {
+            panic!("Error encoding sk(g)");
+        }
+        u += v;
+        let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+                                   F, logn, max_FG_bits[logn as usize] as u32);
+        if v == 0 {
+            panic!("Error encoding sk(F)");
+        }
+        u += v;
+        if u != sk_len {
+            panic!("Wrong private key length {}", u);
+        }
+        pk[0] = (0x00 + logn) as u8;
+        v = modq_encode(pk.as_mut_slice(), 1, pk_len - 1, h, logn);
+        if 1 + v != pk_len {
+            panic!("Wrong public key length {}", u);
+        }
+        nist_randombytes(&mut nonce, 40);
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut nonce);
+        i_shake256_inject(&mut rng, &mut msg);
+        i_shake256_flip(&mut rng);
+        hash_to_point_vartime(&mut rng, hm, logn);
+
+        nist_randombytes(&mut seed2, 48);
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut seed2);
+        i_shake256_flip(&mut rng);
+
+        // sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tmp.as_mut_slice());
+        // expand_privatekey(esk.as_mut_slice(), f,g, F, G, logn, tmp.as_mut_slice());
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut seed2);
+        i_shake256_flip(&mut rng);
+        // sign_tree(sig2, &mut rng, esk.as_mut_slice(), hm, logn, tmp.as_mut_slice());
+        assert_eq!(sig, sig2, "Sign dyn/tree mismatch!");
+
+        to_ntt_monty(h, logn);
+        if !verify_raw(hm, sig, h, logn, tmp.as_mut_slice()) {
+            panic!("Invalid signature");
+        }
+        sm[2..42].copy_from_slice(&mut nonce);
+        sm[42..42 + mlen].copy_from_slice(&mut msg[0..mlen]);
+        sm[42 + mlen] = (0x20 + logn) as u8;
+        u = comp_encode(sm.as_mut_slice(), 43 + mlen, over_len - 43, sig, logn as usize);
+        if u == 0 {
+            panic!("Could not encode signature");
+        }
+        u += 1;
+        smlen = 42 + mlen + u;
+        sm[0] = (u >> 8) as u8;
+        sm[1] = u as u8;
+
+        //Restore DRBG
+
+        print!(".");
+    }
 }
 
 pub(crate) fn test_external_api() {
@@ -34,10 +159,8 @@ pub(crate) fn test_external_api() {
         st: St { a: [0; 25] },
         dptr: 0,
     };
-    let mut x = String::from("external");
-    let mut seed = unsafe {
-        x.as_bytes_mut()
-    };
+
+    let mut seed = vec![101, 120, 116, 101, 114, 110, 97, 108];
     shake_init_prng_from_seed(&mut rng, &mut seed, 8);
     for logn in 1..=10 {
         test_external_api_inner(logn, &mut rng);
@@ -87,18 +210,159 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
         if r != 0 {
             panic!("keygen failed: {}", r);
         }
-        // pk2.fill(0xFF);
-        // r = falcon_make_public(pk2.as_mut_slice(), pk_len, sk.as_mut_slice(), pk_len, tmpmp.as_mut_slice(), tmpmp_len);
-        // if r != 0 {
-        //     panic!("makepub failed: {}", r);
-        // }
-        // assert_eq!(pk, pk2, "pub / repub");
+        pk2.fill(0xFF);
+        r = falcon_make_public(sk.as_mut_slice(), sk_len, pk2.as_mut_slice(), pk_len, tmpmp.as_mut_slice(), tmpmp_len);
+        if r != 0 {
+            panic!("makepub failed: {}", r);
+        }
+        assert_eq!(pk, pk2, "pub / repub");
 
         r = falcon_get_logn(pk.as_mut_slice(), pk_len);
         if r != logn as i32 {
             panic!("get_logn failed: {}", r);
         }
+        /*
+        sig.fill(0);
+        let mut data = "data1";
+        let data_bytes = unsafe { data.as_bytes_mut() };
+        r = falcon_sign_dyn(&mut rng, sig.as_mut_slice(), sig_len,
+                            FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
+                            data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
+        if r != 0 {
+            panic!("sign_dyn failed: {}", r);
+        }
+        r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify failed: {}", r);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+            r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != 6 {
+                panic!("wrong verify error: {}", r);
+            }
+        }
 
+        sigpad.fill(0);
+        r = falcon_sign_dyn(&mut rng, sigpad.as_mut_slice(), sigpad_len,
+                            FALCON_SIG_PADDED, sk.as_mut_slice(), sk_len,
+                            data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
+        if r != 0 {
+            panic!("sign_dyn(padded) failed: {}", r);
+        }
+        if sigpad_len != falcon_sig_padded_size!(logn) {
+            panic!("sign_dyn(padded): wrong length {}", sigpad_len);
+        }
+        r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify(padded) failed: {}", r);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+            r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != 6 {
+                panic!("wrong verify(padded) error: {}", r);
+            }
+        }
+
+        sigct.fill(0);
+        r = falcon_sign_dyn(&mut rng, sigct.as_mut_slice(), sigct_len,
+                            FALCON_SIG_CT, sk.as_mut_slice(), sk_len,
+                            data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
+        if r != 0 {
+            panic!("sign_dyn(ct) failed: {}", r);
+        }
+        r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify(ct) failed: {}", r);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+            r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != 6 {
+                panic!("wrong verify(ct) error: {}", r);
+            }
+        }
+
+        r = falcon_expand_privatekey(expkey.as_mut_slice(), expkey_len, sk.as_mut_slice(), sk_len, tmpek.as_mut_slice(), tmpek_len);
+        if r != 0 {
+            panic!("expand_privatekey failed: {}", r);
+        }
+
+        sig.fill(0);
+        r = falcon_sign_tree(&mut rng, sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
+        if r != 0 {
+            panic!("sign_tree failed: {}", r);
+        }
+        r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify2 failed: {}", r);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+            r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != 6 {
+                panic!("wrong verify(ct) error: {}", r);
+            }
+        }
+
+        sigpad.fill(0);
+        r = falcon_sign_tree(&mut rng, sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
+        if r != 0 {
+            panic!("sign_tree(padded) failed: {}", r);
+        }
+        r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify2(padded) failed: {}", r);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+            r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != 6 {
+                panic!("wrong verify(padded) error: {}", r);
+            }
+        }
+
+        sigct.fill(0);
+        r = falcon_sign_tree(&mut rng, sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
+        if r != 0 {
+            panic!("sign_tree(ct) failed: {}", r);
+        }
+        r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify2(ct) failed: {}", r);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+            r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != 6 {
+                panic!("wrong verify(ct) error: {}", r);
+            }
+        } */
         print!(".");
     }
 }
@@ -209,6 +473,7 @@ pub(crate) fn test_rng() {
     i_shake256_inject(&mut rng, "rng".as_bytes());
     i_shake256_flip(&mut rng);
     prng_init(&mut prng, &mut rng);
+    println!("{:?}", prng.buf);
     for u in 0..KAT_RNG_1.len() {
         let value = prng_get_u64(&mut prng);
         if KAT_RNG_1[u] != value {
