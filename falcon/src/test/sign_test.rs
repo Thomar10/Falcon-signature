@@ -2,6 +2,7 @@
 mod tests {
     use std::ffi::c_void;
     use rand::Rng;
+    use crate::codec::{max_fg_bits, max_FG_bits, trim_i8_decode, trim_i8_encode};
     use crate::falcon_c::sign_c::{ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, smallints_to_fpr_func as smallints_to_fpr_c, skoff_b00_func as skoff_b00_c, skoff_b01_func as skoff_b01_c, skoff_b10_func as skoff_b10_c, skoff_b11_func as skoff_b11_c, skoff_tree_func as skoff_tree_c, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, BerExp_func as BerExpC, SamplerContext as SamplerContextC, falcon_inner_sampler as sampler_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, falcon_inner_sign_dyn};
     use crate::falcon_c::rng_c::{Prng as PrngC};
     use crate::fpr::{fpr_add, fpr_div, fpr_half, FPR_INV_SIGMA, fpr_of, FPR_SIGMA_MIN};
@@ -10,6 +11,7 @@ mod tests {
     use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC, St as StC};
     use crate::sign::{expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, gaussian0_sampler, skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr, BerExp, SamplerContext, sampler, ffSampling_fft_dyntree, sign_dyn, sign_dyn_same};
     use crate::test::rng_test::tests::{create_random_prngs, init_prngs};
+    use crate::vrfy::complete_private;
 
     #[allow(non_snake_case)]
     #[test]
@@ -388,13 +390,28 @@ mod tests {
             const LOGN: usize = 10;
             const N: usize = 1 << LOGN;
 
+            const CRYPTO_SECRETKEYBYTES: usize = 1281;
+
             let mut sig: [i16; 1024] = core::array::from_fn(|_| rng.gen::<i16>());
-            let mut f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
-            let mut g: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
-            let mut F: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
-            let mut G: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+            let mut sk: [u8; CRYPTO_SECRETKEYBYTES] = core::array::from_fn(|_| rng.gen::<u8>());
+            let mut f: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
+            let mut g: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
+            let mut F: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
+            let mut G: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
             //let mut hm: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
             let mut tmp: [u8; 72 * 1024] = [0; 72 * 1024];
+
+            let mut u = 1;
+            let mut offset: usize = trim_i8_decode(&mut f, 10, max_fg_bits[10] as u32, &mut sk, u, CRYPTO_SECRETKEYBYTES - u);
+
+            u += offset;
+            offset = trim_i8_decode(&mut g, 10, max_fg_bits[10] as u32, &mut sk, u, CRYPTO_SECRETKEYBYTES - u);
+
+            u += offset;
+            offset = trim_i8_decode(&mut F, 10, max_FG_bits[10] as u32, &mut sk, u, CRYPTO_SECRETKEYBYTES - u);
+
+            u+= offset;
+            complete_private(&mut G, &mut f, &mut g, &mut F, 10, &mut tmp);
 
             let a: [u64; 25] = core::array::from_fn(|_| rng.gen::<u64>());
             let mut ctx: InnerShake256Context = InnerShake256Context{st: St {a }, dptr: 0};
