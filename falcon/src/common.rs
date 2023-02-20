@@ -1,4 +1,4 @@
-const L2BOUND: [u3; 11] = [
+const L2BOUND: [u32; 11] = [
     0,    /* unused */
     101498,
     208714,
@@ -14,14 +14,14 @@ const L2BOUND: [u3; 11] = [
 
 pub fn is_short_half(mut sqn: u32, s2: &[i16], logn: u32) -> bool {
     let n: usize = 1 << logn;
-    let mut ng: u32 = (-(sqn >> 31) as i32) as u32;
+    let mut ng: u32 = -((sqn >> 31) as i32) as u32;
 
     for u in 0..n {
         let z: i32 = s2[u] as i32;
         sqn += (z * z) as u32;
         ng |= sqn;
     }
-    sqn |= -(ng >> 31);
+    sqn |= -((ng >> 31) as i32) as u32;
 
-    return sqn <= L2BOUND[logn];
+    return sqn <= L2BOUND[logn as usize];
 }

@@ -2,15 +2,13 @@
 mod tests {
     use std::ffi::c_void;
     use rand::Rng;
-    use crate::falcon_c::sign_c::{ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, smallints_to_fpr_func as smallints_to_fpr_c, skoff_b00_func as skoff_b00_c, skoff_b01_func as skoff_b01_c, skoff_b10_func as skoff_b10_c, skoff_b11_func as skoff_b11_c, skoff_tree_func as skoff_tree_c, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, BerExp_func as BerExpC, SamplerContext as SamplerContextC, falcon_inner_sampler as sampler_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c};
+    use crate::falcon_c::sign_c::{ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, smallints_to_fpr_func as smallints_to_fpr_c, skoff_b00_func as skoff_b00_c, skoff_b01_func as skoff_b01_c, skoff_b10_func as skoff_b10_c, skoff_b11_func as skoff_b11_c, skoff_tree_func as skoff_tree_c, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, BerExp_func as BerExpC, SamplerContext as SamplerContextC, falcon_inner_sampler as sampler_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, falcon_inner_sign_dyn};
     use crate::falcon_c::rng_c::{Prng as PrngC};
     use crate::fpr::{fpr_add, fpr_div, fpr_half, FPR_INV_SIGMA, fpr_of, FPR_SIGMA_MIN};
     use crate::rng::Prng;
-    use crate::sign::{expand_privkey,
-                      ffLDL_binary_normalize,
-                      ffLDL_fft, ffLDL_fft_inner,
-                      ffLDL_treesize, gaussian0_sampler,
-                      skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr, BerExp, SamplerContext, sampler, ffSampling_fft_dyntree};
+    use crate::shake::{InnerShake256Context, St};
+    use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC, St as StC};
+    use crate::sign::{expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, gaussian0_sampler, skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr, BerExp, SamplerContext, sampler, ffSampling_fft_dyntree, sign_dyn, sign_dyn_same};
     use crate::test::rng_test::tests::{create_random_prngs, init_prngs};
 
     #[allow(non_snake_case)]
@@ -366,9 +364,9 @@ mod tests {
             let g11_c: [fpr; N] = t0.clone();
             let tmp_c: [fpr; 32 * N] = [0; 32 * N];
 
-            /*ffSampling_fft_dyntree(sampler, &mut samp_ctx, &mut t0, &mut t1, &mut g00,
+            ffSampling_fft_dyntree(sampler, &mut samp_ctx, &mut t0, &mut t1, &mut g00,
                                    &mut g01, &mut g11, orig_logn as u32,
-                                   orig_logn as u32, &mut tmp);*/
+                                   orig_logn as u32, &mut tmp);
 
             unsafe {
                 ffSampling_fft_dyntree_c(sampler_c, &mut samp_ctx_c as *mut _ as *const c_void,
@@ -378,6 +376,35 @@ mod tests {
             }
 
             assert_eq!(tmp, tmp_c);
+        }
+    }
+
+    #[test]
+    fn test_sign_dyn() {
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..100 {
+
+            const LOGN: usize = 10;
+            const N: usize = 1 << LOGN;
+
+            let mut sig: [i16; 1024] = core::array::from_fn(|_| rng.gen::<i16>());
+            let mut f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+            let mut g: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+            let mut F: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+            let mut G: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+            //let mut hm: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
+            let mut tmp: [u8; 72 * 1024] = [0; 72 * 1024];
+
+            let a: [u64; 25] = core::array::from_fn(|_| rng.gen::<u64>());
+            let mut ctx: InnerShake256Context = InnerShake256Context{st: St {a }, dptr: 0};
+            let ctx_c: InnerShake256ContextC = InnerShake256ContextC{st: StC {a}, dptr: 0};
+
+            //sign_dyn_same(&mut sig, &mut ctx, &f, &g, &F, &G, LOGN as u32, &mut tmp);
+
+            unsafe {
+                falcon_inner_sign_dyn(sig.as_ptr(), &ctx_c as *const InnerShake256ContextC, f.as_ptr(), g.as_ptr(), F.as_ptr(), G.as_ptr(), sig.as_ptr(), LOGN as u32, tmp.as_ptr())
+            }
         }
     }
 

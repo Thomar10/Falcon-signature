@@ -767,9 +767,9 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
 	falcon_inner_poly_mul_fft(t1, b01, logn);
-	poly_mulconst(t1, fpr_neg(ni), logn);
+	falcon_inner_poly_mulconst(t1, fpr_neg(ni), logn);
 	falcon_inner_poly_mul_fft(t0, b11, logn);
-	poly_mulconst(t0, ni, logn);
+	falcon_inner_poly_mulconst(t0, ni, logn);
 
 	tx = t1 + n;
 	ty = tx + n;
@@ -794,8 +794,8 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	falcon_inner_poly_mul_fft(t1, b11, logn);
 	falcon_inner_poly_add(t1, ty, logn);
 
-	iFFT(t0, logn);
-	iFFT(t1, logn);
+	falcon_inner_iFFT(t0, logn);
+	falcon_inner_iFFT(t1, logn);
 
 	/*
 	 * Compute the signature.
@@ -953,9 +953,9 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
 	falcon_inner_poly_mul_fft(t1, b01, logn);
-	poly_mulconst(t1, fpr_neg(ni), logn);
+	falcon_inner_poly_mulconst(t1, fpr_neg(ni), logn);
 	falcon_inner_poly_mul_fft(t0, b11, logn);
-	poly_mulconst(t0, ni, logn);
+	falcon_inner_poly_mulconst(t0, ni, logn);
 
 	/*
 	 * b01 and b11 can be discarded, so we move back (t0,t1).
@@ -1013,8 +1013,8 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	memcpy(t0, tx, n * sizeof *tx);
 	falcon_inner_poly_mul_fft(t1, b11, logn);
 	falcon_inner_poly_add(t1, ty, logn);
-	iFFT(t0, logn);
-	iFFT(t1, logn);
+	falcon_inner_iFFT(t0, logn);
+	falcon_inner_iFFT(t1, logn);
 
 	s1tmp = (int16_t *)tx;
 	sqn = 0;
