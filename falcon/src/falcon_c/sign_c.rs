@@ -44,7 +44,7 @@ extern "C" {
     #[allow(dead_code)]
     pub fn falcon_inner_sign_tree(sig: *const i16, rng: *const InnerShake256Context, expanded_key: *const fpr, hm: *const u16, logn: u32, tmp: *const u8);
     #[allow(dead_code)]
-    pub fn falcon_inner_sign_dyn(sig: *const i16, rng: *const InnerShake256Context, f: *const i8, g: *const i8, F: *const i8, G: *const i8, hm: *const i16, logn: u32, tmp: *const u8);
+    pub fn falcon_inner_sign_dyn(sig: *const i16, rng: *const InnerShake256Context, f: *const i8, g: *const i8, F: *const i8, G: *const i8, hm: *const u16, logn: u32, tmp: *const u8);
 }
 
 #[allow(non_camel_case_types)]

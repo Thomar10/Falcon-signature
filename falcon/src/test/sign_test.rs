@@ -9,9 +9,12 @@ mod tests {
     use crate::rng::Prng;
     use crate::shake::{InnerShake256Context, St};
     use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC, St as StC};
+    use crate::falcon_tmpsize_keygen;
+    use crate::keygen::keygen;
     use crate::sign::{expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, gaussian0_sampler, skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr, BerExp, SamplerContext, sampler, ffSampling_fft_dyntree, sign_dyn, sign_dyn_same};
     use crate::test::rng_test::tests::{create_random_prngs, init_prngs};
     use crate::vrfy::complete_private;
+    use crate::test::keygen_test::tests::{init_shake_with_random_context};
 
     #[allow(non_snake_case)]
     #[test]
@@ -385,43 +388,45 @@ mod tests {
     fn test_sign_dyn() {
         let mut rng = rand::thread_rng();
 
-        for _ in 0..100 {
+        for _ in 0..2 {
 
             const LOGN: usize = 10;
             const N: usize = 1 << LOGN;
 
-            const CRYPTO_SECRETKEYBYTES: usize = 1281;
+            let buffer_size: usize = falcon_tmpsize_keygen!(LOGN);
+            let (mut rng_rust, rng_c) = init_shake_with_random_context();
 
-            let mut sig: [i16; 1024] = core::array::from_fn(|_| rng.gen::<i16>());
-            let mut sk: [u8; CRYPTO_SECRETKEYBYTES] = core::array::from_fn(|_| rng.gen::<u8>());
-            let mut f: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
-            let mut g: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
-            let mut F: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
-            let mut G: [i8; 1024] = [0; 1024]; //core::array::from_fn(|_| rng.gen::<i8>());
-            //let mut hm: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
-            let mut tmp: [u8; 72 * 1024] = [0; 72 * 1024];
+            let mut sig: [i16; 1024] = [0; 1024];
+            let sig_c: [i16; 1024] = [0; 1024];
+            let mut h: [u16; 1024] = [0; 1024];
+            let h_c: [u16; 1024] = [0; 1024];
+            let mut f: [i8; 1024] = [0; 1024];
+            let f_c: [i8; 1024] = [0; 1024];
+            let mut g: [i8; 1024] = [0; 1024];
+            let g_c: [i8; 1024] = [0; 1024];
+            let mut F: [i8; 1024] = [0; 1024];
+            let F_c: [i8; 1024] = [0; 1024];
+            let mut G: [i8; 1024] = [0; 1024];
+            let G_c: [i8; 1024] = [0; 1024];
 
-            let mut u = 1;
-            let mut offset: usize = trim_i8_decode(&mut f, 10, max_fg_bits[10] as u32, &mut sk, u, CRYPTO_SECRETKEYBYTES - u);
+            let mut tmp: Vec<u8> = vec![0; buffer_size];
+            let tmp_c: Vec<u8> = vec![0; buffer_size];
 
-            u += offset;
-            offset = trim_i8_decode(&mut g, 10, max_fg_bits[10] as u32, &mut sk, u, CRYPTO_SECRETKEYBYTES - u);
+            let mut hm: [u16; 1024] = core::array::from_fn(|_| rng.gen::<u16>());
+            let hm_c: [u16; 1024] = hm.clone();
 
-            u += offset;
-            offset = trim_i8_decode(&mut F, 10, max_FG_bits[10] as u32, &mut sk, u, CRYPTO_SECRETKEYBYTES - u);
+            keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), LOGN as u32, tmp.as_mut_ptr());
 
-            u+= offset;
-            complete_private(&mut G, &mut f, &mut g, &mut F, 10, &mut tmp);
 
-            let a: [u64; 25] = core::array::from_fn(|_| rng.gen::<u64>());
-            let mut ctx: InnerShake256Context = InnerShake256Context{st: St {a }, dptr: 0};
-            let ctx_c: InnerShake256ContextC = InnerShake256ContextC{st: StC {a}, dptr: 0};
 
-            //sign_dyn_same(&mut sig, &mut ctx, &f, &g, &F, &G, LOGN as u32, &mut tmp);
+            //sign_dyn_same(&mut sig, &mut rng_rust, &f, &g, &F, &G, LOGN as u32, &mut tmp);
+            //sign_dyn(&mut sig, &mut rng_rust, &f, &g, &F, &G, &mut h, LOGN as u32, &mut tmp);
 
             unsafe {
-                falcon_inner_sign_dyn(sig.as_ptr(), &ctx_c as *const InnerShake256ContextC, f.as_ptr(), g.as_ptr(), F.as_ptr(), G.as_ptr(), sig.as_ptr(), LOGN as u32, tmp.as_ptr())
+                falcon_inner_sign_dyn(sig_c.as_ptr(), &rng_c as *const InnerShake256ContextC, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), hm_c.as_ptr(), LOGN as u32, tmp_c.as_ptr())
             }
+
+            assert_eq!(sig, sig_c);
         }
     }
 

@@ -1,4 +1,5 @@
 use std::mem;
+use bytemuck;
 use crate::common::is_short_half;
 use crate::fft::{fft, ifft, poly_add, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
 use crate::fpr::{fpr_mul, fpr_sqrt, FPR_INV_SIGMA, fpr_of, fpr_floor, fpr_sub, fpr_half, fpr_sqr, FPR_INV_2SQRSIGMA0, fpr_trunc, FPR_INV_LOG2, FPR_LOG2, fpr_expm_p63, FPR_INVERSE_OF_Q, fpr_neg, fpr_rint, FPR_SIGMA_MIN, fpr_add, FPR_INVSQRT8, FPR_INVSQRT2};
@@ -207,10 +208,10 @@ pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0:
     g00[..hn].copy_from_slice(tmp0);
     g00[hn..].copy_from_slice(&tmp1[..hn]);
     poly_split_fft(tmp0, tmp1, g11, logn);
-    g11.copy_from_slice(&tmp[..n]);
-    tmp[..n].copy_from_slice(g01);
+    g11[..n].copy_from_slice(&tmp[..n]);
+    tmp[..n].copy_from_slice(&g01[..n]);
     g01[..hn].copy_from_slice(&g00[..hn]);
-    g01[hn..].copy_from_slice(&g11[..hn]);
+    g01[hn..2*hn].copy_from_slice(&g11[..hn]);
 
     let (z10, z11) = tmp.split_at_mut(hn);
     poly_split_fft(z10, &mut z11[..hn], t1, logn);
@@ -604,16 +605,7 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     ifft(t0, logn);
     ifft(t1, logn);
 
-    let (s1tmpf, s2tmpf) = tmp.split_at_mut(6*n);
-    let s1tmp: &mut [i16];
-    unsafe {
-        s1tmp =  mem::transmute(s1tmpf);
-    }
-    let (s1tmp, t0i) = s1tmp.split_at_mut(4*4*n); //s1tmp now has 4 times as many indices and t0 was previously located at 4*n
-    let t0: &mut [fpr];
-    unsafe {
-        t0 = mem::transmute(t0i);
-    }
+    let s1tmp: &mut [i16] = bytemuck::cast_slice_mut(tx);
 
     let mut sqn = 0;
     let mut ng = 0;
@@ -626,10 +618,7 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     }
     sqn |= -((ng >> 31) as i32) as u32;
 
-    let s2tmp: &mut [i16];
-    unsafe {
-        s2tmp = mem::transmute(s2tmpf);
-    }
+    let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(b00);
 
     let t1 = &t0[n..];
     for u in 0..n {
@@ -638,11 +627,8 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
 
     if is_short_half(sqn, s2tmp, logn) > 0 {
         s2.copy_from_slice(&s2tmp[..n]);
-        let tmpi: &mut [i16];
-        unsafe {
-            tmpi = mem::transmute(tmp);
-        }
-        tmpi.copy_from_slice(&s1tmp[..n]);
+        let tmpi: &mut [i16] = bytemuck::cast_slice_mut(b00);
+        tmpi[..n].copy_from_slice(&s1tmp[..n]);
         return true;
     }
     return false;
@@ -753,16 +739,10 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     ifft(t0, logn);
     ifft(t1, logn);
 
-    let (s1tmpf, s2tmpf) = tmp.split_at_mut(6*n);
-    let s1tmp: &mut [i16];
-    unsafe {
-        s1tmp =  mem::transmute(s1tmpf);
-    }
-    let (s1tmp, t0i) = s1tmp.split_at_mut(4*4*n); //s1tmp now has 4 times as many indices and t0 was previously located at 4*n
-    let t0: &mut [fpr];
-    unsafe {
-        t0 = mem::transmute(t0i);
-    }
+    //let (s1tmpf, s2tmpf) = tmp.split_at_mut(6*n);
+    let s1tmp: &mut [i16] = bytemuck::cast_slice_mut(tx);
+    //let (s1tmp, t0i) = s1tmp.split_at_mut(4*4*n); //s1tmp now has 4 times as many indices and t0 was previously located at 4*n
+    //let t0: &mut [fpr] = bytemuck::cast_slice_mut(t0i);
 
     let mut sqn = 0;
     let mut ng = 0;
@@ -775,23 +755,16 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     }
     sqn |= -((ng >> 31) as i32) as u32;
 
-    let s2tmp: &mut [i16];
-    unsafe {
-        s2tmp = mem::transmute(s2tmpf);
-    }
+    let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(b00);
 
-    let t1 = &t0[n..];
     for u in 0..n {
         s2tmp[u] = -fpr_rint(t1[u]) as i16;
     }
 
     if is_short_half(sqn, s2tmp, logn) > 0 {
         s2.copy_from_slice(&s2tmp[..n]);
-        let tmpi: &mut [i16];
-        unsafe {
-            tmpi = mem::transmute(tmp);
-        }
-        tmpi.copy_from_slice(&s1tmp[..n]);
+        let tmpi: &mut [i16] = bytemuck::cast_slice_mut(b00);
+        tmpi[..n].copy_from_slice(&s1tmp[..n]);
         return true;
     }
     return false;
