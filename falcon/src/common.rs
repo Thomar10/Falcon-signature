@@ -1,6 +1,34 @@
 use std::slice::from_raw_parts_mut;
 use crate::shake::{i_shake256_extract, InnerShake256Context};
 
+const L2BOUND: [u32; 11] = [
+    0,
+    101498,
+    208714,
+    428865,
+    892039,
+    1852696,
+    3842630,
+    7959734,
+    16468416,
+    34034726,
+    70265242
+];
+
+const OVERTAB: [u16; 11] = [
+    0,
+    65,
+    67,
+    71,
+    77,
+    86,
+    100,
+    122,
+    154,
+    205,
+    287
+];
+
 pub fn hash_to_point_vartime(sc: &mut InnerShake256Context, x: &mut [u16], logn: u32) {
     let mut n = 1usize << logn;
     let mut index = 0;
@@ -125,31 +153,3 @@ pub fn is_short_half(mut sqn: u32, s2: &mut [i16], logn: u32) -> i32 {
 
     (sqn <= L2BOUND[logn as usize]) as i32
 }
-
-const L2BOUND: [u32; 11] = [
-    0,
-    101498,
-    208714,
-    428865,
-    892039,
-    1852696,
-    3842630,
-    7959734,
-    16468416,
-    34034726,
-    70265242
-];
-
-const OVERTAB: [u16; 11] = [
-    0,
-    65,
-    67,
-    71,
-    77,
-    86,
-    100,
-    122,
-    154,
-    205,
-    287
-];

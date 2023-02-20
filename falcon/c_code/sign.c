@@ -64,6 +64,10 @@ ffLDL_treesize(unsigned logn)
 	return (logn + 1) << logn;
 }
 
+unsigned ffLDL_treesize_func(unsigned logn) {
+    return ffLDL_treesize(logn);
+}
+
 /*
  * Inner function for ffLDL_fft(). It expects the matrix to be both
  * auto-adjoint and quasicyclic; also, it uses the source operands
@@ -89,7 +93,7 @@ ffLDL_fft_inner(fpr *restrict tree,
 	 * and the diagonal of D. Since d00 = g0, we just write d11
 	 * into tmp.
 	 */
-	poly_LDLmv_fft(tmp, tree, g0, g1, g0, logn);
+	falcon_inner_poly_LDLmv_fft(tmp, tree, g0, g1, g0, logn);
 
 	/*
 	 * Split d00 (currently in g0) and d11 (currently in tmp). We
@@ -97,8 +101,8 @@ ffLDL_fft_inner(fpr *restrict tree,
 	 *   d00 splits into g1, g1+hn
 	 *   d11 splits into g0, g0+hn
 	 */
-	poly_split_fft(g1, g1 + hn, g0, logn);
-	poly_split_fft(g0, g0 + hn, tmp, logn);
+	falcon_inner_poly_split_fft(g1, g1 + hn, g0, logn);
+	falcon_inner_poly_split_fft(g0, g0 + hn, tmp, logn);
 
 	/*
 	 * Each split result is the first row of a new auto-adjoint
@@ -108,6 +112,12 @@ ffLDL_fft_inner(fpr *restrict tree,
 		g1, g1 + hn, logn - 1, tmp);
 	ffLDL_fft_inner(tree + n + ffLDL_treesize(logn - 1),
 		g0, g0 + hn, logn - 1, tmp);
+}
+
+void
+ffLDL_fft_inner_func(fpr *restrict tree,
+	fpr *restrict g0, fpr *restrict g1, unsigned logn, fpr *restrict tmp) {
+    return ffLDL_fft_inner(tree, g0, g1, logn, tmp);
 }
 
 /*
@@ -140,15 +150,23 @@ ffLDL_fft(fpr *restrict tree, const fpr *restrict g00,
 	tmp += n << 1;
 
 	memcpy(d00, g00, n * sizeof *g00);
-	poly_LDLmv_fft(d11, tree, g00, g01, g11, logn);
+	falcon_inner_poly_LDLmv_fft(d11, tree, g00, g01, g11, logn);
 
-	poly_split_fft(tmp, tmp + hn, d00, logn);
-	poly_split_fft(d00, d00 + hn, d11, logn);
+	falcon_inner_poly_split_fft(tmp, tmp + hn, d00, logn);
+	falcon_inner_poly_split_fft(d00, d00 + hn, d11, logn);
 	memcpy(d11, tmp, n * sizeof *tmp);
 	ffLDL_fft_inner(tree + n,
 		d11, d11 + hn, logn - 1, tmp);
 	ffLDL_fft_inner(tree + n + ffLDL_treesize(logn - 1),
 		d00, d00 + hn, logn - 1, tmp);
+}
+
+void
+ffLDL_fft_func(fpr *restrict tree, const fpr *restrict g00,
+	const fpr *restrict g01, const fpr *restrict g11,
+	unsigned logn, fpr *restrict tmp)
+{
+    return ffLDL_fft(tree, g00, g01, g11, logn, tmp);
 }
 
 /*
@@ -178,6 +196,11 @@ ffLDL_binary_normalize(fpr *tree, unsigned orig_logn, unsigned logn)
 	}
 }
 
+void
+ffLDL_binary_normalize_func(fpr *tree, unsigned orig_logn, unsigned logn) {
+    return ffLDL_binary_normalize(tree, orig_logn, logn);
+}
+
 /* =================================================================== */
 
 /*
@@ -195,6 +218,10 @@ smallints_to_fpr(fpr *r, const int8_t *t, unsigned logn)
 	}
 }
 
+void smallints_to_fpr_func(fpr *r, const int8_t *t, unsigned logn) {
+    return smallints_to_fpr(r, t, logn);
+}
+
 /*
  * The expanded private key contains:
  *  - The B0 matrix (four elements)
@@ -208,10 +235,22 @@ skoff_b00(unsigned logn)
 	return 0;
 }
 
+size_t
+skoff_b00_func(unsigned logn)
+{
+	return skoff_b00(logn);
+}
+
 static inline size_t
 skoff_b01(unsigned logn)
 {
 	return MKN(logn);
+}
+
+size_t
+skoff_b01_func(unsigned logn)
+{
+	return skoff_b01(logn);
 }
 
 static inline size_t
@@ -220,10 +259,22 @@ skoff_b10(unsigned logn)
 	return 2 * MKN(logn);
 }
 
+size_t
+skoff_b10_func(unsigned logn)
+{
+	return skoff_b10(logn);
+}
+
 static inline size_t
 skoff_b11(unsigned logn)
 {
 	return 3 * MKN(logn);
+}
+
+size_t
+skoff_b11_func(unsigned logn)
+{
+	return skoff_b11(logn);
 }
 
 static inline size_t
@@ -232,9 +283,15 @@ skoff_tree(unsigned logn)
 	return 4 * MKN(logn);
 }
 
+size_t
+skoff_tree_func(unsigned logn)
+{
+	return skoff_tree(logn);
+}
+
 /* see inner.h */
 void
-Zf(expand_privkey)(fpr *restrict expanded_key,
+falcon_inner_expand_privkey(fpr *restrict expanded_key,
 	const int8_t *f, const int8_t *g,
 	const int8_t *F, const int8_t *G,
 	unsigned logn, uint8_t *restrict tmp)
@@ -269,12 +326,12 @@ Zf(expand_privkey)(fpr *restrict expanded_key,
 	/*
 	 * Compute the FFT for the key elements, and negate f and F.
 	 */
-	FFT(rf, logn);
-	FFT(rg, logn);
-	FFT(rF, logn);
-	FFT(rG, logn);
-	poly_neg(rf, logn);
-	poly_neg(rF, logn);
+	falcon_inner_FFT(rf, logn);
+	falcon_inner_FFT(rg, logn);
+	falcon_inner_FFT(rF, logn);
+	falcon_inner_FFT(rG, logn);
+	falcon_inner_poly_neg(rf, logn);
+	falcon_inner_poly_neg(rF, logn);
 
 	/*
 	 * The Gram matrix is G = B·B*. Formulas are:
@@ -292,22 +349,22 @@ Zf(expand_privkey)(fpr *restrict expanded_key,
 	gxx = g11 + n;
 
 	memcpy(g00, b00, n * sizeof *b00);
-	poly_mulselfadj_fft(g00, logn);
+	falcon_inner_poly_mulselfadj_fft(g00, logn);
 	memcpy(gxx, b01, n * sizeof *b01);
-	poly_mulselfadj_fft(gxx, logn);
-	poly_add(g00, gxx, logn);
+	falcon_inner_poly_mulselfadj_fft(gxx, logn);
+	falcon_inner_poly_add(g00, gxx, logn);
 
 	memcpy(g01, b00, n * sizeof *b00);
-	poly_muladj_fft(g01, b10, logn);
+	falcon_inner_poly_muladj_fft(g01, b10, logn);
 	memcpy(gxx, b01, n * sizeof *b01);
-	poly_muladj_fft(gxx, b11, logn);
-	poly_add(g01, gxx, logn);
+	falcon_inner_poly_muladj_fft(gxx, b11, logn);
+	falcon_inner_poly_add(g01, gxx, logn);
 
 	memcpy(g11, b10, n * sizeof *b10);
-	poly_mulselfadj_fft(g11, logn);
+	falcon_inner_poly_mulselfadj_fft(g11, logn);
 	memcpy(gxx, b11, n * sizeof *b11);
-	poly_mulselfadj_fft(gxx, logn);
-	poly_add(g11, gxx, logn);
+	falcon_inner_poly_mulselfadj_fft(gxx, logn);
+	falcon_inner_poly_add(g11, gxx, logn);
 
 	/*
 	 * Compute the Falcon tree.
@@ -359,15 +416,15 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * Decompose G into LDL. We only need d00 (identical to g00),
 	 * d11, and l10; we do that in place.
 	 */
-	poly_LDL_fft(g00, g01, g11, logn);
+	falcon_inner_poly_LDL_fft(g00, g01, g11, logn);
 
 	/*
 	 * Split d00 and d11 and expand them into half-size quasi-cyclic
 	 * Gram matrices. We also save l10 in tmp[].
 	 */
-	poly_split_fft(tmp, tmp + hn, g00, logn);
+	falcon_inner_poly_split_fft(tmp, tmp + hn, g00, logn);
 	memcpy(g00, tmp, n * sizeof *tmp);
-	poly_split_fft(tmp, tmp + hn, g11, logn);
+	falcon_inner_poly_split_fft(tmp, tmp + hn, g11, logn);
 	memcpy(g11, tmp, n * sizeof *tmp);
 	memcpy(tmp, g01, n * sizeof *g01);
 	memcpy(g01, g00, hn * sizeof *g00);
@@ -387,10 +444,10 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * back into tmp + 2*n.
 	 */
 	z1 = tmp + n;
-	poly_split_fft(z1, z1 + hn, t1, logn);
+	falcon_inner_poly_split_fft(z1, z1 + hn, t1, logn);
 	ffSampling_fft_dyntree(samp, samp_ctx, z1, z1 + hn,
 		g11, g11 + hn, g01 + hn, orig_logn, logn - 1, z1 + n);
-	poly_merge_fft(tmp + (n << 1), z1, z1 + hn, logn);
+	falcon_inner_poly_merge_fft(tmp + (n << 1), z1, z1 + hn, logn);
 
 	/*
 	 * Compute tb0 = t0 + (t1 - z1) * l10.
@@ -400,20 +457,29 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 * In the end, z1 is written over t1, and tb0 is in t0.
 	 */
 	memcpy(z1, t1, n * sizeof *t1);
-	poly_sub(z1, tmp + (n << 1), logn);
+	falcon_inner_poly_sub(z1, tmp + (n << 1), logn);
 	memcpy(t1, tmp + (n << 1), n * sizeof *tmp);
-	poly_mul_fft(tmp, z1, logn);
-	poly_add(t0, tmp, logn);
+	falcon_inner_poly_mul_fft(tmp, z1, logn);
+	falcon_inner_poly_add(t0, tmp, logn);
 
 	/*
 	 * Second recursive invocation, on the split tb0 (currently in t0)
 	 * and the left sub-tree.
 	 */
 	z0 = tmp;
-	poly_split_fft(z0, z0 + hn, t0, logn);
+	falcon_inner_poly_split_fft(z0, z0 + hn, t0, logn);
 	ffSampling_fft_dyntree(samp, samp_ctx, z0, z0 + hn,
 		g00, g00 + hn, g01, orig_logn, logn - 1, z0 + n);
-	poly_merge_fft(t0, z0, z0 + hn, logn);
+	falcon_inner_poly_merge_fft(t0, z0, z0 + hn, logn);
+}
+
+void
+ffSampling_fft_dyntree_func(samplerZ samp, void *samp_ctx,
+	fpr *restrict t0, fpr *restrict t1,
+	fpr *restrict g00, fpr *restrict g01, fpr *restrict g11,
+	unsigned orig_logn, unsigned logn, fpr *restrict tmp)
+{
+    return ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, orig_logn, logn, tmp);
 }
 
 /*
@@ -620,26 +686,35 @@ ffSampling_fft(samplerZ samp, void *samp_ctx,
 	 * the recursive invocation, with output in tmp. We finally
 	 * merge back into z1.
 	 */
-	poly_split_fft(z1, z1 + hn, t1, logn);
+	falcon_inner_poly_split_fft(z1, z1 + hn, t1, logn);
 	ffSampling_fft(samp, samp_ctx, tmp, tmp + hn,
 		tree1, z1, z1 + hn, logn - 1, tmp + n);
-	poly_merge_fft(z1, tmp, tmp + hn, logn);
+	falcon_inner_poly_merge_fft(z1, tmp, tmp + hn, logn);
 
 	/*
 	 * Compute tb0 = t0 + (t1 - z1) * L. Value tb0 ends up in tmp[].
 	 */
 	memcpy(tmp, t1, n * sizeof *t1);
-	poly_sub(tmp, z1, logn);
-	poly_mul_fft(tmp, tree, logn);
-	poly_add(tmp, t0, logn);
+	falcon_inner_poly_sub(tmp, z1, logn);
+	falcon_inner_poly_mul_fft(tmp, tree, logn);
+	falcon_inner_poly_add(tmp, t0, logn);
 
 	/*
 	 * Second recursive invocation.
 	 */
-	poly_split_fft(z0, z0 + hn, tmp, logn);
+	falcon_inner_poly_split_fft(z0, z0 + hn, tmp, logn);
 	ffSampling_fft(samp, samp_ctx, tmp, tmp + hn,
 		tree0, z0, z0 + hn, logn - 1, tmp + n);
-	poly_merge_fft(z0, tmp, tmp + hn, logn);
+	falcon_inner_poly_merge_fft(z0, tmp, tmp + hn, logn);
+}
+
+void
+ffSampling_fft_func(samplerZ samp, void *samp_ctx,
+	fpr *restrict z0, fpr *restrict z1,
+	const fpr *restrict tree,
+	const fpr *restrict t0, const fpr *restrict t1, unsigned logn,
+	fpr *restrict tmp) {
+    return ffSampling_fft(samp, samp_ctx, z0, z1, tree, t0, t1, logn, tmp);
 }
 
 /*
@@ -688,13 +763,13 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 * Apply the lattice basis to obtain the real target
 	 * vector (after normalization with regards to modulus).
 	 */
-	FFT(t0, logn);
+	falcon_inner_FFT(t0, logn);
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
-	poly_mul_fft(t1, b01, logn);
-	poly_mulconst(t1, fpr_neg(ni), logn);
-	poly_mul_fft(t0, b11, logn);
-	poly_mulconst(t0, ni, logn);
+	falcon_inner_poly_mul_fft(t1, b01, logn);
+	falcon_inner_poly_mulconst(t1, fpr_neg(ni), logn);
+	falcon_inner_poly_mul_fft(t0, b11, logn);
+	falcon_inner_poly_mulconst(t0, ni, logn);
 
 	tx = t1 + n;
 	ty = tx + n;
@@ -709,18 +784,18 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 */
 	memcpy(t0, tx, n * sizeof *tx);
 	memcpy(t1, ty, n * sizeof *ty);
-	poly_mul_fft(tx, b00, logn);
-	poly_mul_fft(ty, b10, logn);
-	poly_add(tx, ty, logn);
+	falcon_inner_poly_mul_fft(tx, b00, logn);
+	falcon_inner_poly_mul_fft(ty, b10, logn);
+	falcon_inner_poly_add(tx, ty, logn);
 	memcpy(ty, t0, n * sizeof *t0);
-	poly_mul_fft(ty, b01, logn);
+	falcon_inner_poly_mul_fft(ty, b01, logn);
 
 	memcpy(t0, tx, n * sizeof *tx);
-	poly_mul_fft(t1, b11, logn);
-	poly_add(t1, ty, logn);
+	falcon_inner_poly_mul_fft(t1, b11, logn);
+	falcon_inner_poly_add(t1, ty, logn);
 
-	iFFT(t0, logn);
-	iFFT(t1, logn);
+	falcon_inner_iFFT(t0, logn);
+	falcon_inner_iFFT(t1, logn);
 
 	/*
 	 * Compute the signature.
@@ -759,6 +834,15 @@ do_sign_tree(samplerZ samp, void *samp_ctx, int16_t *s2,
 	return 0;
 }
 
+int
+do_sign_tree_func(samplerZ samp, void *samp_ctx, int16_t *s2,
+	const fpr *restrict expanded_key,
+	const uint16_t *hm,
+	unsigned logn, fpr *restrict tmp)
+{
+    return do_sign_tree(samp, samp_ctx, s2, expanded_key, hm, logn, tmp);
+}
+
 /*
  * Compute a signature: the signature contains two vectors, s1 and s2.
  * The s1 vector is not returned. The squared norm of (s1,s2) is
@@ -794,12 +878,12 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	smallints_to_fpr(b00, g, logn);
 	smallints_to_fpr(b11, F, logn);
 	smallints_to_fpr(b10, G, logn);
-	FFT(b01, logn);
-	FFT(b00, logn);
-	FFT(b11, logn);
-	FFT(b10, logn);
-	poly_neg(b01, logn);
-	poly_neg(b11, logn);
+	falcon_inner_FFT(b01, logn);
+	falcon_inner_FFT(b00, logn);
+	falcon_inner_FFT(b11, logn);
+	falcon_inner_FFT(b10, logn);
+	falcon_inner_poly_neg(b01, logn);
+	falcon_inner_poly_neg(b11, logn);
 
 	/*
 	 * Compute the Gram matrix G = B·B*. Formulas are:
@@ -819,20 +903,20 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	t1 = t0 + n;
 
 	memcpy(t0, b01, n * sizeof *b01);
-	poly_mulselfadj_fft(t0, logn);    // t0 <- b01*adj(b01)
+	falcon_inner_poly_mulselfadj_fft(t0, logn);    // t0 <- b01*adj(b01)
 
 	memcpy(t1, b00, n * sizeof *b00);
-	poly_muladj_fft(t1, b10, logn);   // t1 <- b00*adj(b10)
-	poly_mulselfadj_fft(b00, logn);   // b00 <- b00*adj(b00)
-	poly_add(b00, t0, logn);      // b00 <- g00
+	falcon_inner_poly_muladj_fft(t1, b10, logn);   // t1 <- b00*adj(b10)
+	falcon_inner_poly_mulselfadj_fft(b00, logn);   // b00 <- b00*adj(b00)
+	falcon_inner_poly_add(b00, t0, logn);      // b00 <- g00
 	memcpy(t0, b01, n * sizeof *b01);
-	poly_muladj_fft(b01, b11, logn);  // b01 <- b01*adj(b11)
-	poly_add(b01, t1, logn);      // b01 <- g01
+	falcon_inner_poly_muladj_fft(b01, b11, logn);  // b01 <- b01*adj(b11)
+	falcon_inner_poly_add(b01, t1, logn);      // b01 <- g01
 
-	poly_mulselfadj_fft(b10, logn);   // b10 <- b10*adj(b10)
+	falcon_inner_poly_mulselfadj_fft(b10, logn);   // b10 <- b10*adj(b10)
 	memcpy(t1, b11, n * sizeof *b11);
-	poly_mulselfadj_fft(t1, logn);    // t1 <- b11*adj(b11)
-	poly_add(b10, t1, logn);      // b10 <- g11
+	falcon_inner_poly_mulselfadj_fft(t1, logn);    // t1 <- b11*adj(b11)
+	falcon_inner_poly_add(b10, t1, logn);      // b10 <- g11
 
 	/*
 	 * We rename variables to make things clearer. The three elements
@@ -865,13 +949,13 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 * Apply the lattice basis to obtain the real target
 	 * vector (after normalization with regards to modulus).
 	 */
-	FFT(t0, logn);
+	falcon_inner_FFT(t0, logn);
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
-	poly_mul_fft(t1, b01, logn);
-	poly_mulconst(t1, fpr_neg(ni), logn);
-	poly_mul_fft(t0, b11, logn);
-	poly_mulconst(t0, ni, logn);
+	falcon_inner_poly_mul_fft(t1, b01, logn);
+	falcon_inner_poly_mulconst(t1, fpr_neg(ni), logn);
+	falcon_inner_poly_mul_fft(t0, b11, logn);
+	falcon_inner_poly_mulconst(t0, ni, logn);
 
 	/*
 	 * b01 and b11 can be discarded, so we move back (t0,t1).
@@ -906,12 +990,12 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	smallints_to_fpr(b00, g, logn);
 	smallints_to_fpr(b11, F, logn);
 	smallints_to_fpr(b10, G, logn);
-	FFT(b01, logn);
-	FFT(b00, logn);
-	FFT(b11, logn);
-	FFT(b10, logn);
-	poly_neg(b01, logn);
-	poly_neg(b11, logn);
+	falcon_inner_FFT(b01, logn);
+	falcon_inner_FFT(b00, logn);
+	falcon_inner_FFT(b11, logn);
+	falcon_inner_FFT(b10, logn);
+	falcon_inner_poly_neg(b01, logn);
+	falcon_inner_poly_neg(b11, logn);
 	tx = t1 + n;
 	ty = tx + n;
 
@@ -920,17 +1004,17 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	 */
 	memcpy(tx, t0, n * sizeof *t0);
 	memcpy(ty, t1, n * sizeof *t1);
-	poly_mul_fft(tx, b00, logn);
-	poly_mul_fft(ty, b10, logn);
-	poly_add(tx, ty, logn);
+	falcon_inner_poly_mul_fft(tx, b00, logn);
+	falcon_inner_poly_mul_fft(ty, b10, logn);
+	falcon_inner_poly_add(tx, ty, logn);
 	memcpy(ty, t0, n * sizeof *t0);
-	poly_mul_fft(ty, b01, logn);
+	falcon_inner_poly_mul_fft(ty, b01, logn);
 
 	memcpy(t0, tx, n * sizeof *tx);
-	poly_mul_fft(t1, b11, logn);
-	poly_add(t1, ty, logn);
-	iFFT(t0, logn);
-	iFFT(t1, logn);
+	falcon_inner_poly_mul_fft(t1, b11, logn);
+	falcon_inner_poly_add(t1, ty, logn);
+	falcon_inner_iFFT(t0, logn);
+	falcon_inner_iFFT(t1, logn);
 
 	s1tmp = (int16_t *)tx;
 	sqn = 0;
@@ -966,12 +1050,21 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	return 0;
 }
 
+int
+do_sign_dyn_func(samplerZ samp, void *samp_ctx, int16_t *s2,
+	const int8_t *restrict f, const int8_t *restrict g,
+	const int8_t *restrict F, const int8_t *restrict G,
+	const uint16_t *hm, unsigned logn, fpr *restrict tmp)
+{
+    return do_sign_dyn(samp, samp_ctx, s2, f, g, F, G, hm, logn, tmp);
+}
+
 /*
  * Sample an integer value along a half-gaussian distribution centered
  * on zero and standard deviation 1.8205, with a precision of 72 bits.
  */
 int
-Zf(gaussian0_sampler)(prng *p)
+falcon_inner_gaussian0_sampler(prng *p)
 {
 
 	static const uint32_t dist[] = {
@@ -1037,7 +1130,7 @@ BerExp(prng *p, fpr x, fpr ccs)
 {
 	int s, i;
 	fpr r;
-	uint32_t sw, w;
+	uint32_t sw, w, rhs;
 	uint64_t z;
 
 	/*
@@ -1087,6 +1180,12 @@ BerExp(prng *p, fpr x, fpr ccs)
 	return (int)(w >> 31);
 }
 
+int
+BerExp_func(prng *p, fpr x, fpr ccs)
+{
+    return BerExp(p, x, ccs);
+}
+
 /*
  * The sampler produces a random integer that follows a discrete Gaussian
  * distribution, centered on mu, and with standard deviation sigma. The
@@ -1096,7 +1195,7 @@ BerExp(prng *p, fpr x, fpr ccs)
  * 0.5 and 1); in Falcon, sigma should always be between 1.2 and 1.9.
  */
 int
-Zf(sampler)(void *ctx, fpr mu, fpr isigma)
+falcon_inner_sampler(void *ctx, fpr mu, fpr isigma)
 {
 	sampler_context *spc;
 	int s;
@@ -1139,7 +1238,7 @@ Zf(sampler)(void *ctx, fpr mu, fpr isigma)
 		 *  - b = 0: z <= 0 and sampled against a Gaussian
 		 *    centered on 0.
 		 */
-		z0 = Zf(gaussian0_sampler)(&spc->p);
+		z0 = falcon_inner_gaussian0_sampler(&spc->p);
 		b = (int)prng_get_u8(&spc->p) & 1;
 		z = b + ((b << 1) - 1) * z0;
 
@@ -1182,7 +1281,7 @@ Zf(sampler)(void *ctx, fpr mu, fpr isigma)
 
 /* see inner.h */
 void
-Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
+falcon_inner_sign_tree(int16_t *sig, inner_shake256_context *rng,
 	const fpr *restrict expanded_key,
 	const uint16_t *hm, unsigned logn, uint8_t *tmp)
 {
@@ -1210,7 +1309,7 @@ Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 		 */
 		spc.sigma_min = fpr_sigma_min[logn];
 		prng_init(&spc.p, rng);
-		samp = Zf(sampler);
+		samp = falcon_inner_sampler;
 		samp_ctx = &spc;
 
 		/*
@@ -1226,7 +1325,7 @@ Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 
 /* see inner.h */
 void
-Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
+falcon_inner_sign_dyn(int16_t *sig, inner_shake256_context *rng,
 	const int8_t *restrict f, const int8_t *restrict g,
 	const int8_t *restrict F, const int8_t *restrict G,
 	const uint16_t *hm, unsigned logn, uint8_t *tmp)
@@ -1255,7 +1354,7 @@ Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
 		 */
 		spc.sigma_min = fpr_sigma_min[logn];
 		prng_init(&spc.p, rng);
-		samp = Zf(sampler);
+		samp = falcon_inner_sampler;
 		samp_ctx = &spc;
 
 		/*

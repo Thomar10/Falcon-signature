@@ -9,6 +9,7 @@ libc = "0.2"
 aes = "0.8.2"
 rand = "0.8.4"
 hex = "0.4.3"
+bytemuck = "1.13.0"
 
 [build-dependencies]
 cmake="0.1.31"
