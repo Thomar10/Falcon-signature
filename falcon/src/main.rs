@@ -1,11 +1,16 @@
-extern crate core;
+#![allow(dead_code)]
+use crate::gen_kat::genkat512;
 
-use rand::Rng;
-
-mod main_test;
 mod fft;
 mod fpr;
 mod shake;
+mod keygen;
+mod falcon;
+mod codec;
+mod vrfy;
+mod gen_kat;
+mod katrng;
+mod nist;
 mod rng;
 mod sign;
 mod common;
@@ -29,19 +34,15 @@ mod test {
     pub mod shake_test;
     pub mod rng_test;
     pub mod sign_test;
+    pub mod keygen_test;
+    pub mod vrfy_test;
+    pub mod codec_test;
+    pub mod nist_test;
+    pub mod katrng_test;
+    pub mod common_test;
 }
-
 
 
 fn main() {
-
-    println!("Hello, world falcon!");
-
-    let mut rng = rand::thread_rng();
-    let _array: [u8; 10] = core::array::from_fn(|_| rng.gen::<u8>());
-
-}
-
-pub fn addd(a: i32, b: i32) -> i32  {
-    a + b
+    unsafe { genkat512(); }
 }
