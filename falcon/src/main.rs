@@ -36,6 +36,7 @@ mod test {
     pub mod codec_test;
     pub mod nist_test;
     pub mod katrng_test;
+    pub mod common_test;
 }
 
 

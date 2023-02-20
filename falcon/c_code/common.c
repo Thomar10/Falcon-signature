@@ -65,6 +65,13 @@ hash_to_point_vartime(
 		}
 	}
 }
+void
+hash_to_point_vartime_func(
+	inner_shake256_context *sc,
+	uint16_t *x, unsigned logn)
+{
+hash_to_point_vartime(sc, x, logn);
+}
 
 /* see inner.h */
 void
@@ -232,6 +239,13 @@ hash_to_point_ct(
 		}
 	}
 }
+void
+hash_to_point_ct_func(
+	inner_shake256_context *sc,
+	uint16_t *x, unsigned logn, uint8_t *tmp)
+{
+hash_to_point_ct(sc, x, logn, tmp);
+}
 
 /*
  * Acceptance bound for the (squared) l2-norm of the signature depends
@@ -283,6 +297,13 @@ is_short(
 	return s <= l2bound[logn];
 }
 
+int
+is_short_func(
+	const int16_t *s1, const int16_t *s2, unsigned logn)
+{
+return is_short(s1, s2, logn);
+}
+
 /* see inner.h */
 int
 is_short_half(
@@ -303,4 +324,11 @@ is_short_half(
 	sqn |= -(ng >> 31);
 
 	return sqn <= l2bound[logn];
+}
+
+int
+is_short_half_func(
+	uint32_t sqn, const int16_t *s2, unsigned logn)
+{
+return is_short_half(sqn, s2, logn);
 }
