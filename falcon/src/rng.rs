@@ -45,11 +45,10 @@ pub fn prng_init(p: &mut Prng, src: &mut InnerShake256Context) -> () {
     }
 
     unsafe {
-        tl = p.state.d32[12];
-        p.state.d32[12] = p.state.d32[13];
-        p.state.d32[13] = tl;
+        tl = p.state.d32[6];
+        let th = p.state.d32[7];
+        p.state.d32[6] = tl + ((th as u64) << 32) as u32;
     }
-
     prng_refill(p);
 }
 
@@ -146,7 +145,6 @@ pub fn prng_refill(p: &mut Prng) -> () {
     unsafe {
         p.state.d64[6] = cc;
     }
-
     p.ptr = 0;
 }
 
@@ -182,7 +180,7 @@ pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
 #[inline(always)]
 pub fn prng_get_u64(p: &mut Prng) -> u64 {
     let mut u = p.ptr;
-    if u >= p.buf.len() * 8 - 9 {
+    if u >= p.buf.len()  - 9 {
         prng_refill(p);
         u = 0;
     }
