@@ -28,6 +28,21 @@ pub const max_FG_bits: [u8; 11] = [
     8
 ];
 
+#[allow(non_upper_case_globals)]
+pub const max_sig_bits: [u8; 11] = [
+    0, /* unused */
+    10,
+    11,
+    11,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12
+];
+
 pub fn modq_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [u16], logn: u32) -> usize {
     let mut acc: u32;
     let mut acc_len: i32;

@@ -401,7 +401,6 @@ ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	 */
 	if (logn == 0) {
 		fpr leaf;
-
 		leaf = g00[0];
 		leaf = fpr_mul(fpr_sqrt(leaf), fpr_inv_sigma[orig_logn]);
 		t0[0] = fpr_of(samp(samp_ctx, t0[0], leaf));
@@ -885,30 +884,19 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	falcon_inner_poly_neg(b01, logn);
 	falcon_inner_poly_neg(b11, logn);
 
-	/*
-	 * Compute the Gram matrix G = B·B*. Formulas are:
-	 *   g00 = b00*adj(b00) + b01*adj(b01)
-	 *   g01 = b00*adj(b10) + b01*adj(b11)
-	 *   g10 = b10*adj(b00) + b11*adj(b01)
-	 *   g11 = b10*adj(b10) + b11*adj(b11)
-	 *
-	 * For historical reasons, this implementation uses
-	 * g00, g01 and g11 (upper triangle). g10 is not kept
-	 * since it is equal to adj(g01).
-	 *
-	 * We _replace_ the matrix B with the Gram matrix, but we
-	 * must keep b01 and b11 for computing the target vector.
-	 */
+
 	t0 = b11 + n;
 	t1 = t0 + n;
-
 	memcpy(t0, b01, n * sizeof *b01);
+
+
 	falcon_inner_poly_mulselfadj_fft(t0, logn);    // t0 <- b01*adj(b01)
 
 	memcpy(t1, b00, n * sizeof *b00);
 	falcon_inner_poly_muladj_fft(t1, b10, logn);   // t1 <- b00*adj(b10)
 	falcon_inner_poly_mulselfadj_fft(b00, logn);   // b00 <- b00*adj(b00)
 	falcon_inner_poly_add(b00, t0, logn);      // b00 <- g00
+
 	memcpy(t0, b01, n * sizeof *b01);
 	falcon_inner_poly_muladj_fft(b01, b11, logn);  // b01 <- b01*adj(b11)
 	falcon_inner_poly_add(b01, t1, logn);      // b01 <- g01
@@ -918,11 +906,7 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	falcon_inner_poly_mulselfadj_fft(t1, logn);    // t1 <- b11*adj(b11)
 	falcon_inner_poly_add(b10, t1, logn);      // b10 <- g11
 
-	/*
-	 * We rename variables to make things clearer. The three elements
-	 * of the Gram matrix uses the first 3*n slots of tmp[], followed
-	 * by b11 and b01 (in that order).
-	 */
+
 	g00 = b00;
 	g01 = b01;
 	g11 = b10;
@@ -930,62 +914,35 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	t0 = b01 + n;
 	t1 = t0 + n;
 
-	/*
-	 * Memory layout at that point:
-	 *   g00 g01 g11 b11 b01 t0 t1
-	 */
 
-	/*
-	 * Set the target vector to [hm, 0] (hm is the hashed message).
-	 */
 	for (u = 0; u < n; u ++) {
 		t0[u] = fpr_of(hm[u]);
-		/* This is implicit.
-		t1[u] = fpr_zero;
-		*/
 	}
 
-	/*
-	 * Apply the lattice basis to obtain the real target
-	 * vector (after normalization with regards to modulus).
-	 */
-	falcon_inner_FFT(t0, logn);
+
+  falcon_inner_FFT(t0, logn);
 	ni = fpr_inverse_of_q;
 	memcpy(t1, t0, n * sizeof *t0);
 	falcon_inner_poly_mul_fft(t1, b01, logn);
 	falcon_inner_poly_mulconst(t1, fpr_neg(ni), logn);
 	falcon_inner_poly_mul_fft(t0, b11, logn);
 	falcon_inner_poly_mulconst(t0, ni, logn);
-
-	/*
-	 * b01 and b11 can be discarded, so we move back (t0,t1).
-	 * Memory layout is now:
-	 *      g00 g01 g11 t0 t1
-	 */
 	memcpy(b11, t0, n * 2 * sizeof *t0);
 	t0 = g11 + n;
 	t1 = t0 + n;
-
-	/*
-	 * Apply sampling; result is written over (t0,t1).
-	 */
 	ffSampling_fft_dyntree(samp, samp_ctx,
 		t0, t1, g00, g01, g11, logn, logn, t1 + n);
 
-	/*
-	 * We arrange the layout back to:
-	 *     b00 b01 b10 b11 t0 t1
-	 *
-	 * We did not conserve the matrix basis, so we must recompute
-	 * it now.
-	 */
+
 	b00 = tmp;
 	b01 = b00 + n;
 	b10 = b01 + n;
 	b11 = b10 + n;
+
 	memmove(b11 + n, t0, n * 2 * sizeof *t0);
 	t0 = b11 + n;
 	t1 = t0 + n;
+
 	smallints_to_fpr(b01, f, logn);
 	smallints_to_fpr(b00, g, logn);
 	smallints_to_fpr(b11, F, logn);
@@ -999,9 +956,8 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	tx = t1 + n;
 	ty = tx + n;
 
-	/*
-	 * Get the lattice point corresponding to that tiny vector.
-	 */
+
+
 	memcpy(tx, t0, n * sizeof *t0);
 	memcpy(ty, t1, n * sizeof *t1);
 	falcon_inner_poly_mul_fft(tx, b00, logn);
@@ -1029,15 +985,7 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	}
 	sqn |= -(ng >> 31);
 
-	/*
-	 * With "normal" degrees (e.g. 512 or 1024), it is very
-	 * improbable that the computed vector is not short enough;
-	 * however, it may happen in practice for the very reduced
-	 * versions (e.g. degree 16 or below). In that case, the caller
-	 * will loop, and we must not write anything into s2[] because
-	 * s2[] may overlap with the hashed message hm[] and we need
-	 * hm[] for the next iteration.
-	 */
+
 	s2tmp = (int16_t *)tmp;
 	for (u = 0; u < n; u ++) {
 		s2tmp[u] = (int16_t)-fpr_rint(t1[u]);
@@ -1047,7 +995,7 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 		memcpy(tmp, s1tmp, n * sizeof *s1tmp);
 		return 1;
 	}
-	return 0;
+	return 01;
 }
 
 int

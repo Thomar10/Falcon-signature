@@ -1,8 +1,11 @@
 use std::mem;
+use std::slice::from_raw_parts_mut;
+
 use bytemuck;
+
 use crate::common::is_short_half;
 use crate::fft::{fft, ifft, poly_add, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
-use crate::fpr::{fpr_mul, fpr_sqrt, FPR_INV_SIGMA, fpr_of, fpr_floor, fpr_sub, fpr_half, fpr_sqr, FPR_INV_2SQRSIGMA0, fpr_trunc, FPR_INV_LOG2, FPR_LOG2, fpr_expm_p63, FPR_INVERSE_OF_Q, fpr_neg, fpr_rint, FPR_SIGMA_MIN, fpr_add, FPR_INVSQRT8, FPR_INVSQRT2};
+use crate::fpr::{fpr_add, fpr_expm_p63, fpr_floor, fpr_half, FPR_INV_2SQRSIGMA0, FPR_INV_LOG2, FPR_INV_SIGMA, FPR_INVERSE_OF_Q, FPR_INVSQRT2, FPR_INVSQRT8, FPR_LOG2, fpr_mul, fpr_neg, fpr_of, fpr_rint, FPR_SIGMA_MIN, fpr_sqr, fpr_sqrt, fpr_sub, fpr_trunc};
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::InnerShake256Context;
 
@@ -179,14 +182,72 @@ pub fn expand_privkey(expanded_key: &mut [fpr], f: &[i8], g: &[i8], F: &[i8],
 
 pub struct SamplerContext {
     pub(crate) p: Prng,
-    pub(crate) sigma_min: fpr
+    pub(crate) sigma_min: fpr,
 }
 
 type SamplerZ = fn(&mut SamplerContext, fpr, fpr) -> i32;
 
-//TODO test
-#[allow(non_snake_case)]
-pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0: &mut [fpr],
+// //TODO test
+// #[allow(non_snake_case)]
+// pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0: &mut [fpr],
+//                               t1: &mut [fpr], g00: &mut [fpr], g01: &mut [fpr], g11: &mut [fpr],
+//                               orig_logn: u32, logn: u32, tmp: &mut [fpr]) {
+//
+//     let n: usize = 1 << logn as usize;
+//     let hn: usize = n >> 1;
+//     if logn == 0 {
+//         let mut leaf: fpr = g00[0];
+//         leaf = fpr_mul(fpr_sqrt(leaf), FPR_INV_SIGMA[orig_logn as usize]);
+//         t0[0] = fpr_of(samp(samp_ctx, t0[0], leaf) as i64);
+//         t1[0] = fpr_of(samp(samp_ctx, t1[0], leaf) as i64);
+//         return;
+//     }
+//
+//     poly_LDL_fft(g00, g01, g11, logn);
+//
+//     let (tmp0, tmp1) = tmp.split_at_mut(hn);
+//     poly_split_fft(tmp0, tmp1, g00, logn);
+//     g00[..hn].copy_from_slice(tmp0);
+//     g00[hn..].copy_from_slice(&tmp1[..hn]);
+//     poly_split_fft(tmp0, tmp1, g11, logn);
+//     g11[..n].copy_from_slice(&tmp[..n]);
+//     tmp[..n].copy_from_slice(&g01[..n]);
+//     g01[..hn].copy_from_slice(&g00[..hn]);
+//     g01[hn..2 * hn].copy_from_slice(&g11[..hn]);
+//
+//     println!("tmp {:?}", tmp);
+//
+//     let (z10, z11) = tmp.split_at_mut(n);
+//     let z1hn = &mut z11[..hn];
+//     poly_split_fft(z11, z1hn, t1, logn);
+//
+//     let (g110, g111) = g11.split_at_mut(hn);
+//     let (z1hn, z1n) = z11.split_at_mut(n);
+//     println!("z10 {:?}", z10);
+//     ffSampling_fft_dyntree(samp, samp_ctx, z10, z1hn, g110, g111,
+//                            &mut g01[hn..], orig_logn, logn - 1, z1n);
+//     poly_merge_fft(z1n, z10, z1hn, logn);
+//
+//     let (tmp0, inter) = tmp.split_at_mut(n);
+//     let (z1, tmpn1) = inter.split_at_mut(n);
+//     z1.copy_from_slice(t1);
+//     poly_sub(z1, tmpn1, logn);
+//     t1.copy_from_slice(&tmpn1[..n]);
+//     poly_mul_fft(tmp0, z1, logn);
+//     poly_add(t0, tmp0, logn);
+//
+//     let (z0, z0n) = tmp.split_at_mut(n);
+//     let (z00, z01) = z0.split_at_mut(hn);
+//
+//     poly_split_fft(z00, z01, t0, logn);
+//
+//     let (g000, g001) = g00.split_at_mut(hn);
+//     ffSampling_fft_dyntree(samp, samp_ctx, z00, z01, g000, g001,
+//                            g01, orig_logn, logn - 1, z0n);
+//     poly_merge_fft(t0, z00, z01, logn);
+// }
+
+pub fn ffSampling_fft_dyntree2(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0: &mut [fpr],
                               t1: &mut [fpr], g00: &mut [fpr], g01: &mut [fpr], g11: &mut [fpr],
                               orig_logn: u32, logn: u32, tmp: &mut [fpr]) {
 
@@ -203,49 +264,54 @@ pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0:
 
     poly_LDL_fft(g00, g01, g11, logn);
 
-    let (tmp0, tmp1) = tmp.split_at_mut(hn);
-    poly_split_fft(tmp0, tmp1, g00, logn);
-    g00[..hn].copy_from_slice(tmp0);
-    g00[hn..].copy_from_slice(&tmp1[..hn]);
-    poly_split_fft(tmp0, tmp1, g11, logn);
+    let tmphn: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(hn), hn) };
+
+
+    poly_split_fft(tmp, tmphn, g00, logn);
+    g00[..n].copy_from_slice(&tmp[0..n]);
+    poly_split_fft(tmp, tmphn, g11, logn);
     g11[..n].copy_from_slice(&tmp[..n]);
     tmp[..n].copy_from_slice(&g01[..n]);
     g01[..hn].copy_from_slice(&g00[..hn]);
-    g01[hn..2*hn].copy_from_slice(&g11[..hn]);
+    g01[hn..2 * hn].copy_from_slice(&g11[..hn]);
 
-    let (z10, z11) = tmp.split_at_mut(hn);
-    poly_split_fft(z10, &mut z11[..hn], t1, logn);
 
-    let (g110, g111) = g11.split_at_mut(hn);
-    let (z1hn, z1n) = z11.split_at_mut(hn);
-    ffSampling_fft_dyntree(samp, samp_ctx, z10, z1hn, g110, g111,
-                           &mut g01[hn..], orig_logn, logn - 1, z1n);
-    poly_merge_fft(z1n, z10, z1hn, logn);
+    let z1: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(n), n) };
+    let z1hn: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(n + hn), n) };
+    let g11hn: &mut [fpr] = unsafe { from_raw_parts_mut(g11.as_mut_ptr().wrapping_add(hn), n) };
+    let g01hn: &mut [fpr] = unsafe { from_raw_parts_mut(g01.as_mut_ptr().wrapping_add(hn), n) };
+    let z1n: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(2*n), n) };
+    let tmp_shift: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(n << 1), n) };
 
-    let (tmp0, inter) = tmp.split_at_mut(n);
-    let (z1, tmpn1) = inter.split_at_mut(n);
-    z1.copy_from_slice(t1);
-    poly_sub(z1, tmpn1, logn);
-    t1.copy_from_slice(&tmpn1[..n]);
-    poly_mul_fft(tmp0, z1, logn);
-    poly_add(t0, tmp0, logn);
+    poly_split_fft(z1, z1hn, t1, logn);
 
-    let (z0, z0n) = tmp.split_at_mut(n);
-    let (z00, z01) = z0.split_at_mut(hn);
+    ffSampling_fft_dyntree2(samp, samp_ctx, z1, z1hn, g11, g11hn,
+                            g01hn, orig_logn, logn - 1, z1n);
+    poly_merge_fft(tmp_shift, z1, z1hn, logn);
 
-    poly_split_fft(z00, z01, t0, logn);
+    z1.copy_from_slice(&t1[..n]);
+    poly_sub(z1, tmp_shift, logn);
 
-    let (g000, g001) = g00.split_at_mut(hn);
-    ffSampling_fft_dyntree(samp, samp_ctx, z00, z01, g000, g001,
+    t1[..n].copy_from_slice(&tmp_shift[..n]);
+
+    poly_mul_fft(tmp, z1, logn);
+    poly_add(t0, tmp, logn);
+
+    let z0hn: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(hn), n) };
+    let z0n: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(n), n) };
+    let g00hn: &mut [fpr] = unsafe { from_raw_parts_mut(g00.as_mut_ptr().wrapping_add(hn), n) };
+
+    poly_split_fft(tmp, z0hn, t0, logn);
+
+    ffSampling_fft_dyntree2(samp, samp_ctx, tmp, z0hn, g00, g00hn,
                            g01, orig_logn, logn - 1, z0n);
-    poly_merge_fft(t0, z00, z01, logn);
+    poly_merge_fft(t0, tmp, z0hn, logn);
 }
 
 //TODO test
 #[allow(non_snake_case)]
 pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [fpr],
                       z1: &mut [fpr], tree: &mut [fpr], t0: &mut [fpr], t1: &mut [fpr], logn: u32, tmp: &mut [fpr]) {
-
     if logn == 2 {
         let (tree0, treerest) = tree.split_at(4);
         let (tree1, treerest) = treerest.split_at(4);
@@ -501,13 +567,13 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
 //TODO test
 #[allow(non_snake_case)]
 pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
-                   f: &[i8], g: &[i8], F: &[i8], G: &[i8], hm: &[u16], logn: u32, tmp: &mut [fpr]) -> bool {
-
+                   f: &[i8], g: &[i8], F: &[i8], G: &[i8], hm: &[u16], logn: u32, mut tmp: &mut [fpr]) -> bool {
     let n: usize = MKN!(logn);
 
-    let (b00, inter) = tmp.split_at_mut(n);
-    let (b01, inter) = inter.split_at_mut(n);
-    let (b10, b11) = inter.split_at_mut(n);
+    let b00 = unsafe { from_raw_parts_mut(tmp.as_mut_ptr(), n) };
+    let b01 = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(n), n) };
+    let b10 = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(2*n), n) };
+    let b11 = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(3*n), n) };
 
     smallints_to_fpr(b01, f, logn);
     smallints_to_fpr(b00, g, logn);
@@ -520,9 +586,8 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     poly_neg(b01, logn);
     poly_neg(b11, logn);
 
-    let (b11, rest) = b11.split_at_mut(n);
-    let (t0, rest) = rest.split_at_mut(n);
-    let (t1, rest) = rest.split_at_mut(n);
+    let t0 = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(4*n), n) };
+    let t1 = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().wrapping_add(5*n), n) };
     t0.copy_from_slice(b01);
     poly_mulselfadj_fft(t0, logn);
 
@@ -539,14 +604,15 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     t1.copy_from_slice(b11);
     poly_mulselfadj_fft(t1, logn);
     poly_add(b10, t1, logn);
+    let g00: &mut [fpr] = unsafe { from_raw_parts_mut(b00.as_mut_ptr(), n) };
+    let g01: &mut [fpr] = unsafe { from_raw_parts_mut(b01.as_mut_ptr(), n) };
+    let g11: &mut [fpr] = unsafe { from_raw_parts_mut(b10.as_mut_ptr(), n) };
+    let b01: &mut [fpr] = unsafe { from_raw_parts_mut(t0.as_mut_ptr(), n) };
+    let t0: &mut [fpr] = unsafe { from_raw_parts_mut(b01.as_mut_ptr().wrapping_add(n), n) };
+    let t1: &mut [fpr] = unsafe { from_raw_parts_mut(t0.as_mut_ptr().wrapping_add(n), n) };
 
-    let (g00, inter) = tmp.split_at_mut(n);
-    let (g01, inter) = inter.split_at_mut(n);
-    let (g11, inter) = inter.split_at_mut(n);
-    let (b11, inter) = inter.split_at_mut(n);
-    let (b01, inter) = inter.split_at_mut(n);
-    let (t0, inter) = inter.split_at_mut(n);
-    let (t1, inter) = inter.split_at_mut(n);
+    //let (t0, inter) = inter.split_at_mut(n);
+    // let (t1, inter) = inter.split_at_mut(n);
 
     for u in 0..n {
         t0[u] = fpr_of(hm[u] as i64);
@@ -559,24 +625,22 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     poly_mulconst(t1, fpr_neg(ni), logn);
     poly_mul_fft(t0, b11, logn);
     poly_mulconst(t0, ni, logn);
-
     b11.copy_from_slice(t0);
     b01.copy_from_slice(t1);
 
-    let t0 = b11;
-    let t1 = b01;
+    let t0 = unsafe { from_raw_parts_mut(g11.as_mut_ptr().wrapping_add(n), n) };
+    let t1 = unsafe { from_raw_parts_mut(t0.as_mut_ptr().wrapping_add(n), n) };
+    let tmp2: &mut [fpr] = unsafe { from_raw_parts_mut(t1.as_mut_ptr().wrapping_add(n), 2*n) };
 
-    ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, inter);
-
-    let (b00, inter) = tmp.split_at_mut(n);
-    let (b01, inter) = inter.split_at_mut(n);
-    let (b10, inter) = inter.split_at_mut(n);
-    let (b11, inter) = inter.split_at_mut(n);
-    let (t0, inter) = inter.split_at_mut(n);
-    let (t1, inter) = inter.split_at_mut(n);
-
-    t1.copy_from_slice(t0);
-    t0.copy_from_slice(b11);
+    ffSampling_fft_dyntree2(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, tmp2);
+    let b00: &mut [fpr] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr(), n) };
+    let b01: &mut [fpr] = unsafe { from_raw_parts_mut(b00.as_mut_ptr().wrapping_add(n), n) };
+    let b10: &mut [fpr] = unsafe { from_raw_parts_mut(b01.as_mut_ptr().wrapping_add(n), n) };
+    let b11: &mut [fpr] = unsafe { from_raw_parts_mut(b10.as_mut_ptr().wrapping_add(n), n) };
+    let t0i: &mut [fpr] = unsafe { from_raw_parts_mut(b11.as_mut_ptr().wrapping_add(n), n) };
+    let t1i: &mut [fpr] = unsafe { from_raw_parts_mut(t0i.as_mut_ptr().wrapping_add(n), n) };
+    t1i.copy_from_slice(t1);
+    t0i.copy_from_slice(t0);
 
     smallints_to_fpr(b01, f, logn);
     smallints_to_fpr(b00, g, logn);
@@ -588,22 +652,24 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     fft(b10, logn);
     poly_neg(b01, logn);
     poly_neg(b11, logn);
-    let(tx, rest) = inter.split_at_mut(n);
-    let(ty, rest) = rest.split_at_mut(n);
+    let tx: &mut [fpr] = unsafe { from_raw_parts_mut(t1i.as_mut_ptr().wrapping_add(n), n) };
+    let ty: &mut [fpr] = unsafe { from_raw_parts_mut(tx.as_mut_ptr().wrapping_add(n), n) };
 
-    tx.copy_from_slice(t0);
-    ty.copy_from_slice(t1);
+
+
+    tx.copy_from_slice(t0i);
+    ty.copy_from_slice(t1i);
     poly_mul_fft(tx, b00, logn);
     poly_mul_fft(ty, b10, logn);
     poly_add(tx, ty, logn);
-    ty.copy_from_slice(t0);
+    ty.copy_from_slice(t0i);
     poly_mul_fft(ty, b01, logn);
 
-    t0.copy_from_slice(tx);
-    poly_mul_fft(t1, b11, logn);
-    poly_add(t1, ty, logn);
-    ifft(t0, logn);
-    ifft(t1, logn);
+    t0i.copy_from_slice(tx);
+    poly_mul_fft(t1i, b11, logn);
+    poly_add(t1i, ty, logn);
+    ifft(t0i, logn);
+    ifft(t1i, logn);
 
     let s1tmp: &mut [i16] = bytemuck::cast_slice_mut(tx);
 
@@ -611,7 +677,7 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let mut ng = 0;
 
     for u in 0..n {
-        let z: i32 = hm[u] as i32 - fpr_rint(t0[u]) as i32;
+        let z: i32 = hm[u] as i32 - fpr_rint(t0i[u]) as i32;
         sqn += (z * z) as u32;
         ng |= sqn;
         s1tmp[u] = z as i16;
@@ -620,9 +686,9 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
 
     let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(b00);
 
-    let t1 = &t0[n..];
+    // let t1 = &t0[n..];
     for u in 0..n {
-        s2tmp[u] = -fpr_rint(t1[u]) as i16;
+        s2tmp[u] = -fpr_rint(t1i[u]) as i16;
     }
 
     if is_short_half(sqn, s2tmp, logn) > 0 {
@@ -635,8 +701,7 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
 }
 
 pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
-                   f: &[i8], g: &[i8], F: &[i8], G: &[i8], logn: u32, tmp: &mut [fpr]) -> bool {
-
+                        f: &[i8], g: &[i8], F: &[i8], G: &[i8], logn: u32, tmp: &mut [fpr]) -> bool {
     let n: usize = MKN!(logn);
 
     let (b00, inter) = tmp.split_at_mut(n);
@@ -700,7 +765,7 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     let t0 = b11;
     let t1 = b01;
 
-    ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, inter);
+    ffSampling_fft_dyntree2(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, inter);
 
     let (b00, inter) = tmp.split_at_mut(n);
     let (b01, inter) = inter.split_at_mut(n);
@@ -722,8 +787,8 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     fft(b10, logn);
     poly_neg(b01, logn);
     poly_neg(b11, logn);
-    let(tx, rest) = inter.split_at_mut(n);
-    let(ty, rest) = rest.split_at_mut(n);
+    let (tx, rest) = inter.split_at_mut(n);
+    let (ty, rest) = rest.split_at_mut(n);
 
     tx.copy_from_slice(t0);
     ty.copy_from_slice(t1);
@@ -780,7 +845,7 @@ pub fn sampler(spc: &mut SamplerContext, mu: fpr, isigma: fpr) -> i32 {
     loop {
         let z0: i32 = gaussian0_sampler(&mut spc.p);
         let b: i32 = prng_get_u8(&mut spc.p) as i32 & 1;
-        let z:i64 = (b + ((b << 1) - 1) * z0) as i64;
+        let z: i64 = (b + ((b << 1) - 1) * z0) as i64;
 
         let mut x = fpr_mul(fpr_sqr(fpr_sub(fpr_of(z), r)), dss);
         x = fpr_sub(x, fpr_mul(fpr_of((z0 * z0) as i64), FPR_INV_2SQRSIGMA0));
@@ -794,24 +859,24 @@ pub fn sampler(spc: &mut SamplerContext, mu: fpr, isigma: fpr) -> i32 {
 
 pub fn gaussian0_sampler(p: &mut Prng) -> i32 {
     const DIST: [u32; 54] = [
-        10745844,  3068844,  3741698,
-        5559083,  1580863,  8248194,
-        2260429, 13669192,  2736639,
-        708981,  4421575, 10046180,
-        169348,  7122675,  4136815,
-        30538, 13063405,  7650655,
-        4132, 14505003,  7826148,
+        10745844, 3068844, 3741698,
+        5559083, 1580863, 8248194,
+        2260429, 13669192, 2736639,
+        708981, 4421575, 10046180,
+        169348, 7122675, 4136815,
+        30538, 13063405, 7650655,
+        4132, 14505003, 7826148,
         417, 16768101, 11363290,
-        31,  8444042,  8086568,
-        1, 12844466,   265321,
-        0,  1232676, 13644283,
-        0,    38047,  9111839,
-        0,      870,  6138264,
-        0,       14, 12545723,
-        0,        0,  3104126,
-        0,        0,    28824,
-        0,        0,      198,
-        0,        0,        1
+        31, 8444042, 8086568,
+        1, 12844466, 265321,
+        0, 1232676, 13644283,
+        0, 38047, 9111839,
+        0, 870, 6138264,
+        0, 14, 12545723,
+        0, 0, 3104126,
+        0, 0, 28824,
+        0, 0, 198,
+        0, 0, 1
     ];
 
     let lo: u64 = prng_get_u64(p);
@@ -862,14 +927,13 @@ pub fn BerExp(p: &mut Prng, x: fpr, ccs: fpr) -> i32 {
 //TODO test
 pub fn sign_tree(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: &mut [fpr], hm: &[u16],
                  logn: u32, tmp: &mut [u8]) {
-
     let mut ftmp: &mut [fpr];
     unsafe {
         ftmp = mem::transmute(tmp);
     }
 
     loop {
-        let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};
+        let mut spc: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[logn as usize] };
         prng_init(&mut spc.p, rng);
         let samp: SamplerZ = sampler;
 
@@ -883,14 +947,13 @@ pub fn sign_tree(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: 
 #[allow(non_snake_case)]
 pub fn sign_dyn(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], g: &[i8],
                 F: &[i8], G: &[i8], hm: &[u16], logn: u32, tmp: &mut [u8]) {
-
     let mut ftmp: &mut [fpr];
     unsafe {
         ftmp = mem::transmute(tmp);
     }
 
     loop {
-        let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};
+        let mut spc: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[logn as usize] };
         prng_init(&mut spc.p, rng);
         let samp: SamplerZ = sampler;
         //let mut samp_ctx: &SamplerContext = &spc;
@@ -904,15 +967,14 @@ pub fn sign_dyn(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], g: &[
 //TODO test
 #[allow(non_snake_case)]
 pub fn sign_dyn_same(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], g: &[i8],
-                F: &[i8], G: &[i8], logn: u32, tmp: &mut [u8]) {
-
+                     F: &[i8], G: &[i8], logn: u32, tmp: &mut [u8]) {
     let mut ftmp: &mut [fpr];
     unsafe {
         ftmp = mem::transmute(tmp);
     }
 
     loop {
-        let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};
+        let mut spc: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[logn as usize] };
         prng_init(&mut spc.p, rng);
         let samp: SamplerZ = sampler;
         //let mut samp_ctx: &SamplerContext = &spc;

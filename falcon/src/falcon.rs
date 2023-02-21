@@ -1,10 +1,12 @@
 use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 
-use crate::codec::{max_fg_bits, max_FG_bits, modq_encode, trim_i8_decode, trim_i8_encode};
+use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
+use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::keygen::keygen;
-use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context};
-use crate::vrfy::compute_public;
+use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
+use crate::sign::sign_dyn;
+use crate::vrfy::{complete_private, compute_public, to_ntt_monty, verify_raw};
 
 // type FALCON_SIG_TYPE = i32;
 pub const FALCON_SIG_COMPRESS: i32 = 1;
@@ -108,8 +110,9 @@ pub fn shake256_flip(rng: &mut InnerShake256Context) {
 }
 
 // TODO EXTRACT MUTATE INSTEAD?
-pub fn shake256_extract(rng: &mut InnerShake256Context, _out: &mut [u8], len: usize) {
-    i_shake256_extract(rng, len);
+pub fn shake256_extract(rng: &mut InnerShake256Context, out: &mut [u8], len: usize) {
+    let vec = i_shake256_extract(rng, len);
+    out.copy_from_slice(vec.as_slice());
 }
 
 pub fn shake_init_prng_from_seed(rng: &mut InnerShake256Context, seed: &mut [u8], _len: usize) {
@@ -254,7 +257,7 @@ pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
     }
     let mut h: *mut u16 = gp.wrapping_add(n).cast();
     let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
-    let mut atmp: *mut u8 = h.wrapping_add(n).cast();
+    let atmp: *mut u8 = h.wrapping_add(n).cast();
     if !compute_public(h, fp, gp, logn as u32, atmp) {
         return -7;
     }
@@ -270,11 +273,19 @@ pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
 }
 
 
-pub fn falcon_sign_dyn(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+pub fn falcon_sign_dyn(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                        signature_type: i32, private_key: &mut [u8],
                        private_len: usize, data: &mut [u8], data_len: usize,
                        tmp: &mut [u8], tmp_len: usize) -> i32 {
-    0
+    let mut hd: InnerShake256Context = InnerShake256Context {
+        st: St { a: [0; 25] },
+        dptr: 0,
+    };
+    let mut nonce = [0u8; 40];
+    falcon_sign_start(rng, &mut nonce, &mut hd);
+    shake256_inject(&mut hd, data);
+    falcon_sign_dyn_finish(&mut rng, signature, signature_len, signature_type,
+                           private_key, private_len, &mut hd, &mut nonce, tmp, tmp_len)
 }
 
 pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
@@ -290,16 +301,144 @@ pub fn falcon_sign_tree(rng: &mut InnerShake256Context, signature: &mut [u8], si
     0
 }
 
-pub fn falcon_sign_start(rng: &mut InnerShake256Context, nonce: &mut [u8],
-                         hash_data: &mut InnerShake256Context) -> i32 {
+pub fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
+                         mut hash_data: &mut InnerShake256Context) -> i32 {
+    shake256_extract(&mut rng, nonce, nonce.len());
+    shake256_init(&mut hash_data);
+    shake256_inject(&mut hash_data, nonce);
     0
 }
 
-pub fn falcon_sign_dyn_finish(rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                               signature_type: i32, private_key: &mut [u8],
                               private_len: usize,
-                              hash_data: &mut InnerShake256Context, nonce: &mut [u8],
+                              mut hash_data: &mut InnerShake256Context, nonce: &mut [u8],
                               tmp: &mut [u8], tmp_len: usize) -> i32 {
+    if private_len == 0 {
+        return -6;
+    }
+    let sk = private_key;
+    if (sk[0] & 0xF0) != 0x50 {
+        return -6;
+    }
+    let logn: u32 = (sk[0] & 0x0F) as u32;
+    if logn < 1 || logn > 10 {
+        return -6;
+    }
+    if private_len != falcon_privatekey_size!(logn) as usize {
+        return -6;
+    }
+    if tmp_len < falcon_tmpsize_signdyn!(logn) {
+        return -6;
+    }
+    if signature_len < 41 {
+        return -6;
+    }
+    match signature_type {
+        FALCON_SIG_COMPRESS => {
+            // Lul
+        }
+        FALCON_SIG_PADDED => {
+            if signature_len < falcon_sig_padded_size!(logn) {
+                return -6;
+            }
+        }
+        FALCON_SIG_CT => {
+            if signature_len < falcon_sig_ct_size!(logn) {
+                return -6;
+            }
+        }
+        _ => { return -6; }
+    }
+
+    let n: usize = 1 << logn;
+    let fp: *mut i8 = tmp.as_mut_ptr().cast();
+    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
+    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
+    let gp = fp.wrapping_add(n);
+    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
+    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
+    let Fp = gp.wrapping_add(n);
+    let F: &mut [i8] = unsafe { from_raw_parts_mut(Fp, n) };
+    let Gp = Fp.wrapping_add(n);
+    let G: &mut [i8] = unsafe { from_raw_parts_mut(Gp, n) };
+    let hmp: *mut u16 = Gp.wrapping_add(n).cast();
+    let hm: &mut [u16] = unsafe { from_raw_parts_mut(hmp, n) };
+    let sv: &mut [i16] = unsafe { from_raw_parts_mut(hmp.cast(), n) };
+    let atmp: &mut [u8] = unsafe { from_raw_parts_mut(hmp.wrapping_add(n).cast(), n) };
+    let mut u = 1;
+    let mut v = trim_i8_decode(f, logn, max_fg_bits[logn as usize] as u32, sk, u,
+                               private_len - u);
+    if v == 0 {
+        return -6;
+    }
+    u += v;
+    v = trim_i8_decode(g, logn, max_fg_bits[logn as usize] as u32, sk, u,
+                       private_len - u);
+    if v == 0 {
+        return -6;
+    }
+    u += v;
+    v = trim_i8_decode(F, logn, max_FG_bits[logn as usize] as u32, sk, u,
+                       private_len - u);
+    if v == 0 {
+        return -6;
+    }
+    u += v;
+    if u != private_len {
+        return -6;
+    }
+    if !complete_private(G, f, g, F, logn, atmp) {
+        return -6;
+    }
+    shake256_flip(&mut hash_data);
+
+    loop {
+        let mut hash_data_restart: &mut InnerShake256Context = &mut unsafe {
+            InnerShake256Context {
+                st: St { a: hash_data.st.a },
+                dptr: hash_data.dptr,
+            }
+        };
+        if signature_type == FALCON_SIG_CT {
+            hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
+        } else {
+            hash_to_point_vartime(&mut hash_data_restart, hm, logn);
+        }
+        sign_dyn(sv, &mut rng, f, g, F, G, hm, logn, atmp);
+        signature[1..41].copy_from_slice(nonce);
+        let u = 41;
+        let mut v = 0;
+        match signature_type {
+            FALCON_SIG_COMPRESS => {
+                signature[0] = 0x30 + logn as u8;
+                v = comp_encode(signature, u, signature_len - u, sv, logn as usize);
+                break;
+            }
+            FALCON_SIG_PADDED => {
+                signature[0] = 0x30 + logn as u8;
+                let tu = falcon_sig_padded_size!(logn);
+                v = comp_encode(signature, u, tu - u, sv, logn as usize);
+                if v == 0 {
+                    // Signature does not fit loop (idk why).
+                    continue;
+                }
+                if (v + u) < tu {
+                    signature[(u + v)..(tu - (u + v))].fill(0);
+                    v = tu - u;
+                }
+                break;
+            }
+            FALCON_SIG_CT => {
+                signature[0] = 0x50 + logn as u8;
+                v = trim_i16_encode(signature, u, signature_len - u, sv, logn, max_sig_bits[logn as usize] as u32);
+                if v == 0 {
+                    return -6;
+                }
+            }
+            _ => { return -6; }
+        }
+    }
     0
 }
 
@@ -315,16 +454,132 @@ pub fn falcon_verify(signature: &mut [u8], signature_len: usize, signature_type:
                      public_key: &mut [u8], public_len: usize,
                      data: &mut [u8], data_len: usize,
                      tmp: &mut [u8], tmp_len: usize) -> i32 {
-    0
+    let mut hd: InnerShake256Context = InnerShake256Context {
+        st: St { a: [0; 25] },
+        dptr: 0,
+    };
+    let r = falcon_verify_start(&mut hd, signature, signature_len);
+    if r < 0 {
+        return r;
+    }
+    shake256_inject(&mut hd, data);
+    falcon_verify_finish(signature, signature_len, signature_type, public_key, public_len, &mut hd, tmp, tmp_len)
 }
 
-pub fn falcon_verify_start(hash_data: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize) -> i32 {
+pub fn falcon_verify_start(mut hash_data: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize) -> i32 {
+    if signature_len < 41 {
+        return -6;
+    }
+    shake256_init(&mut hash_data);
+    shake256_inject(&mut hash_data, &mut signature[1..41]);
     0
 }
 
 pub fn falcon_verify_finish(signature: &mut [u8], signature_len: usize, signature_type: i32,
                             public_key: &mut [u8], public_len: usize,
-                            hash_data: &mut InnerShake256Context,
+                            mut hash_data: &mut InnerShake256Context,
                             tmp: &mut [u8], tmp_len: usize) -> i32 {
+    if signature_len < 41 || public_len == 0 {
+        return -6;
+    }
+    let pk = public_key;
+    if (pk[0] & 0xF0) != 0x00 {
+        return -6;
+    }
+    let logn: u32 = (pk[0] & 0xF0) as u32;
+    if logn < 1 || logn > 10 {
+        return -6;
+    }
+    if (signature[0] & 0xF0) != logn as u8 {
+        return -6;
+    }
+    let mut ct = 0;
+    match signature_type {
+        0 => {
+            if (signature[0] & 0xF0) == 0x50 {
+                if signature_len != falcon_sig_ct_size!(logn) {
+                    return -6;
+                }
+                ct = 1;
+            } else if (signature[0] & 0xF0) == 0x30 {
+                // DO NATHING
+            } else {
+                return -6;
+            }
+        }
+        FALCON_SIG_COMPRESS => {
+            if (signature[0] & 0xF0) != 0x30 {
+                return -6;
+            }
+        }
+        FALCON_SIG_PADDED => {
+            if (signature[0] & 0xF0) != 0x30 {
+                return -6;
+            }
+            if signature_len != falcon_sig_padded_size!(logn) {
+                return -6;
+            }
+        }
+        FALCON_SIG_CT => {
+            if (signature[0] & 0xF0) != 0x50 {
+                return -6;
+            }
+            if signature_len != falcon_sig_ct_size!(logn) {
+                return -6;
+            }
+            ct = 1;
+        }
+        _ => { return -6; }
+    }
+    if public_len != falcon_publickey_size!(logn) {
+        return -6;
+    }
+    if tmp_len < falcon_tmpsize_verify!(logn) {
+        return -6;
+    }
+
+    let n: usize = 1 << logn;
+    let h: &mut [u16] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().cast(), n) };
+    let hm = unsafe { from_raw_parts_mut(h.as_mut_ptr().wrapping_add(n), n) };
+    let sv: &mut [i16] = unsafe { from_raw_parts_mut(hm.as_mut_ptr().cast(), n) };
+    let atmp: &mut [u8] = unsafe { from_raw_parts_mut(sv.as_mut_ptr().wrapping_add(n).cast(), n) };
+
+    if modq_decode(h, logn as u32, pk, 1, public_len - 1) != public_len - 1 {
+        return -6;
+    }
+
+    let mut u = 41;
+    let mut v = 0;
+    if ct == 1 {
+        v = trim_i16_decode(sv, logn, max_sig_bits[logn as usize] as u32, signature, u, signature_len - u);
+    } else {
+        v = comp_decode(sv, logn, signature, u, signature_len - u);
+    }
+    if v == 0 {
+        return -6;
+    }
+    if (u + v) != signature_len {
+        if signature_type == 0 && signature_len == falcon_sig_padded_size!(logn) || signature_type == FALCON_SIG_PADDED {
+            while u + v < signature_len {
+                if signature[u + v] != 0 {
+                    return -6;
+                }
+                v += 1;
+            }
+        } else {
+            return -6;
+        }
+    }
+
+    shake256_flip(&mut hash_data);
+    if ct == 1 {
+        hash_to_point_ct(&mut hash_data, hm, logn, atmp);
+    } else {
+        hash_to_point_vartime(&mut hash_data, hm, logn);
+    }
+    to_ntt_monty(h, logn);
+    if !verify_raw(hm, sv, h, logn, atmp) {
+        return -6;
+    }
     0
 }

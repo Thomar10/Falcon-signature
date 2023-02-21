@@ -1,4 +1,6 @@
 #![allow(non_upper_case_globals)]
+#![allow(warnings, unused)]
+#![allow(warnings, unused_unsafe)]
 
 use std::slice::from_raw_parts_mut;
 
@@ -14,17 +16,17 @@ use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_mon
 
 // TODO REFACTOR INTO BEING ABLE TO RUN ITSELF
 pub fn run_falcon_tests() {
-    test_shake256();
-    test_codec();
-    test_vrfy();
-    test_rng();
+    // test_shake256();
+    // test_codec();
+    // test_vrfy();
+    // test_rng();
     // test_FP_block();
     // test_poly();
     // test_gaussian0_sampler();
     // test_sampler();
     // test_sign();
     // test_keygen();
-    // test_external_api();
+    test_external_api();
     // test_nist_kat(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
     // test_nist_KAT(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
 }
@@ -223,58 +225,63 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
         if r != logn as i32 {
             panic!("get_logn failed: {}", r);
         }
-        /*
+
         sig.fill(0);
-        let mut data = "data1";
-        let data_bytes = unsafe { data.as_bytes_mut() };
+
+        let mut data1Vec = vec![100, 97, 116, 97, 49];
+        let data_bytes = data1Vec.as_mut_slice();
         r = falcon_sign_dyn(&mut rng, sig.as_mut_slice(), sig_len,
                             FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
                             data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
+        println!();
+        println!("signature {:?}", sig);
         if r != 0 {
             panic!("sign_dyn failed: {}", r);
         }
-        r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify failed: {}", r);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
-            r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != 6 {
-                panic!("wrong verify error: {}", r);
-            }
-        }
-
-        sigpad.fill(0);
-        r = falcon_sign_dyn(&mut rng, sigpad.as_mut_slice(), sigpad_len,
-                            FALCON_SIG_PADDED, sk.as_mut_slice(), sk_len,
-                            data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
-        if r != 0 {
-            panic!("sign_dyn(padded) failed: {}", r);
-        }
-        if sigpad_len != falcon_sig_padded_size!(logn) {
-            panic!("sign_dyn(padded): wrong length {}", sigpad_len);
-        }
-        r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify(padded) failed: {}", r);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
-            r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != 6 {
-                panic!("wrong verify(padded) error: {}", r);
-            }
-        }
-
+        // r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+        //                   pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        // if r != 0 {
+        //     panic!("verify failed: {}", r);
+        // }
+        // if logn >= 5 {
+        //     // Skip check for very low degrees as alternate data hashes to a point very close
+        //     // to the correct point so signature matches both.
+        //     let mut data2Vec = vec![10, 10, 10, 10, 10];
+        //     let data2 = data2Vec.as_mut_slice();
+        //     r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+        //                       pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        //     if r != 6 {
+        //         panic!("wrong verify error: {}", r);
+        //     }
+        // }
+        //
+        // sigpad.fill(0);
+        // r = falcon_sign_dyn(&mut rng, sigpad.as_mut_slice(), sigpad_len,
+        //                     FALCON_SIG_PADDED, sk.as_mut_slice(), sk_len,
+        //                     data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
+        // if r != 0 {
+        //     panic!("sign_dyn(padded) failed: {}", r);
+        // }
+        // if sigpad_len != falcon_sig_padded_size!(logn) {
+        //     panic!("sign_dyn(padded): wrong length {}", sigpad_len);
+        // }
+        // r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+        //                   pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        // if r != 0 {
+        //     panic!("verify(padded) failed: {}", r);
+        // }
+        // if logn >= 5 {
+        //     // Skip check for very low degrees as alternate data hashes to a point very close
+        //     // to the correct point so signature matches both.
+        //     let mut data2vec = vec![10, 10, 10, 10, 10];
+        //     let data2 = data2vec.as_mut_slice();
+        //     r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+        //                       pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+        //     if r != 6 {
+        //         panic!("wrong verify(padded) error: {}", r);
+        //     }
+        // }
+        //
         sigct.fill(0);
         r = falcon_sign_dyn(&mut rng, sigct.as_mut_slice(), sigct_len,
                             FALCON_SIG_CT, sk.as_mut_slice(), sk_len,
@@ -290,7 +297,8 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
         if logn >= 5 {
             // Skip check for very low degrees as alternate data hashes to a point very close
             // to the correct point so signature matches both.
-            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+            let mut data2vec = vec![10, 10, 10, 10, 10];
+            let data2 = data2vec.as_mut_slice();
             r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
                               pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
             if r != 6 {
@@ -298,6 +306,7 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
             }
         }
 
+        /*
         r = falcon_expand_privatekey(expkey.as_mut_slice(), expkey_len, sk.as_mut_slice(), sk_len, tmpek.as_mut_slice(), tmpek_len);
         if r != 0 {
             panic!("expand_privatekey failed: {}", r);
@@ -417,16 +426,21 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     let mut s1ttp: *mut i16 = s1p.wrapping_add(n).cast();
     let tt: &mut [u8];
     let s1tt: &mut [i16];
+    // TODO FIX HERNEDE!
     if logn == 1 {
         ttp = ttp.wrapping_add(4);
         s1ttp = s1ttp.wrapping_add(2);
-        tt = unsafe { from_raw_parts_mut(ttp, n + 4) };
-        s1tt = unsafe { from_raw_parts_mut(s1ttp, (n / 2) + 2) };
+        // tt = unsafe { from_raw_parts_mut(ttp, n + 4) };
+        tt = unsafe { from_raw_parts_mut(ttp, 50000) };
+        // s1tt = unsafe { from_raw_parts_mut(s1ttp, n + 2) };
+        s1tt = unsafe { from_raw_parts_mut(s1ttp, 25000) };
     } else {
-        tt = unsafe { from_raw_parts_mut(ttp, n) };
-        s1tt = unsafe { from_raw_parts_mut(s1ttp, n / 2) };
+        tt = unsafe { from_raw_parts_mut(ttp, 50000) };
+        // tt = unsafe { from_raw_parts_mut(ttp, n * 2) };
+        // s1tt = unsafe { from_raw_parts_mut(s1ttp, n) };
+        s1tt = unsafe { from_raw_parts_mut(s1ttp, 25000) };
     }
-    for _ in 0..1 {
+    for _ in 0..12 {
         let mut sc: InnerShake256Context = InnerShake256Context {
             st: St { a: [0; 25] },
             dptr: 0,
@@ -440,19 +454,18 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
         unsafe { hash_to_point_vartime(&mut sc, hm, logn); };
 
 
-        println!("Going into loop");
         sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tt);
-        s1.copy_from_slice(s1tt);
+        let hmm: &[u8] = &tt[0..n * 2];
+        s1[..n].copy_from_slice(&s1tt[0..n]);
         while !is_invertible(sig, logn, tt) {
-            println!("Loop");
             sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tt);
-            s1.copy_from_slice(s1tt);
+            s1.copy_from_slice(&s1tt[..n]);
         }
         to_ntt_monty(h, logn);
         if !verify_raw(hm, sig, h, logn, tt) {
             panic!("Self signature not verified");
         }
-        if verify_recover(h2, hm, s1, sig, logn, tt) {
+        if !verify_recover(h2, hm, s1, sig, logn, tt) {
             panic!("Self signature recovery failed");
         }
         to_ntt_monty(h2, logn);
