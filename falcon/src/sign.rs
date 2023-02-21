@@ -2,7 +2,7 @@ use std::mem;
 use bytemuck;
 use crate::common::is_short_half;
 use crate::fft::{fft, ifft, poly_add, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
-use crate::fpr::{fpr_mul, fpr_sqrt, FPR_INV_SIGMA, fpr_of, fpr_floor, fpr_sub, fpr_half, fpr_sqr, FPR_INV_2SQRSIGMA0, fpr_trunc, FPR_INV_LOG2, FPR_LOG2, fpr_expm_p63, FPR_INVERSE_OF_Q, fpr_neg, fpr_rint, FPR_SIGMA_MIN, fpr_add, FPR_INVSQRT8, FPR_INVSQRT2};
+use crate::fpr::{fpr_mul, fpr_sqrt, FPR_INV_SIGMA, fpr_of, fpr_floor, fpr_sub, fpr_half, fpr_sqr, FPR_INV_2SQRSIGMA0, fpr_trunc, FPR_INV_LOG2, FPR_LOG2, fpr_expm_p63, FPR_INVERSE_OF_Q, fpr_neg, fpr_rint, FPR_SIGMA_MIN, fpr_add, FPR_INVSQRT8, FPR_INVSQRT2, fpr_lt, FPR_ONEHALF, FPR_ONE};
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::InnerShake256Context;
 
@@ -213,28 +213,27 @@ pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0:
     g01[..hn].copy_from_slice(&g00[..hn]);
     g01[hn..2*hn].copy_from_slice(&g11[..hn]);
 
-    let (z10, z11) = tmp.split_at_mut(hn);
-    poly_split_fft(z10, &mut z11[..hn], t1, logn);
-
+    let (z10, inter) = tmp.split_at_mut(n);
+    let (z11, z1hn) = inter.split_at_mut(hn);
+    poly_split_fft(z11, z1hn, t1, logn);
     let (g110, g111) = g11.split_at_mut(hn);
-    let (z1hn, z1n) = z11.split_at_mut(hn);
-    ffSampling_fft_dyntree(samp, samp_ctx, z10, z1hn, g110, g111,
+    let (z1hn, z1n) = z1hn.split_at_mut(hn);
+    ffSampling_fft_dyntree(samp, samp_ctx, z11, z1hn, g110, g111,
                            &mut g01[hn..], orig_logn, logn - 1, z1n);
-    poly_merge_fft(z1n, z10, z1hn, logn);
+    poly_merge_fft(z1n, z11, z1hn, logn);
 
     let (tmp0, inter) = tmp.split_at_mut(n);
-    let (z1, tmpn1) = inter.split_at_mut(n);
+    let (z1, inter) = inter.split_at_mut(n);
+    let (tmpn1, inter) = inter.split_at_mut(n);
     z1.copy_from_slice(t1);
     poly_sub(z1, tmpn1, logn);
-    t1.copy_from_slice(&tmpn1[..n]);
+    t1.copy_from_slice(tmpn1);
     poly_mul_fft(tmp0, z1, logn);
     poly_add(t0, tmp0, logn);
-
     let (z0, z0n) = tmp.split_at_mut(n);
     let (z00, z01) = z0.split_at_mut(hn);
 
     poly_split_fft(z00, z01, t0, logn);
-
     let (g000, g001) = g00.split_at_mut(hn);
     ffSampling_fft_dyntree(samp, samp_ctx, z00, z01, g000, g001,
                            g01, orig_logn, logn - 1, z0n);
@@ -544,8 +543,8 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let (g01, inter) = inter.split_at_mut(n);
     let (g11, inter) = inter.split_at_mut(n);
     let (b11, inter) = inter.split_at_mut(n);
-    let (b01, inter) = inter.split_at_mut(n);
-    let (t0, inter) = inter.split_at_mut(n);
+    let (b01, interrest) = inter.split_at_mut(n);
+    let (t0, inter) = interrest.split_at_mut(n);
     let (t1, inter) = inter.split_at_mut(n);
 
     for u in 0..n {
@@ -566,7 +565,7 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let t0 = b11;
     let t1 = b01;
 
-    ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, inter);
+    ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, interrest);
 
     let (b00, inter) = tmp.split_at_mut(n);
     let (b01, inter) = inter.split_at_mut(n);
@@ -607,12 +606,12 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
 
     let s1tmp: &mut [i16] = bytemuck::cast_slice_mut(tx);
 
-    let mut sqn = 0;
-    let mut ng = 0;
+    let mut sqn: u32 = 0;
+    let mut ng: u32 = 0;
 
     for u in 0..n {
         let z: i32 = hm[u] as i32 - fpr_rint(t0[u]) as i32;
-        sqn += (z * z) as u32;
+        sqn = sqn.wrapping_add(z.wrapping_mul(z) as u32);
         ng |= sqn;
         s1tmp[u] = z as i16;
     }
@@ -620,13 +619,12 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
 
     let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(b00);
 
-    let t1 = &t0[n..];
     for u in 0..n {
         s2tmp[u] = -fpr_rint(t1[u]) as i16;
     }
 
     if is_short_half(sqn, s2tmp, logn) > 0 {
-        s2.copy_from_slice(&s2tmp[..n]);
+        s2[..n].copy_from_slice(&s2tmp[..n]);
         let tmpi: &mut [i16] = bytemuck::cast_slice_mut(b00);
         tmpi[..n].copy_from_slice(&s1tmp[..n]);
         return true;
@@ -771,6 +769,10 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
 }
 
 pub fn sampler(spc: &mut SamplerContext, mu: fpr, isigma: fpr) -> i32 {
+
+    assert_eq!(fpr_lt(isigma, FPR_ONEHALF), 0);
+    assert_eq!(fpr_lt(isigma, FPR_ONE), 1);
+
     let s: i64 = fpr_floor(mu);
     let r: fpr = fpr_sub(mu, fpr_of(s));
 
@@ -785,11 +787,12 @@ pub fn sampler(spc: &mut SamplerContext, mu: fpr, isigma: fpr) -> i32 {
         let mut x = fpr_mul(fpr_sqr(fpr_sub(fpr_of(z), r)), dss);
         x = fpr_sub(x, fpr_mul(fpr_of((z0 * z0) as i64), FPR_INV_2SQRSIGMA0));
 
-        //TODO fix infinite loop
         if BerExp(&mut spc.p, x, ccs) > 0 {
             return (s + z) as i32;
         }
     }
+
+    panic!("We keep running in circles my man!");
 }
 
 pub fn gaussian0_sampler(p: &mut Prng) -> i32 {
@@ -879,21 +882,16 @@ pub fn sign_tree(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: 
     }
 }
 
-//TODO test
 #[allow(non_snake_case)]
 pub fn sign_dyn(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], g: &[i8],
                 F: &[i8], G: &[i8], hm: &[u16], logn: u32, tmp: &mut [u8]) {
 
-    let mut ftmp: &mut [fpr];
-    unsafe {
-        ftmp = mem::transmute(tmp);
-    }
+    let mut ftmp: &mut [fpr] = bytemuck::cast_slice_mut(tmp);
 
     loop {
         let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};
         prng_init(&mut spc.p, rng);
         let samp: SamplerZ = sampler;
-        //let mut samp_ctx: &SamplerContext = &spc;
 
         if do_sign_dyn(samp, &mut spc, sig, f, g, F, G, hm, logn, &mut ftmp) {
             break;
@@ -906,16 +904,12 @@ pub fn sign_dyn(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], g: &[
 pub fn sign_dyn_same(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], g: &[i8],
                 F: &[i8], G: &[i8], logn: u32, tmp: &mut [u8]) {
 
-    let mut ftmp: &mut [fpr];
-    unsafe {
-        ftmp = mem::transmute(tmp);
-    }
+    let mut ftmp: &mut [fpr] = bytemuck::cast_slice_mut(tmp);
 
     loop {
         let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};
         prng_init(&mut spc.p, rng);
         let samp: SamplerZ = sampler;
-        //let mut samp_ctx: &SamplerContext = &spc;
 
         if do_sign_dyn_same(samp, &mut spc, sig, f, g, F, G, logn, &mut ftmp) {
             break;

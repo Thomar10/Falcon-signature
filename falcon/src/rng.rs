@@ -45,9 +45,9 @@ pub fn prng_init(p: &mut Prng, src: &mut InnerShake256Context) -> () {
     }
 
     unsafe {
-        tl = p.state.d32[12];
-        p.state.d32[12] = p.state.d32[13];
-        p.state.d32[13] = tl;
+        tl = p.state.d32[6];
+        let th = p.state.d32[7];
+        p.state.d32[6] = tl + ((th as u64) << 32) as u32;
     }
 
     prng_refill(p);

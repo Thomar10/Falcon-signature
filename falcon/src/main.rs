@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+extern crate core;
+
 use crate::gen_kat::genkat512;
 
 mod fft;
