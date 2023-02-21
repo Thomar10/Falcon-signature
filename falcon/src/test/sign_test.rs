@@ -298,17 +298,17 @@ mod tests {
         }
     }
 
-    #[test] //Sometimes loops forever
+    #[test]
     fn test_sampler() {
         let mut rng = rand::thread_rng();
-        for _ in 0..10 {
+        for _ in 0..1000 {
             let (mut prng, prng_c): (Prng, PrngC) = create_random_prngs();
             init_prngs(&mut prng, &prng_c);
 
             let logn = rng.gen_range(1..8);
-            let sigma_min: fpr = FPR_SIGMA_MIN[logn]; //fpr 1
-            let isigma = FPR_INV_SIGMA[logn];
-            let mu: fpr = rand::random();
+            let sigma_min: fpr = FPR_SIGMA_MIN[logn];
+            let isigma = fpr_from_fraction(rng.gen_range(50..100), 100); //Should be between 0.5 and 1
+            let mu: fpr = fpr_of(rng.gen_range(1..10));
 
             let mut samp_ctx: SamplerContext = SamplerContext{p: prng, sigma_min};
             let samp_ctx_c: SamplerContextC = SamplerContextC{p: prng_c, sigma_min};
@@ -456,6 +456,13 @@ mod tests {
         }
 
         return vec;
+    }
+
+    fn fpr_from_fraction(top: i64, bot: i64) -> fpr {
+        let numerator: fpr = fpr_of(top);
+        let denominator: fpr = fpr_of(bot);
+
+        return fpr_div(numerator, denominator);
     }
 
     #[allow(non_camel_case_types)]
