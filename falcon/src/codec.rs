@@ -143,7 +143,6 @@ pub fn comp_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i1
             acc_len -= 8;
             if out.len() > 0 {
                 if v >= max_out {
-                    println!("v >= max_out");
                     return 0;
                 }
                 out[v + out_index] = (acc >> acc_len) as u8;

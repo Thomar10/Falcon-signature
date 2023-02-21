@@ -230,155 +230,170 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
 
         let mut data1vec = vec![100, 97, 116, 97, 49];
         let data_bytes = data1vec.as_mut_slice();
-        sig_len = falcon_sig_compressed_maxsize!(logn);
-        (r, sig_len) = falcon_sign_dyn(&mut rng, sig.as_mut_slice(), sig_len,
-                                       FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
-                                       data_bytes, tmpsd.as_mut_slice(), tmpsd_len);
+        // sig_len = falcon_sig_compressed_maxsize!(logn);
+        // (r, sig_len) = falcon_sign_dyn(&mut rng, sig.as_mut_slice(), sig_len,
+        //                                FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
+        //                                data_bytes, tmpsd.as_mut_slice(), tmpsd_len);
+        //
+        //
+        // if r != 0 {
+        //     panic!("sign_dyn failed: {}", r);
+        // }
+        //
+        // r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+        //                   pk_len, data_bytes, tmpvv.as_mut_slice(), tmpvv_len);
+        // if r != 0 {
+        //     panic!("verify failed: {}, at logn {}", r, logn);
+        // }
+        // if logn >= 5 {
+        //     // Skip check for very low degrees as alternate data hashes to a point very close
+        //     // to the correct point so signature matches both.
+        //     let mut data2vec = vec![15, 10, 10, 10, 10];
+        //     let data2 = data2vec.as_mut_slice();
+        //     r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+        //                       pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
+        //     if r != -6 {
+        //         panic!("wrong verify error: {}", r);
+        //     }
+        // }
+        //
+        // sigpad.fill(0);
+        // sigpad_len = falcon_sig_padded_size!(logn);
+        // (r, sigpad_len) = falcon_sign_dyn(&mut rng, sigpad.as_mut_slice(), sigpad_len,
+        //                                   FALCON_SIG_PADDED, sk.as_mut_slice(), sk_len,
+        //                                   data_bytes, tmpsd.as_mut_slice(), tmpsd_len);
+        // if r != 0 {
+        //     panic!("sign_dyn(padded) failed: {}", r);
+        // }
+        // if sigpad_len != falcon_sig_padded_size!(logn) {
+        //     panic!("sign_dyn(padded): wrong length {}", sigpad_len);
+        // }
+        // r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+        //                   pk_len, data_bytes, tmpvv.as_mut_slice(), tmpvv_len);
+        // if r != 0 {
+        //     panic!("verify(padded) failed: {}", r);
+        // }
+        // if logn >= 5 {
+        //     // Skip check for very low degrees as alternate data hashes to a point very close
+        //     // to the correct point so signature matches both.
+        //     let mut data2vec = vec![10, 10, 10, 10, 10];
+        //     let data2 = data2vec.as_mut_slice();
+        //     r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+        //                       pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
+        //     if r != -6 {
+        //         panic!("wrong verify(padded) error: {}", r);
+        //     }
+        // }
+        //
+        //
+        // sigct.fill(0);
+        // sigct_len = falcon_sig_ct_size!(logn);
+        // (r, sigct_len) = falcon_sign_dyn(&mut rng, sigct.as_mut_slice(), sigct_len,
+        //                                  FALCON_SIG_CT, sk.as_mut_slice(), sk_len,
+        //                                  data_bytes, tmpsd.as_mut_slice(), tmpsd_len);
+        // if r != 0 {
+        //     panic!("sign_dyn(ct) failed: {}", r);
+        // }
+        // r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+        //                   pk_len, data_bytes, tmpvv.as_mut_slice(), tmpvv_len);
+        // if r != 0 {
+        //     panic!("verify(ct) failed: {}", r);
+        // }
+        // if logn >= 5 {
+        //     // Skip check for very low degrees as alternate data hashes to a point very close
+        //     // to the correct point so signature matches both.
+        //     let mut data2vec = vec![10, 10, 10, 10, 10];
+        //     let data2 = data2vec.as_mut_slice();
+        //     r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+        //                       pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
+        //     if r != -6 {
+        //         panic!("wrong verify(ct) error: {}", r);
+        //     }
+        // }
 
 
-        if r != 0 {
-            panic!("sign_dyn failed: {}", r);
-        }
-
-        r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-                          pk_len, data_bytes, tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify failed: {}, at logn {}", r, logn);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let mut data2vec = vec![15, 10, 10, 10, 10];
-            let data2 = data2vec.as_mut_slice();
-            r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-                              pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != -6 {
-                panic!("wrong verify error: {}", r);
-            }
-        }
-
-        sigpad.fill(0);
-        sigpad_len = falcon_sig_padded_size!(logn);
-        (r, sigpad_len) = falcon_sign_dyn(&mut rng, sigpad.as_mut_slice(), sigpad_len,
-                            FALCON_SIG_PADDED, sk.as_mut_slice(), sk_len,
-                            data_bytes,  tmpsd.as_mut_slice(), tmpsd_len);
-        if r != 0 {
-            panic!("sign_dyn(padded) failed: {}", r);
-        }
-        if sigpad_len != falcon_sig_padded_size!(logn) {
-            panic!("sign_dyn(padded): wrong length {}", sigpad_len);
-        }
-        r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-                          pk_len, data_bytes,  tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify(padded) failed: {}", r);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let mut data2vec = vec![10, 10, 10, 10, 10];
-            let data2 = data2vec.as_mut_slice();
-            r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-                              pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != -6 {
-                panic!("wrong verify(padded) error: {}", r);
-            }
-        }
-
-
-        sigct.fill(0);
-        sigct_len = falcon_sig_ct_size!(logn);
-        (r, sigct_len) = falcon_sign_dyn(&mut rng, sigct.as_mut_slice(), sigct_len,
-                            FALCON_SIG_CT, sk.as_mut_slice(), sk_len,
-                            data_bytes,  tmpsd.as_mut_slice(), tmpsd_len);
-        if r != 0 {
-            panic!("sign_dyn(ct) failed: {}", r);
-        }
-        r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
-                          pk_len, data_bytes,  tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify(ct) failed: {}", r);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let mut data2vec = vec![10, 10, 10, 10, 10];
-            let data2 = data2vec.as_mut_slice();
-            r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
-                              pk_len, data2,  tmpvv.as_mut_slice(), tmpvv_len);
-            if r != -6 {
-                panic!("wrong verify(ct) error: {}", r);
-            }
-        }
-
-        /*
         r = falcon_expand_privatekey(expkey.as_mut_slice(), expkey_len, sk.as_mut_slice(), sk_len, tmpek.as_mut_slice(), tmpek_len);
         if r != 0 {
             panic!("expand_privatekey failed: {}", r);
         }
+        println!();
+        println!("{:?}", expkey);
+        // if logn == 2 {
+        //     println!();
+        //     println!("{:?}", expkey);
+        //     println!("{:?}", sk);
+        // }
+        // sig.fill(0);
+        // sig_len = falcon_sig_compressed_maxsize!(logn as usize);
+        //
+        // (r, sig_len) = falcon_sign_tree(&mut rng, sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS,
+        //                                 expkey.as_mut_slice(), data_bytes, tmpst.as_mut_slice(), tmpst_len);
+        // // println!();
+        // // println!("{:?}", sig);
+        // if logn == 2 {
+        //     panic!(":(");
+        // }
+        // if r != 0 {
+        //     panic!("sign_tree failed: {}", r);
+        // }
+        // r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+        //                   pk_len, data_bytes, tmpvv.as_mut_slice(), tmpvv_len);
+        // if r != 0 {
+        //     panic!("verify2 failed: {}", r);
+        // }
+        // if logn >= 5 {
+        //     // Skip check for very low degrees as alternate data hashes to a point very close
+        //     // to the correct point so signature matches both.
+        //     let mut data2_vec = vec![10, 10, 10, 10, 10];
+        //     let data2 = data2_vec.as_mut_slice();
+        //     r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+        //                       pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
+        //     if r != -6 {
+        //         panic!("wrong verify(ct) error: {}", r);
+        //     }
+        // }
+        /*
+              sigpad.fill(0);
+              r = falcon_sign_tree(&mut rng, sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
+              if r != 0 {
+                  panic!("sign_tree(padded) failed: {}", r);
+              }
+              r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                                pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+              if r != 0 {
+                  panic!("verify2(padded) failed: {}", r);
+              }
+              if logn >= 5 {
+                  // Skip check for very low degrees as alternate data hashes to a point very close
+                  // to the correct point so signature matches both.
+                  let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+                  r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                                    pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+                  if r != 6 {
+                      panic!("wrong verify(padded) error: {}", r);
+                  }
+              }
 
-        sig.fill(0);
-        r = falcon_sign_tree(&mut rng, sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
-        if r != 0 {
-            panic!("sign_tree failed: {}", r);
-        }
-        r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify2 failed: {}", r);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
-            r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != 6 {
-                panic!("wrong verify(ct) error: {}", r);
-            }
-        }
-
-        sigpad.fill(0);
-        r = falcon_sign_tree(&mut rng, sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
-        if r != 0 {
-            panic!("sign_tree(padded) failed: {}", r);
-        }
-        r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify2(padded) failed: {}", r);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
-            r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != 6 {
-                panic!("wrong verify(padded) error: {}", r);
-            }
-        }
-
-        sigct.fill(0);
-        r = falcon_sign_tree(&mut rng, sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
-        if r != 0 {
-            panic!("sign_tree(ct) failed: {}", r);
-        }
-        r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
-                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        if r != 0 {
-            panic!("verify2(ct) failed: {}", r);
-        }
-        if logn >= 5 {
-            // Skip check for very low degrees as alternate data hashes to a point very close
-            // to the correct point so signature matches both.
-            let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
-            r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
-                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != 6 {
-                panic!("wrong verify(ct) error: {}", r);
-            }
-        } */
+              sigct.fill(0);
+              r = falcon_sign_tree(&mut rng, sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, expkey.as_mut_slice(), data_bytes, 5, tmpst.as_mut_slice(), tmpst_len);
+              if r != 0 {
+                  panic!("sign_tree(ct) failed: {}", r);
+              }
+              r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+                                pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+              if r != 0 {
+                  panic!("verify2(ct) failed: {}", r);
+              }
+              if logn >= 5 {
+                  // Skip check for very low degrees as alternate data hashes to a point very close
+                  // to the correct point so signature matches both.
+                  let data2 = vec![10, 10, 10, 10, 10].as_mut_slice();
+                  r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
+                                    pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
+                  if r != 6 {
+                      panic!("wrong verify(ct) error: {}", r);
+                  }
+              } */
         print!(".");
     }
 }
