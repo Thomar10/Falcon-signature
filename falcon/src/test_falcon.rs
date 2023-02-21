@@ -176,9 +176,9 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
     print!("[{}]", logn);
     let pk_len = falcon_publickey_size!(logn as usize);
     let sk_len = falcon_privatekey_size!(logn as usize);
-    let sig_len = falcon_sig_compressed_maxsize!(logn as usize);
-    let sigpad_len = falcon_sig_padded_size!(logn as usize);
-    let sigct_len = falcon_sig_ct_size!(logn as usize);
+    let mut sig_len = falcon_sig_compressed_maxsize!(logn as usize);
+    let mut sigpad_len = falcon_sig_padded_size!(logn as usize);
+    let mut sigct_len = falcon_sig_ct_size!(logn as usize);
     let expkey_len = falcon_tmpsize_expanded_key_size!(logn as usize);
 
     let mut pk: Vec<u8> = vec![0; pk_len];
@@ -228,69 +228,74 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
 
         sig.fill(0);
 
-        let mut data1Vec = vec![100, 97, 116, 97, 49];
-        let data_bytes = data1Vec.as_mut_slice();
-        r = falcon_sign_dyn(&mut rng, sig.as_mut_slice(), sig_len,
-                            FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
-                            data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
-        println!();
-        println!("signature {:?}", sig);
+        let mut data1vec = vec![100, 97, 116, 97, 49];
+        let data_bytes = data1vec.as_mut_slice();
+        sig_len = falcon_sig_compressed_maxsize!(logn);
+        (r, sig_len) = falcon_sign_dyn(&mut rng, sig.as_mut_slice(), sig_len,
+                                       FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
+                                       data_bytes, tmpsd.as_mut_slice(), tmpsd_len);
+
+
         if r != 0 {
             panic!("sign_dyn failed: {}", r);
         }
-        // r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-        //                   pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        // if r != 0 {
-        //     panic!("verify failed: {}", r);
-        // }
-        // if logn >= 5 {
-        //     // Skip check for very low degrees as alternate data hashes to a point very close
-        //     // to the correct point so signature matches both.
-        //     let mut data2Vec = vec![10, 10, 10, 10, 10];
-        //     let data2 = data2Vec.as_mut_slice();
-        //     r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
-        //                       pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        //     if r != 6 {
-        //         panic!("wrong verify error: {}", r);
-        //     }
-        // }
-        //
-        // sigpad.fill(0);
-        // r = falcon_sign_dyn(&mut rng, sigpad.as_mut_slice(), sigpad_len,
-        //                     FALCON_SIG_PADDED, sk.as_mut_slice(), sk_len,
-        //                     data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
-        // if r != 0 {
-        //     panic!("sign_dyn(padded) failed: {}", r);
-        // }
-        // if sigpad_len != falcon_sig_padded_size!(logn) {
-        //     panic!("sign_dyn(padded): wrong length {}", sigpad_len);
-        // }
-        // r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-        //                   pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        // if r != 0 {
-        //     panic!("verify(padded) failed: {}", r);
-        // }
-        // if logn >= 5 {
-        //     // Skip check for very low degrees as alternate data hashes to a point very close
-        //     // to the correct point so signature matches both.
-        //     let mut data2vec = vec![10, 10, 10, 10, 10];
-        //     let data2 = data2vec.as_mut_slice();
-        //     r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
-        //                       pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-        //     if r != 6 {
-        //         panic!("wrong verify(padded) error: {}", r);
-        //     }
-        // }
-        //
+
+        r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+                          pk_len, data_bytes, tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify failed: {}, at logn {}", r, logn);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let mut data2vec = vec![15, 10, 10, 10, 10];
+            let data2 = data2vec.as_mut_slice();
+            r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
+                              pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != -6 {
+                panic!("wrong verify error: {}", r);
+            }
+        }
+
+        sigpad.fill(0);
+        sigpad_len = falcon_sig_padded_size!(logn);
+        (r, sigpad_len) = falcon_sign_dyn(&mut rng, sigpad.as_mut_slice(), sigpad_len,
+                            FALCON_SIG_PADDED, sk.as_mut_slice(), sk_len,
+                            data_bytes,  tmpsd.as_mut_slice(), tmpsd_len);
+        if r != 0 {
+            panic!("sign_dyn(padded) failed: {}", r);
+        }
+        if sigpad_len != falcon_sig_padded_size!(logn) {
+            panic!("sign_dyn(padded): wrong length {}", sigpad_len);
+        }
+        r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                          pk_len, data_bytes,  tmpvv.as_mut_slice(), tmpvv_len);
+        if r != 0 {
+            panic!("verify(padded) failed: {}", r);
+        }
+        if logn >= 5 {
+            // Skip check for very low degrees as alternate data hashes to a point very close
+            // to the correct point so signature matches both.
+            let mut data2vec = vec![10, 10, 10, 10, 10];
+            let data2 = data2vec.as_mut_slice();
+            r = falcon_verify(sigpad.as_mut_slice(), sigpad_len, FALCON_SIG_PADDED, pk.as_mut_slice(),
+                              pk_len, data2, tmpvv.as_mut_slice(), tmpvv_len);
+            if r != -6 {
+                panic!("wrong verify(padded) error: {}", r);
+            }
+        }
+
+
         sigct.fill(0);
-        r = falcon_sign_dyn(&mut rng, sigct.as_mut_slice(), sigct_len,
+        sigct_len = falcon_sig_ct_size!(logn);
+        (r, sigct_len) = falcon_sign_dyn(&mut rng, sigct.as_mut_slice(), sigct_len,
                             FALCON_SIG_CT, sk.as_mut_slice(), sk_len,
-                            data_bytes, 5, tmpsd.as_mut_slice(), tmpsd_len);
+                            data_bytes,  tmpsd.as_mut_slice(), tmpsd_len);
         if r != 0 {
             panic!("sign_dyn(ct) failed: {}", r);
         }
         r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
-                          pk_len, data_bytes, 5, tmpvv.as_mut_slice(), tmpvv_len);
+                          pk_len, data_bytes,  tmpvv.as_mut_slice(), tmpvv_len);
         if r != 0 {
             panic!("verify(ct) failed: {}", r);
         }
@@ -300,8 +305,8 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
             let mut data2vec = vec![10, 10, 10, 10, 10];
             let data2 = data2vec.as_mut_slice();
             r = falcon_verify(sigct.as_mut_slice(), sigct_len, FALCON_SIG_CT, pk.as_mut_slice(),
-                              pk_len, data2, 5, tmpvv.as_mut_slice(), tmpvv_len);
-            if r != 6 {
+                              pk_len, data2,  tmpvv.as_mut_slice(), tmpvv_len);
+            if r != -6 {
                 panic!("wrong verify(ct) error: {}", r);
             }
         }
@@ -714,15 +719,15 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
             }
             assert_eq!(s1, s2, "trim_i16 encode/decode");
             s2.fill(0);
-            // len1 = comp_encode(tmp, 4 * n, maxlen, s1, logn as usize);
-            // if len1 == 0 {
-            //     panic!("Error comp encode: {}", len1);
-            // }
-            // len2 = comp_decode(s2, logn, tmp, 4 * n, len1);
-            // if len2 != len1 {
-            //     panic!("Error comp decode: {}", len2);
-            // }
-            // assert_eq!(s1, s2, "comp encode/decode");
+            len1 = comp_encode(tmp, 4 * n, maxlen, s1, logn as usize);
+            if len1 == 0 {
+                panic!("Error comp encode: {}", len1);
+            }
+            len2 = comp_decode(s2, logn, tmp, 4 * n, len1);
+            if len2 != len1 {
+                panic!("Error comp decode: {} != {}", len2, len1);
+            }
+            assert_eq!(s1, s2, "comp encode/decode");
         }
 
         let b1p: *mut i8 = tmp.as_mut_ptr().cast();

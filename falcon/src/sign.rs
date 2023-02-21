@@ -656,7 +656,6 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let ty: &mut [fpr] = unsafe { from_raw_parts_mut(tx.as_mut_ptr().wrapping_add(n), n) };
 
 
-
     tx.copy_from_slice(t0i);
     ty.copy_from_slice(t1i);
     poly_mul_fft(tx, b00, logn);
