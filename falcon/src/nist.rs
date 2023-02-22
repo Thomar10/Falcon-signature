@@ -4,7 +4,7 @@ use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_deco
 use crate::common::hash_to_point_vartime;
 use crate::katrng::randombytes;
 use crate::keygen::keygen;
-use crate::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context, St};
+use crate::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
 use crate::sign::sign_dyn;
 use crate::vrfy::{complete_private, to_ntt_monty, verify_raw};
 
@@ -23,7 +23,7 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8], logn: usize) ->
     let mut h: Vec<u16> = vec![0; buff_size];
     let mut seed: [u8; 48] = [0; 48];
     let mut rng = InnerShake256Context {
-        st: St { a: [0u64; 25] },
+        st: [0u64; 25],
         dptr: 0,
     };
     randombytes(&mut seed);
@@ -83,7 +83,7 @@ pub fn crypto_sign(sm: &mut [u8], mut m: &mut [u8], mlen: usize, sk: &mut [u8], 
     let mut esig: Vec<u8> = vec![0; crypto_bytes - 2 - NONCE];
 
     let mut rng = InnerShake256Context {
-        st: St { a: [0u64; 25] },
+        st: [0u64; 25],
         dptr: 0,
     };
 
@@ -151,7 +151,7 @@ pub fn crypto_sign_open(msg: &mut [u8], signature: &mut [u8], slen: usize, pk: &
     let mut hm: Vec<u16> = vec![0; buff_size];
     let mut sig: Vec<i16> = vec![0; buff_size];
     let mut rng = InnerShake256Context {
-        st: St { a: [0u64; 25] },
+        st: [0u64; 25],
         dptr: 0,
     };
     if pk[0] != (0x00 + logn) as u8 {
