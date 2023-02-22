@@ -29,6 +29,7 @@ mod falcon_c {
     pub mod sign_c;
     pub mod vrfy_c;
     pub mod keygen_c;
+    pub mod test_falcon_c;
 }
 
 
