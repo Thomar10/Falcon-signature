@@ -2,7 +2,7 @@
 mod tests {
     use rand::Rng;
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, process_block as process_block_c, InnerShake256Context as InnerShake256ContextC, St as StC, falcon_inner_i_shake256_inject, falcon_inner_i_shake256_flip, falcon_inner_i_shake256_extract};
-    use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, process_block, St};
+    use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, process_block};
 
     #[test]
     fn test_process_block() {
@@ -23,9 +23,7 @@ mod tests {
         let random_state: [u64; 25] = rand::random();
         let random_dptr: u64 = rand::random();
 
-        let st = St {a: random_state};
-
-        let mut sc_rust = InnerShake256Context {st, dptr: random_dptr};
+        let mut sc_rust = InnerShake256Context {st: random_state, dptr: random_dptr};
 
         let sc_c = InnerShake256ContextC {st: StC {a: random_state.clone()}, dptr: random_dptr};
 
@@ -44,9 +42,7 @@ mod tests {
             let random_state: [u64; 25] = rand::random();
             let random_dptr: u64 = rand::random();
 
-            let st = St { a: random_state };
-
-            let mut sc_rust = InnerShake256Context { st, dptr: random_dptr };
+            let mut sc_rust = InnerShake256Context { st: random_state, dptr: random_dptr };
 
             let sc_c = InnerShake256ContextC { st: StC { a: random_state.clone() }, dptr: random_dptr };
 
@@ -77,9 +73,7 @@ mod tests {
             let random_state: [u64; 25] = rand::random();
             let random_dptr: u64 = rand::random();
 
-            let st = St { a: random_state };
-
-            let mut sc_rust = InnerShake256Context { st, dptr: random_dptr };
+            let mut sc_rust = InnerShake256Context { st: random_state, dptr: random_dptr };
 
             let sc_c = InnerShake256ContextC { st: StC { a: random_state.clone() }, dptr: random_dptr };
 
@@ -112,9 +106,7 @@ mod tests {
             let random_state: [u64; 25] = rand::random();
             let random_dptr: u64 = rand::random();
 
-            let st = St { a: random_state };
-
-            let mut sc_rust = InnerShake256Context { st, dptr: random_dptr };
+            let mut sc_rust = InnerShake256Context { st: random_state, dptr: random_dptr };
 
             let sc_c = InnerShake256ContextC { st: StC { a: random_state.clone() }, dptr: random_dptr };
 
@@ -148,9 +140,7 @@ mod tests {
             let random_state: [u64; 25] = rand::random();
             let random_dptr: u64 = rand::random();
 
-            let st = St { a: random_state };
-
-            let mut sc_rust = InnerShake256Context { st, dptr: random_dptr };
+            let mut sc_rust = InnerShake256Context { st: random_state, dptr: random_dptr };
 
             let sc_c = InnerShake256ContextC { st: StC { a: random_state.clone() }, dptr: random_dptr };
 
@@ -192,7 +182,7 @@ mod tests {
             return false;
         }
 
-        if sc_rust.st.a != sc_c.st.a {
+        if sc_rust.st != sc_c.st.a {
             return false;
         }
 

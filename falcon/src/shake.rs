@@ -1,15 +1,7 @@
-//TODO maybe we don't need a union and can avoid using unsafe?
-pub union St {
-    pub(crate) a: [u64; 25],
-    #[allow(dead_code)] //dbuf is never used. Maybe we can remove it?
-    dbuf: [u8; 200],
-}
-
 pub struct InnerShake256Context {
-    pub(crate) st: St,
+    pub(crate) st: [u64; 25],
     pub(crate) dptr: u64,
 }
-
 
 //Round constants
 static RC: [u64; 24] = [
@@ -461,7 +453,7 @@ pub fn process_block(a: &mut [u64]) -> () {
 pub fn i_shake256_init(sc: &mut InnerShake256Context) -> () {
     sc.dptr = 0;
 
-    sc.st = St { a: [0; 25] };
+    sc.st = [0; 25];
 }
 
 /*
@@ -487,9 +479,7 @@ pub fn i_shake256_inject(sc: &mut InnerShake256Context, input: &[u8]) -> () {
         u = 0;
         while u < clen {
             let v: usize = u + dptr;
-            unsafe {
-                sc.st.a[v >> 3] ^= (input[offset + u] as u64) << ((v & 7) << 3);
-            }
+            sc.st[v >> 3] ^= (input[offset + u] as u64) << ((v & 7) << 3);
             u += 1;
         }
 
@@ -498,9 +488,7 @@ pub fn i_shake256_inject(sc: &mut InnerShake256Context, input: &[u8]) -> () {
         len -= clen;
 
         if dptr == 136 {
-            unsafe {
-                process_block(&mut sc.st.a);
-            }
+            process_block(&mut sc.st);
             dptr = 0;
         }
     }
@@ -526,9 +514,7 @@ pub fn i_shake256_inject_length(sc: &mut InnerShake256Context, input: &[u8], off
         u = 0;
         while u < clen {
             let v: usize = u + dptr;
-            unsafe {
-                sc.st.a[v >> 3] ^= (input[offset + u] as u64) << ((v & 7) << 3);
-            }
+            sc.st[v >> 3] ^= (input[offset + u] as u64) << ((v & 7) << 3);
             u += 1;
         }
 
@@ -537,9 +523,7 @@ pub fn i_shake256_inject_length(sc: &mut InnerShake256Context, input: &[u8], off
         len -= clen;
 
         if dptr == 136 {
-            unsafe {
-                process_block(&mut sc.st.a);
-            }
+            process_block(&mut sc.st);
             dptr = 0;
         }
     }
@@ -563,10 +547,9 @@ pub fn i_shake256_flip(sc: &mut InnerShake256Context) -> () {
 	 * shake_extract() will process the block.
 	 */
     let v: usize = sc.dptr as usize;
-    unsafe {
-        sc.st.a[v >> 3] ^= (0x1F as u64) << ((v & 7) << 3);
-        sc.st.a[16] ^= (0x80 as u64) << 56;
-    }
+
+    sc.st[v >> 3] ^= (0x1F as u64) << ((v & 7) << 3);
+    sc.st[16] ^= (0x80 as u64) << 56;
 
     sc.dptr = 136;
 }
@@ -590,10 +573,8 @@ pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<
         let mut clen: usize;
 
         if dptr == 136 {
-            unsafe {
-                process_block(&mut sc.st.a);
-                dptr = 0;
-            }
+            process_block(&mut sc.st);
+            dptr = 0;
         }
 
         clen = 136 - dptr;
@@ -603,9 +584,7 @@ pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<
 
         len -= clen;
         while clen > 0 {
-            unsafe {
-                output.push((sc.st.a[dptr >> 3] >> ((dptr & 7) << 3)) as u8);
-            }
+            output.push((sc.st[dptr >> 3] >> ((dptr & 7) << 3)) as u8);
             dptr += 1;
             clen -= 1;
         }

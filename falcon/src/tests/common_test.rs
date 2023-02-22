@@ -5,7 +5,7 @@ mod tests {
     use crate::common::{hash_to_point_ct, hash_to_point_vartime, is_short, is_short_half};
     use crate::falcon_c::common_c::{hash_to_point_ct_func, hash_to_point_vartime_func, is_short_func, is_short_half_func};
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};
-    use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context, St};
+    use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
 
     #[test]
     fn test_hash_to_point_vartime() {
@@ -72,8 +72,7 @@ mod tests {
     pub fn init_shake_with_random_context() -> (InnerShake256Context, InnerShake256ContextC) {
         let random_state: [u64; 25] = rand::random();
         let random_dptr: u64 = rand::random();
-        let st = St { a: random_state };
-        let mut sc_rust = InnerShake256Context { st, dptr: random_dptr };
+        let mut sc_rust = InnerShake256Context { st: random_state, dptr: random_dptr };
         let sc_c = InnerShake256ContextC { st: StC { a: random_state.clone() }, dptr: random_dptr };
         unsafe { falcon_inner_i_shake256_init(&sc_c as *const InnerShake256ContextC) }
         i_shake256_init(&mut sc_rust);
