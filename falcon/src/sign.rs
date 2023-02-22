@@ -1,5 +1,3 @@
-use std::mem;
-
 use bytemuck;
 use libc::c_float;
 
@@ -462,10 +460,7 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
     ifft(t0, logn);
     ifft(t1, logn);
 
-    let s1tmp: &mut [i16];
-    unsafe {
-        s1tmp = mem::transmute(tx);
-    }
+    let s1tmp: &mut [i16] = bytemuck::cast_slice_mut(tx);
     let mut sqn: u32 = 0;
     let mut ng: u32 = 0;
 
@@ -478,21 +473,14 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
     }
     sqn |= -((ng >> 31) as i32) as u32;
 
-    let s2tmp: &mut [i16];
-    unsafe {
-        s2tmp = mem::transmute(t0);
-    }
+    let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(t0);
 
     for u in 0..n {
         s2tmp[u] = -fpr_rint(t1[u]) as i16;
     }
     if is_short_half(sqn, s2tmp, logn) > 0 {
         s2[..n].copy_from_slice(&s2tmp[..n]);
-        let tmpi: &mut [i16];
-        unsafe {
-            tmpi = mem::transmute(tmp);
-        }
-        tmpi[..n].copy_from_slice(&s1tmp[..n]);
+        s2tmp[..n].copy_from_slice(&s1tmp[..n]);
         return true;
     }
     return false;
@@ -737,10 +725,7 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     ifft(t0, logn);
     ifft(t1, logn);
 
-    //let (s1tmpf, s2tmpf) = tmp.split_at_mut(6*n);
     let s1tmp: &mut [i16] = bytemuck::cast_slice_mut(tx);
-    //let (s1tmp, t0i) = s1tmp.split_at_mut(4*4*n); //s1tmp now has 4 times as many indices and t0 was previously located at 4*n
-    //let t0: &mut [fpr] = bytemuck::cast_slice_mut(t0i);
 
     let mut sqn = 0;
     let mut ng = 0;
