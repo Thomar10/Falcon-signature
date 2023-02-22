@@ -31,9 +31,9 @@ pub fn genkat_logn(logn: usize) {
     let mut mlen = 0;
     let mut msg: Vec<u8> = vec![0; 0];
     let mut m1: Vec<u8>;
-    let mut smlen = 0;
+    let mut smlen;
     let mut sm: Vec<u8> = vec![0; 0];
-    let mut sm_read: Vec<u8> = vec![0; 0];
+    let mut sm_read: Vec<u8>;
     for line in buf_reader.lines() {
         let string = line.unwrap();
         if string.contains("seed") {
