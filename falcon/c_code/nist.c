@@ -268,3 +268,11 @@ crypto_sign_open(unsigned char *m, unsigned long long *mlen,
 	*mlen = msg_len;
 	return 0;
 }
+
+int
+crypto_sign_open_func(unsigned char *m, unsigned long long *mlen,
+	const unsigned char *sm, unsigned long long smlen,
+	const unsigned char *pk)
+{
+  return crypto_sign_open(m, mlen, sm, smlen, pk);
+}
