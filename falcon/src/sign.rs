@@ -487,7 +487,7 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
         s2tmp[u] = -fpr_rint(t1[u]) as i16;
     }
     if is_short_half(sqn, s2tmp, logn) > 0 {
-        s2.copy_from_slice(&s2tmp[..n]);
+        s2[..n].copy_from_slice(&s2tmp[..n]);
         let tmpi: &mut [i16];
         unsafe {
             tmpi = mem::transmute(tmp);
