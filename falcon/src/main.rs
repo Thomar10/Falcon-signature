@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::gen_kat::genkat;
 
 mod fft;
