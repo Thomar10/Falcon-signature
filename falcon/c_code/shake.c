@@ -497,6 +497,12 @@ falcon_inner_i_shake256_init(inner_shake256_context *sc)
 	memset(sc->st.A, 0, sizeof sc->st.A);
 }
 
+
+void
+falcon_inner_i_shake256_inject2(inner_shake256_context *sc, const uint16_t *in, size_t len)
+{
+ falcon_inner_i_shake256_inject(sc, in, len);
+}
 /* see inner.h */
 void
 falcon_inner_i_shake256_inject(inner_shake256_context *sc, const uint8_t *in, size_t len)

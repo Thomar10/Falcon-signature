@@ -848,7 +848,6 @@ mod tests {
     fn test_keygen() {
         for _ in 0..5 {
             for logn in 1..11 {
-                println!("logn {}", logn);
                 let buffer_size = falcon_tmpsize_keygen!(logn);
                 let (mut rng_rust, rng_c) = init_shake_with_random_context();
                 let mut h: Vec<u16> = vec![0u16; buffer_size];
@@ -876,7 +875,7 @@ mod tests {
     }
 
 
-    fn init_shake_with_random_context() -> (InnerShake256Context, InnerShake256ContextC) {
+    pub fn init_shake_with_random_context() -> (InnerShake256Context, InnerShake256ContextC) {
         let random_state: [u64; 25] = rand::random();
         let random_dptr: u64 = rand::random();
         let st = St { a: random_state };
