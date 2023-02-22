@@ -1,6 +1,7 @@
 use std::mem;
 
 use bytemuck;
+use libc::c_float;
 
 use crate::common::is_short_half;
 use crate::fft::{fft, ifft, poly_add, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
@@ -248,8 +249,8 @@ pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [f
                       z1: &mut [fpr], tree: &mut [fpr], t0: &mut [fpr], t1: &mut [fpr], logn: u32, tmp: &mut [fpr]) {
 
     if logn == 2 {
-        let (tree0, treerest) = tree.split_at(4);
-        let (tree1, treerest) = treerest.split_at(4);
+        let (_, treerest) = tree.split_at(4);
+        let (tree0, tree1) = treerest.split_at(4);
 
         let mut a_re: fpr = t1[0];
         let mut a_im: fpr = t1[2];
@@ -262,7 +263,7 @@ pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [f
         c_re = fpr_sub(a_re, b_re);
         c_im = fpr_sub(a_im, b_im);
         let mut w2: fpr = fpr_mul(fpr_add(c_re, c_im), FPR_INVSQRT8);
-        let mut w3: fpr = fpr_mul(fpr_add(c_im, c_re), FPR_INVSQRT8);
+        let mut w3: fpr = fpr_mul(fpr_sub(c_im, c_re), FPR_INVSQRT8);
 
         let mut x0: fpr = w2;
         let mut x1: fpr = w3;
@@ -391,8 +392,8 @@ pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [f
     let n: usize = 1 << logn;
     let hn: usize = n >> 1;
 
-    let (tree0, treerest) = tree.split_at_mut(n);
-    let (tree1, treerest) = treerest.split_at_mut(ffLDL_treesize(logn - 1) as usize);
+    let tree1: &mut [fpr] = &mut tree[n + ffLDL_treesize(logn - 1) as usize..];
+
 
     let (z10, z11) = z1.split_at_mut(hn);
     poly_split_fft(z10, z11, t1, logn);
@@ -407,18 +408,17 @@ pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [f
     poly_add(tmp, t0, logn);
 
 
-    let (tree0, treerest) = tree.split_at_mut(n);
-    let (tree1, treerest) = treerest.split_at_mut(ffLDL_treesize(logn - 1) as usize);
+    let tree0: &mut [fpr] = &mut tree[n..];
 
     let (z00, z01) = z0.split_at_mut(hn);
     poly_split_fft(z00, z01, tmp, logn);
     let (tmp0, tmprest) = tmp.split_at_mut(hn);
     let (tmp1, tmp2) = tmprest.split_at_mut(hn);
-    ffSampling_fft(samp, samp_ctx, tmp0, tmp1, tree1, z00, z01, logn - 1, tmp2);
+    ffSampling_fft(samp, samp_ctx, tmp0, tmp1, tree0, z00, z01, logn - 1, tmp2);
     poly_merge_fft(z0, tmp0, tmp1, logn);
 }
 
-//TODO test
+
 pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
                     expanded_key: &mut [fpr], hm: &[u16], logn: u32, tmp: &mut [fpr]) -> bool {
     let n: usize = MKN!(logn);
@@ -486,14 +486,13 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
     for u in 0..n {
         s2tmp[u] = -fpr_rint(t1[u]) as i16;
     }
-
     if is_short_half(sqn, s2tmp, logn) > 0 {
         s2.copy_from_slice(&s2tmp[..n]);
         let tmpi: &mut [i16];
         unsafe {
             tmpi = mem::transmute(tmp);
         }
-        tmpi.copy_from_slice(&s1tmp[..n]);
+        tmpi[..n].copy_from_slice(&s1tmp[..n]);
         return true;
     }
     return false;
@@ -857,13 +856,11 @@ pub fn BerExp(p: &mut Prng, x: fpr, ccs: fpr) -> i32 {
     return (w >> 31) as i32;
 }
 
-//TODO test
+
 pub fn sign_tree(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: &mut [fpr], hm: &[u16],
                  logn: u32, tmp: &mut [u8]) {
-    let mut ftmp: &mut [fpr];
-    unsafe {
-        ftmp = mem::transmute(tmp);
-    }
+
+    let mut ftmp: &mut [fpr] = bytemuck::cast_slice_mut(tmp);
 
     loop {
         let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};

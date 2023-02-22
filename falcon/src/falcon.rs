@@ -313,16 +313,12 @@ pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
     }
 
     let n: usize = 1 << logn;
-    let fp: *mut i8 = tmp.as_mut_ptr().cast();
-    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
-    let gp = fp.wrapping_add(n);
-    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
-    let Fp = gp.wrapping_add(n);
-    let F: &mut [i8] = unsafe { from_raw_parts_mut(Fp, n) };
-    let Gp = Fp.wrapping_add(n);
-    let G: &mut [i8] = unsafe { from_raw_parts_mut(Gp, n) };
-    let atmp: &mut [u8] = unsafe { from_raw_parts_mut(Gp.wrapping_add(n).cast(), tmp.len() - 5 * n) };
-    let atmp_fpr: &mut [fpr] = unsafe { from_raw_parts_mut(Gp.wrapping_add(n).cast(), (tmp.len() - 5 * n) / 8) };
+    let (f, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
+    let (F, inter) = inter.split_at_mut(n);
+    let (G, inter) = inter.split_at_mut(n);
+    let (_, atmp, _) = bytemuck::pod_align_to_mut::<i8, u64>(inter);
+    let atmp = bytemuck::cast_slice_mut::<u64, u8>(atmp);
     let mut u = 1;
     let mut v = trim_i8_decode(f, logn, max_fg_bits[logn as usize] as u32, sk, u, sk_len - u);
     if v == 0 {
@@ -347,13 +343,10 @@ pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
     }
     expanded_key[0] = logn as u8;
 
-    let expkey: &mut [fpr] = unsafe {
-        let key_cast: *mut fpr = expanded_key.as_mut_ptr().cast();
-        from_raw_parts_mut(key_cast.wrapping_add(1), expanded_len  - 1)
-    };
-
-    // let expkey: &mut [fpr] = unsafe { from_raw_parts_mut(expanded_key.as_mut_ptr().wrapping_add(1).cast(), expanded_len - 1) };
-    expand_privkey(expkey, f, g, F, G, logn, atmp_fpr);
+    let (_, expkey) = expanded_key.split_at_mut(8);
+    let expkey = bytemuck::cast_slice_mut(expkey);
+    let atmp = bytemuck::cast_slice_mut(atmp);
+    expand_privkey(expkey, f, g, F, G, logn, atmp);
     0
 }
 
@@ -439,7 +432,7 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
     let (g, inter) = inter.split_at_mut(n);
     let (F, inter) = inter.split_at_mut(n);
     let (G, inter) = inter.split_at_mut(n);
-    let (_ , inter, _ ) = bytemuck::pod_align_to_mut::<i8, u16>(inter);
+    let (_, inter, _) = bytemuck::pod_align_to_mut::<i8, u16>(inter);
     let (hm, inter) = inter.split_at_mut(n);
     let atmp: &mut [u8] = align_fpr(inter);
     let mut u = 1;
@@ -538,7 +531,8 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
     if signature_len < 41 {
         return (-6, 0);
     }
-    let expkey: &mut [fpr] = unsafe { from_raw_parts_mut(expanded_key.as_mut_ptr().wrapping_add(1).cast(), expanded_key.len() / 8) };
+    let (_, expkey) = expanded_key.split_at_mut(8); // alignment
+    let expkey = bytemuck::cast_slice_mut(expkey);
     match signature_type {
         FALCON_SIG_COMPRESS => {}
         FALCON_SIG_PADDED => {
@@ -553,10 +547,10 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
         }
         _ => { return (-6, 0); }
     }
-    let hm: &mut [u16] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().cast(), n) };
-    let sv: &mut [i16] = unsafe { from_raw_parts_mut(hm.as_mut_ptr().cast(), n) };
-    let atmp: &mut [u8] = unsafe { from_raw_parts_mut(sv.as_mut_ptr().wrapping_add(n).cast(), n * 8) };
-
+    let (_, hm, _) = bytemuck::pod_align_to_mut::<u8, u16>(tmp);
+    let (hm, atmp) = hm.split_at_mut(n);
+    let (_, atmp, _) = bytemuck::pod_align_to_mut::<u16, u64>(atmp);
+    let atmp = bytemuck::cast_slice_mut::<u64, u8>(atmp);
     shake256_flip(&mut hash_data);
     loop {
         let mut hash_data_restart: &mut InnerShake256Context = &mut unsafe {
@@ -570,7 +564,9 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
         } else {
             hash_to_point_vartime(&mut hash_data_restart, hm, logn);
         }
-
+        let mut sv = vec![0u16; hm.len()];
+        sv.clone_from_slice(hm);
+        let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
         sign_tree(sv, &mut rng, expkey, hm, logn, atmp);
 
         signature[1..41].copy_from_slice(nonce);
