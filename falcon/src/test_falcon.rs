@@ -1,6 +1,5 @@
 #![allow(non_upper_case_globals)]
-#![allow(warnings, unused)]
-#![allow(warnings, unused_unsafe)]
+#![allow(non_snake_case)]
 
 use std::ffi::{CStr, CString};
 use std::slice::from_raw_parts_mut;
@@ -35,14 +34,14 @@ pub(crate) fn test_sign() {
     print!("Test sign : ");
     const TLEN: usize = 178176;
     let mut tmp: [u8; TLEN] = [0; TLEN];
-    test_sign_self(&mut ntru_f_16, &mut ntru_g_16, &mut ntru_F_16, &mut ntru_G_16, &mut ntru_h_16, 4, &mut tmp);
-    test_sign_self(&mut ntru_f_512, &mut ntru_g_512, &mut ntru_F_512, &mut ntru_G_512, &ntru_h_512, 9, &mut tmp);
-    test_sign_self(&mut ntru_f_1024, &mut ntru_g_1024, &mut ntru_F_1024, &mut ntru_G_1024, &mut ntru_h_1024, 10, &mut tmp);
+    test_sign_self(&ntru_f_16, &ntru_g_16, &ntru_F_16, &ntru_G_16, &ntru_h_16, 4, &mut tmp);
+    test_sign_self(&ntru_f_512, &ntru_g_512, &ntru_F_512, &ntru_G_512, &ntru_h_512, 9, &mut tmp);
+    test_sign_self(&ntru_f_1024, &ntru_g_1024, &ntru_F_1024, &ntru_G_1024, &ntru_h_1024, 10, &mut tmp);
     println!(" done");
 }
 
-fn test_sign_self(mut f: &mut [i8], mut g: &mut [i8],
-                  mut F: &mut [i8], G: &mut [i8], h_src: &[u16], logn: usize,
+fn test_sign_self(mut f: &[i8], mut g: &[i8],
+                  mut F: &[i8], G: &[i8], h_src: &[u16], logn: usize,
                   tmp: &mut [u8]) {
     let n = 1 << logn;
     let inter = bytemuck::cast_slice_mut::<u8, u16>(tmp);
@@ -764,29 +763,30 @@ pub(crate) fn test_vrfy() {
 
     const TLEN: usize = 8192;
     let mut tmp: [u8; TLEN] = [0; TLEN];
-    test_vrfy_inner(4, &mut ntru_f_16, &mut ntru_g_16, &mut ntru_F_16, &mut ntru_G_16,
-                    &mut ntru_h_16, ntru_pkey_16, &KAT_SIG_16, &mut tmp, TLEN);
-    test_vrfy_inner(9, &mut ntru_f_512, &mut ntru_g_512, &mut ntru_F_512, &mut ntru_G_512,
-                    &mut ntru_h_512, ntru_pkey_512, &KAT_SIG_512, &mut tmp, TLEN);
-    test_vrfy_inner(10, &mut ntru_f_1024, &mut ntru_g_1024, &mut ntru_F_1024, &mut ntru_G_1024,
-                    &mut ntru_h_1024, ntru_pkey_1024, &KAT_SIG_1024, &mut tmp, TLEN);
+    test_vrfy_inner(4, &ntru_f_16, &ntru_g_16, &ntru_F_16, &ntru_G_16,
+                    &ntru_h_16, ntru_pkey_16, &KAT_SIG_16, &mut tmp, TLEN);
+    test_vrfy_inner(9, &ntru_f_512, &ntru_g_512, &ntru_F_512, &ntru_G_512,
+                    &ntru_h_512, ntru_pkey_512, &KAT_SIG_512, &mut tmp, TLEN);
+    test_vrfy_inner(10, &ntru_f_1024, &ntru_g_1024, &ntru_F_1024, &ntru_G_1024,
+                    &ntru_h_1024, ntru_pkey_1024, &KAT_SIG_1024, &mut tmp, TLEN);
 
     println!(" done.");
 }
 
-// TODO Refactor to actually only use the tmp instead of the f, g, G, F, h values (removes warnings)
-#[allow(non_snake_case)]
-fn test_vrfy_inner(logn: u32, mut f: &mut [i8], mut g: &mut [i8],
-                   mut F: &mut [i8], G: &mut [i8], mut h: &mut [u16],
+
+fn test_vrfy_inner(logn: u32, mut f: &[i8], mut g: &[i8],
+                   mut F: &[i8], G: &[i8], mut h: &[u16],
                    hexpubkey: &str, kat: &[&str], tmp: &mut [u8], tlen: usize) {
     let n: usize = 1 << logn;
     let h2p: *mut u16 = tmp.as_mut_ptr().cast();
     let h2: &mut [u16];
     unsafe { h2 = from_raw_parts_mut(h2p, n); }
+    let ff = f.clone();
+    let gg = g.clone();
     if tlen < 4 * n {
         panic!("Insufficient buffer size");
     }
-    if !compute_public(h2p, f.as_mut_ptr(), g.as_mut_ptr(), logn, h2p.wrapping_add(n).cast()) {
+    if !compute_public(h2p, ff.as_mut_ptr(), gg.as_mut_ptr(), logn, h2p.wrapping_add(n).cast()) {
         panic!("Compute public failed!");
     }
     assert_eq!(h, h2, "compute_public");
