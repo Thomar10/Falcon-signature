@@ -1,4 +1,4 @@
-use crate::gen_kat::genkat512;
+use crate::gen_kat::genkat;
 
 mod fft;
 mod fpr;
@@ -33,5 +33,5 @@ mod falcon_c {
 
 fn main() {
     //run_falcon_tests();
-    unsafe { genkat512(); }
+    genkat();
 }
