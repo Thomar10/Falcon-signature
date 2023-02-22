@@ -1,4 +1,3 @@
-use std::mem::align_of;
 use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 
@@ -123,6 +122,7 @@ pub fn shake_init_prng_from_seed(rng: &mut InnerShake256Context, seed: &mut [u8]
     shake256_inject(rng, seed);
 }
 
+#[allow(dead_code)]
 pub fn shake_init_prng_from_system(rng: &mut InnerShake256Context) -> i32 {
     let mut seed: [u8; 48] = [0; 48];
     // TODO ? get_seed defined in rng for Extra/c/rng
@@ -135,6 +135,7 @@ pub fn shake_init_prng_from_system(rng: &mut InnerShake256Context) -> i32 {
 }
 
 // see inner.h for set_fpu_cw for better / more correct implementation.
+#[allow(dead_code)]
 pub(crate) fn set_fpu_cw(x: u32) -> u32 {
     x
 }
@@ -291,6 +292,7 @@ pub fn falcon_sign_dyn(mut rng: &mut InnerShake256Context, signature: &mut [u8],
                            private_key, private_len, &mut hd, &mut nonce, tmp, tmp_len)
 }
 
+#[allow(non_snake_case)]
 pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
                                 sk: &mut [u8], sk_len: usize,
                                 tmp: &mut [u8], tmp_len: usize) -> i32 {
@@ -385,6 +387,7 @@ fn align_fpr(tmp: &mut [u16]) -> &mut [u8] {
     bytemuck::cast_slice_mut(fpr)
 }
 
+#[allow(non_snake_case)]
 pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                               signature_type: i32, private_key: &mut [u8],
                               private_len: usize,
@@ -480,7 +483,7 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
         sign_dyn(sv, &mut rng, f, g, F, G, hm, logn, atmp);
         signature[1..41].copy_from_slice(nonce);
         let u = 41;
-        let mut v = 0;
+        let mut v: usize;
         match signature_type {
             FALCON_SIG_COMPRESS => {
                 signature[0] = 0x30 + logn as u8;
@@ -571,7 +574,7 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
 
         signature[1..41].copy_from_slice(nonce);
         let u = 41;
-        let mut v = 0;
+        let mut v: usize;
         match signature_type {
             FALCON_SIG_COMPRESS => {
                 signature[0] = 0x30 + logn as u8;

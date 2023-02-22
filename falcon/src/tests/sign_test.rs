@@ -4,21 +4,18 @@ mod tests {
 
     use rand::Rng;
 
-    use crate::codec::{max_fg_bits, max_FG_bits, trim_i8_decode, trim_i8_encode};
     use crate::common::hash_to_point_vartime;
     use crate::falcon_c::keygen_c::falcon_inner_keygen;
     use crate::falcon_c::rng_c::Prng as PrngC;
-    use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC, St as StC};
+    use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC};
     use crate::falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, skoff_b00_func as skoff_b00_c, skoff_b01_func as skoff_b01_c, skoff_b10_func as skoff_b10_c, skoff_b11_func as skoff_b11_c, skoff_tree_func as skoff_tree_c, smallints_to_fpr_func as smallints_to_fpr_c};
-    use crate::falcon_tmpsize_keygen;
-    use crate::fpr::{fpr_add, fpr_div, fpr_half, FPR_INV_SIGMA, fpr_of, FPR_SIGMA_MIN};
+    use crate::fpr::{fpr_div, fpr_of, FPR_SIGMA_MIN};
     use crate::keygen::keygen;
     use crate::rng::Prng;
-    use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_inject, InnerShake256Context, St};
-    use crate::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_dyn_same, sign_tree, skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr};
+    use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_inject};
+    use crate::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_tree, skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr};
     use crate::tests::keygen_test::tests::init_shake_with_random_context;
     use crate::tests::rng_test::tests::{create_random_prngs, init_prngs};
-    use crate::vrfy::complete_private;
 
     #[allow(non_snake_case)]
     #[test]
@@ -327,9 +324,10 @@ mod tests {
     }
 
     //TODO fix test
+    #[test]
+    #[ignore]
     #[allow(non_snake_case)]
     fn test_ffSampling_fft_dyntree() {
-        let mut rng = rand::thread_rng();
         for _ in 0..2 {
             let (mut prng, prng_c): (Prng, PrngC) = create_random_prngs();
             init_prngs(&mut prng, &prng_c);
@@ -389,16 +387,14 @@ mod tests {
     }
 
     #[test]
+    #[allow(non_snake_case)]
     fn test_sign_dyn() {
-        let mut rng = rand::thread_rng();
-
         for _ in 0..100 {
 
             const LOGN: usize = 10;
-            const N: usize = 1 << LOGN;
 
             const BUFFER_SIZE: usize = 8192 * 4 * 8;
-            let (mut rng_rust, rng_c) = init_shake_with_random_context();
+            let (mut rng_rust, _) = init_shake_with_random_context();
 
             let mut sig: [i16; 1024] = [0; 1024];
             let sig_c: [i16; 1024] = [0; 1024];
@@ -418,12 +414,11 @@ mod tests {
 
             let mut hm: [u16; 1024] = [0; 1024];
 
-            let mut msg: [u8; 128] = [0; 128];
+            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
 
-            msg = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
             let (mut rng_rust, rng_c) = init_shake_with_random_context();
 
-            let (mut sc, sc_c) = init_shake_with_random_context();
+            let (mut sc, _) = init_shake_with_random_context();
             i_shake256_inject(&mut sc, &msg);
             i_shake256_flip(&mut sc);
             hash_to_point_vartime(&mut sc, &mut hm, LOGN as u32);
@@ -446,6 +441,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(non_snake_case)]
     fn test_sign_tree() {
         for _ in 0..100 {
             const LOGN: usize = 4;
@@ -457,16 +453,15 @@ mod tests {
 
             let mut tmp_key: [fpr; N * 16] = [0; N * 16];
 
-            let (mut rng_rust, rng_c) = init_shake_with_random_context();
+            let (mut rng_rust, _) = init_shake_with_random_context();
 
             let mut hm: [u16; 1024] = [0; 1024];
 
-            let mut msg: [u8; 128] = [0; 128];
+            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
 
-            msg = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
-            let (mut rng_rust, rng_c) = init_shake_with_random_context();
+            let (mut rng_rust, _) = init_shake_with_random_context();
 
-            let (mut sc, sc_c) = init_shake_with_random_context();
+            let (mut sc, _) = init_shake_with_random_context();
             i_shake256_inject(&mut sc, &msg);
             i_shake256_flip(&mut sc);
             hash_to_point_vartime(&mut sc, &mut hm, LOGN as u32);

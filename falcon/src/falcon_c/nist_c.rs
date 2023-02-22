@@ -5,5 +5,6 @@ extern "C" {
     pub fn crypto_sign_keypair_func(pk: *const u8, sk: *const u8) -> i32;
     #[allow(dead_code)]
     pub fn crypto_sign(sm: *const u8, smlen: *const u64, m: *const u8, mlen: u64, sk: *const u8);
+    #[allow(dead_code)]
     pub fn crypto_sign_open_func(m: *const u8, mlen: *const u64, sm: *const u8, smlen: u64, pk: *const u8);
 }

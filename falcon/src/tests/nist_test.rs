@@ -12,11 +12,8 @@ mod tests {
         let pk_c = [0u8; 897];
         let mut sk: [u8; 1281] = [0; 1281];
         let sk_c = [0u8; 1281];
-        let mut rng = rand::thread_rng();
         let mut entropy: [u8; 48] = [0; 48];
         let entropy_c: [u8; 48] = [0; 48];
-        let mut seed: [u8; 48] = [0; 48];
-        let seed_c: [u8; 48] = [0; 48];
         unsafe { randombytes_init_func(entropy_c.as_ptr(), null(), 256); }
         randombytes_init(&mut entropy);
         let res = crypto_sign_keypair(&mut pk, &mut sk);
