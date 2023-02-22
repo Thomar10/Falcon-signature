@@ -7,6 +7,7 @@ use crate::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake2
 use crate::vrfy::{to_ntt_monty, verify_raw};
 
 const NONCE: usize = 40;
+#[allow(dead_code)]
 const CRYPTO_SECRETKEYBYTES: u32 = 1281;
 const CRYPTO_PUBLICKEYBYTES: u32 = 897;
 

@@ -1,7 +1,4 @@
-#![allow(dead_code)]
-
 use crate::gen_kat::genkat512;
-use crate::test_falcon::run_falcon_tests;
 
 mod fft;
 mod fpr;
