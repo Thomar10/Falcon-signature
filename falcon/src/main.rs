@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 use crate::gen_kat::genkat512;
 use crate::test_falcon::run_falcon_tests;
 
@@ -16,6 +17,7 @@ mod rng;
 mod sign;
 mod common;
 mod test_falcon;
+mod tests;
 
 mod falcon_c {
     pub mod codec_c;
@@ -30,19 +32,6 @@ mod falcon_c {
     pub mod keygen_c;
 }
 
-mod test {
-    pub mod fft_test;
-    pub mod fpr_test;
-    pub mod shake_test;
-    pub mod rng_test;
-    pub mod sign_test;
-    pub mod keygen_test;
-    pub mod vrfy_test;
-    pub mod codec_test;
-    pub mod nist_test;
-    pub mod katrng_test;
-    pub mod common_test;
-}
 
 
 fn main() {

@@ -1,18 +1,20 @@
 #[cfg(test)]
 pub(crate) mod tests {
     use std::ffi::c_void;
+
     use rand::Rng;
+
     use crate::falcon_c::rng_c::{Buf as BufC,
-                                 State as StateC,
                                  Prng as PrngC,
-                                 prng_refill as prng_refill_c,
-                                 prng_init as prng_init_c,
                                  prng_get_bytes as prng_get_bytes_c,
                                  prng_get_u64_func as prng_get_u64_c,
-                                 prng_get_u8_func as prng_get_u8_c};
+                                 prng_get_u8_func as prng_get_u8_c,
+                                 prng_init as prng_init_c,
+                                 prng_refill as prng_refill_c,
+                                 State as StateC};
+    use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, InnerShake256Context as InnerShake256ContextC, St as StC};
     use crate::rng::{Prng, prng_get_bytes, prng_get_u64, prng_get_u8, prng_init, prng_refill, State};
     use crate::shake::{i_shake256_init, InnerShake256Context, St};
-    use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, InnerShake256Context as InnerShake256ContextC, St as StC};
 
     #[test]
     fn test_prng_refill() {

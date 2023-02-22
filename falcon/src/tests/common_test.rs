@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use rand::Rng;
+
     use crate::common::{hash_to_point_ct, hash_to_point_vartime, is_short, is_short_half};
     use crate::falcon_c::common_c::{hash_to_point_ct_func, hash_to_point_vartime_func, is_short_func, is_short_half_func};
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};

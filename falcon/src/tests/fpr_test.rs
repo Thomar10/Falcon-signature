@@ -3,7 +3,6 @@ mod tests {
     use crate::falcon_c::fpr_c::{fpr_add_func, fpr_div_func, fpr_double_func, fpr_expm_p63_func, fpr_floor_func, fpr_half_func, fpr_inv_func, fpr_irsh_func, fpr_lt_func, fpr_mul_func, fpr_neg_func, fpr_of_func, fpr_rint_func, fpr_scaled_func, fpr_sqr_func, fpr_sqrt_func, fpr_sub_func, fpr_trunc_func, fpr_ulsh_func, fpr_ursh_func};
     use crate::fpr::{fpr_add, fpr_div, fpr_double, fpr_expm_p63, fpr_floor, fpr_half, fpr_inv, fpr_irsh, fpr_lt, fpr_mul, fpr_neg, fpr_of, fpr_rint, fpr_scaled, fpr_sqr, fpr_sqrt, fpr_sub, fpr_trunc, fpr_ulsh, fpr_ursh};
 
-
     #[test]
     fn test_add() {
         for _ in 0..20000 {

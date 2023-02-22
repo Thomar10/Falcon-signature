@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
+
 use crate::katrng::randombytes_init;
 use crate::nist::{crypto_sign_keypair, crypto_sign_open};
 
 pub unsafe fn genkat512() {
-    let check_file_path = Path::new("./src/test/falcon512-KAT.rsp");
+    let check_file_path = Path::new("./src/tests/falcon512-KAT.rsp");
     if !check_file_path.exists() {
         panic!("No file to check up with!");
     }

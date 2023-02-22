@@ -1,22 +1,24 @@
 #[cfg(test)]
 mod tests {
     use std::ffi::c_void;
+
     use rand::Rng;
+
     use crate::codec::{max_fg_bits, max_FG_bits, trim_i8_decode, trim_i8_encode};
     use crate::common::hash_to_point_vartime;
     use crate::falcon_c::keygen_c::falcon_inner_keygen;
-    use crate::falcon_c::sign_c::{ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, smallints_to_fpr_func as smallints_to_fpr_c, skoff_b00_func as skoff_b00_c, skoff_b01_func as skoff_b01_c, skoff_b10_func as skoff_b10_c, skoff_b11_func as skoff_b11_c, skoff_tree_func as skoff_tree_c, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, BerExp_func as BerExpC, SamplerContext as SamplerContextC, falcon_inner_sampler as sampler_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, falcon_inner_sign_dyn, falcon_inner_sign_tree};
-    use crate::falcon_c::rng_c::{Prng as PrngC};
+    use crate::falcon_c::rng_c::Prng as PrngC;
+    use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC, St as StC};
+    use crate::falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, skoff_b00_func as skoff_b00_c, skoff_b01_func as skoff_b01_c, skoff_b10_func as skoff_b10_c, skoff_b11_func as skoff_b11_c, skoff_tree_func as skoff_tree_c, smallints_to_fpr_func as smallints_to_fpr_c};
+    use crate::falcon_tmpsize_keygen;
     use crate::fpr::{fpr_add, fpr_div, fpr_half, FPR_INV_SIGMA, fpr_of, FPR_SIGMA_MIN};
+    use crate::keygen::keygen;
     use crate::rng::Prng;
     use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_inject, InnerShake256Context, St};
-    use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC, St as StC};
-    use crate::falcon_tmpsize_keygen;
-    use crate::keygen::keygen;
-    use crate::sign::{expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, gaussian0_sampler, skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr, BerExp, SamplerContext, sampler, ffSampling_fft_dyntree, sign_dyn, sign_dyn_same, sign_tree};
-    use crate::test::rng_test::tests::{create_random_prngs, init_prngs};
+    use crate::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_dyn_same, sign_tree, skoff_b00, skoff_b01, skoff_b10, skoff_b11, skoff_tree, smallints_to_fpr};
+    use crate::tests::keygen_test::tests::init_shake_with_random_context;
+    use crate::tests::rng_test::tests::{create_random_prngs, init_prngs};
     use crate::vrfy::complete_private;
-    use crate::test::keygen_test::tests::{init_shake_with_random_context};
 
     #[allow(non_snake_case)]
     #[test]
