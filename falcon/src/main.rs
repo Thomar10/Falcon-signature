@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::gen_kat::genkat512;
+use crate::gen_kat::genkat;
 use crate::test_falcon::run_falcon_tests;
 
 mod fft;
@@ -36,5 +36,5 @@ mod falcon_c {
 
 fn main() {
     //run_falcon_tests();
-    genkat512();
+    genkat();
 }

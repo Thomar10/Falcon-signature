@@ -5,16 +5,26 @@ use std::path::Path;
 use crate::katrng::randombytes_init;
 use crate::nist::{crypto_sign, crypto_sign_keypair, crypto_sign_open};
 
-pub fn genkat512() {
-    let check_file_path = Path::new("./src/tests/falcon512-KAT.rsp");
+pub fn genkat() {
+    genkat_logn(9);
+    genkat_logn(10);
+}
+
+pub fn genkat_logn(logn: usize) {
+    let kat = 1 << logn;
+    let format = format!("./src/tests/falcon{}-KAT.rsp", kat);
+    let file = format.as_str();
+    let check_file_path = Path::new(file);
     if !check_file_path.exists() {
         panic!("No file to check up with!");
     }
     let check_file = File::open(check_file_path).expect("Could not open file!");
     let buf_reader = BufReader::new(check_file);
 
-    let mut pk: [u8; 897] = [0; 897];
-    let mut sk: [u8; 1281] = [0; 1281];
+    let pk_len: usize = if logn == 9 {897} else {1793};
+    let sk_len: usize = if logn == 9 {1281} else {2305};
+    let mut pk: Vec<u8> = vec![0; pk_len];
+    let mut sk: Vec<u8> = vec![0; sk_len];
     let mut seed: Vec<u8>;
     let mut pk_hex: String = String::new();
     let mut sk_hex: String = String::new();
@@ -29,10 +39,10 @@ pub fn genkat512() {
         if string.contains("seed") {
             seed = hex::decode(string.split_at(7).1).unwrap();
             randombytes_init(&mut seed);
-            let res = crypto_sign_keypair(&mut pk, &mut sk);
+            let res = crypto_sign_keypair(pk.as_mut_slice(), sk.as_mut_slice(), logn);
             assert_eq!(res, true);
-            pk_hex = hex::encode_upper(pk);
-            sk_hex = hex::encode_upper(sk);
+            pk_hex = hex::encode_upper(pk.as_mut_slice());
+            sk_hex = hex::encode_upper(sk.as_mut_slice());
         }
         if string.contains("mlen") && !string.contains("s") {
             mlen = string.split_at(7).1.parse().unwrap();
@@ -52,7 +62,7 @@ pub fn genkat512() {
             smlen = string.split_at(8).1.parse().unwrap();
             sm = vec![0; smlen];
             let msg_len = msg.len();
-            let (res, length) = crypto_sign(sm.as_mut_slice(), msg.as_mut_slice(), msg_len, &mut sk);
+            let (res, length) = crypto_sign(sm.as_mut_slice(), msg.as_mut_slice(), msg_len, &mut sk, logn);
             assert_eq!(res, true, "Failed signature");
             assert_eq!(length, smlen, "Invalid signature length");
         }
@@ -62,7 +72,7 @@ pub fn genkat512() {
             m1 = msg.clone();
             m1.fill(0);
             let signature_length = sm_read.len();
-            let (res, length) = crypto_sign_open(m1.as_mut_slice(), sm_read.as_mut_slice(), signature_length, &mut pk);
+            let (res, length) = crypto_sign_open(m1.as_mut_slice(), sm_read.as_mut_slice(), signature_length, &mut pk, logn);
             assert_eq!(res, true);
             assert_eq!(length, mlen);
             assert_eq!(m1, msg);
