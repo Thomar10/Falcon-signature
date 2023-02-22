@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use rand::Rng;
+
     use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
     use crate::falcon_c::codec_c::{falcon_inner_comp_decode, falcon_inner_comp_encode, falcon_inner_modq_decode, falcon_inner_modq_encode, falcon_inner_trim_i16_decode, falcon_inner_trim_i16_encode, falcon_inner_trim_i8_decode, falcon_inner_trim_i8_encode};
 

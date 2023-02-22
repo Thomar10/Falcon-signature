@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, process_block as process_block_c, InnerShake256Context as InnerShake256ContextC, St as StC, falcon_inner_i_shake256_inject, falcon_inner_i_shake256_flip, falcon_inner_i_shake256_extract};
+
+    use crate::falcon_c::shake_c::{falcon_inner_i_shake256_extract, falcon_inner_i_shake256_flip, falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, process_block as process_block_c, St as StC};
     use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, process_block, St};
 
     #[test]

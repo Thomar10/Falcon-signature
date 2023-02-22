@@ -8,6 +8,7 @@ mod tests {
 
     #[test]
     fn test_crypto_sign_keypair() {
+
         let mut pk: [u8; 897] = [0; 897];
         let pk_c = [0u8; 897];
         let mut sk: [u8; 1281] = [0; 1281];
