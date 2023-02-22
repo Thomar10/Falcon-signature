@@ -1,8 +1,10 @@
 use std::mem;
+
 use bytemuck;
+
 use crate::common::is_short_half;
 use crate::fft::{fft, ifft, poly_add, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
-use crate::fpr::{fpr_mul, fpr_sqrt, FPR_INV_SIGMA, fpr_of, fpr_floor, fpr_sub, fpr_half, fpr_sqr, FPR_INV_2SQRSIGMA0, fpr_trunc, FPR_INV_LOG2, FPR_LOG2, fpr_expm_p63, FPR_INVERSE_OF_Q, fpr_neg, fpr_rint, FPR_SIGMA_MIN, fpr_add, FPR_INVSQRT8, FPR_INVSQRT2, fpr_lt, FPR_ONEHALF, FPR_ONE};
+use crate::fpr::{fpr_add, fpr_expm_p63, fpr_floor, fpr_half, FPR_INV_2SQRSIGMA0, FPR_INV_LOG2, FPR_INV_SIGMA, FPR_INVERSE_OF_Q, FPR_INVSQRT2, FPR_INVSQRT8, FPR_LOG2, fpr_lt, fpr_mul, fpr_neg, fpr_of, FPR_ONE, FPR_ONEHALF, fpr_rint, FPR_SIGMA_MIN, fpr_sqr, fpr_sqrt, fpr_sub, fpr_trunc};
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::InnerShake256Context;
 
@@ -633,8 +635,7 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
 }
 
 pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
-                   f: &[i8], g: &[i8], F: &[i8], G: &[i8], logn: u32, tmp: &mut [fpr]) -> bool {
-
+                        f: &[i8], g: &[i8], F: &[i8], G: &[i8], logn: u32, tmp: &mut [fpr]) -> bool {
     let n: usize = MKN!(logn);
 
     let (b00, inter) = tmp.split_at_mut(n);
@@ -769,10 +770,6 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
 }
 
 pub fn sampler(spc: &mut SamplerContext, mu: fpr, isigma: fpr) -> i32 {
-
-    assert_eq!(fpr_lt(isigma, FPR_ONEHALF), 0);
-    assert_eq!(fpr_lt(isigma, FPR_ONE), 1);
-
     let s: i64 = fpr_floor(mu);
     let r: fpr = fpr_sub(mu, fpr_of(s));
 
@@ -782,7 +779,7 @@ pub fn sampler(spc: &mut SamplerContext, mu: fpr, isigma: fpr) -> i32 {
     loop {
         let z0: i32 = gaussian0_sampler(&mut spc.p);
         let b: i32 = prng_get_u8(&mut spc.p) as i32 & 1;
-        let z:i64 = (b + ((b << 1) - 1) * z0) as i64;
+        let z: i64 = (b + ((b << 1) - 1) * z0) as i64;
 
         let mut x = fpr_mul(fpr_sqr(fpr_sub(fpr_of(z), r)), dss);
         x = fpr_sub(x, fpr_mul(fpr_of((z0 * z0) as i64), FPR_INV_2SQRSIGMA0));
@@ -791,30 +788,28 @@ pub fn sampler(spc: &mut SamplerContext, mu: fpr, isigma: fpr) -> i32 {
             return (s + z) as i32;
         }
     }
-
-    panic!("We keep running in circles my man!");
 }
 
 pub fn gaussian0_sampler(p: &mut Prng) -> i32 {
     const DIST: [u32; 54] = [
-        10745844,  3068844,  3741698,
-        5559083,  1580863,  8248194,
-        2260429, 13669192,  2736639,
-        708981,  4421575, 10046180,
-        169348,  7122675,  4136815,
-        30538, 13063405,  7650655,
-        4132, 14505003,  7826148,
+        10745844, 3068844, 3741698,
+        5559083, 1580863, 8248194,
+        2260429, 13669192, 2736639,
+        708981, 4421575, 10046180,
+        169348, 7122675, 4136815,
+        30538, 13063405, 7650655,
+        4132, 14505003, 7826148,
         417, 16768101, 11363290,
-        31,  8444042,  8086568,
-        1, 12844466,   265321,
-        0,  1232676, 13644283,
-        0,    38047,  9111839,
-        0,      870,  6138264,
-        0,       14, 12545723,
-        0,        0,  3104126,
-        0,        0,    28824,
-        0,        0,      198,
-        0,        0,        1
+        31, 8444042, 8086568,
+        1, 12844466, 265321,
+        0, 1232676, 13644283,
+        0, 38047, 9111839,
+        0, 870, 6138264,
+        0, 14, 12545723,
+        0, 0, 3104126,
+        0, 0, 28824,
+        0, 0, 198,
+        0, 0, 1
     ];
 
     let lo: u64 = prng_get_u64(p);
@@ -865,7 +860,6 @@ pub fn BerExp(p: &mut Prng, x: fpr, ccs: fpr) -> i32 {
 //TODO test
 pub fn sign_tree(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: &mut [fpr], hm: &[u16],
                  logn: u32, tmp: &mut [u8]) {
-
     let mut ftmp: &mut [fpr];
     unsafe {
         ftmp = mem::transmute(tmp);

@@ -1,3 +1,4 @@
+use std::mem::align_of;
 use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 
@@ -345,7 +346,13 @@ pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
         return -6;
     }
     expanded_key[0] = logn as u8;
-    let expkey: &mut [fpr] = unsafe { from_raw_parts_mut(expanded_key.as_mut_ptr().wrapping_add(1).cast(), expanded_len - 1) };
+
+    let expkey: &mut [fpr] = unsafe {
+        let key_cast: *mut fpr = expanded_key.as_mut_ptr().cast();
+        from_raw_parts_mut(key_cast.wrapping_add(1), expanded_len  - 1)
+    };
+
+    // let expkey: &mut [fpr] = unsafe { from_raw_parts_mut(expanded_key.as_mut_ptr().wrapping_add(1).cast(), expanded_len - 1) };
     expand_privkey(expkey, f, g, F, G, logn, atmp_fpr);
     0
 }
@@ -371,6 +378,18 @@ pub fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
     shake256_init(&mut hash_data);
     shake256_inject(&mut hash_data, nonce);
     0
+}
+
+fn align_fpr(tmp: &mut [u16]) -> &mut [u8] {
+    // let offset = tmp.as_mut_ptr().align_offset(align_of::<fpr>());
+    // if offset < tmp.len() - 1 {
+    //     let fpr_ptr = tmp.as_mut_ptr().add(offset).cast::<fpr>();
+    //     bytemuck::pod_align_to_mut()
+    // } else {
+    //     panic!("Alignment indexes out of bound");
+    // }
+    let (_, fpr, _) = bytemuck::pod_align_to_mut::<u16, fpr>(tmp);
+    bytemuck::cast_slice_mut(fpr)
 }
 
 pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
@@ -416,18 +435,13 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
     }
 
     let n: usize = 1 << logn;
-    let fp: *mut i8 = tmp.as_mut_ptr().cast();
-    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
-    let gp = fp.wrapping_add(n);
-    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
-    let Fp = gp.wrapping_add(n);
-    let F: &mut [i8] = unsafe { from_raw_parts_mut(Fp, n) };
-    let Gp = Fp.wrapping_add(n);
-    let G: &mut [i8] = unsafe { from_raw_parts_mut(Gp, n) };
-    let hmp: *mut u16 = Gp.wrapping_add(n).cast();
-    let hm: &mut [u16] = unsafe { from_raw_parts_mut(hmp, n) };
-    let sv: &mut [i16] = unsafe { from_raw_parts_mut(hmp.cast(), n) };
-    let atmp: &mut [u8] = unsafe { from_raw_parts_mut(hmp.wrapping_add(n).cast(), n) };
+    let (f, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
+    let (F, inter) = inter.split_at_mut(n);
+    let (G, inter) = inter.split_at_mut(n);
+    let (_ , inter, _ ) = bytemuck::pod_align_to_mut::<i8, u16>(inter);
+    let (hm, inter) = inter.split_at_mut(n);
+    let atmp: &mut [u8] = align_fpr(inter);
     let mut u = 1;
     let mut v = trim_i8_decode(f, logn, max_fg_bits[logn as usize] as u32, sk, u,
                                private_len - u);
@@ -467,6 +481,9 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
         } else {
             hash_to_point_vartime(&mut hash_data_restart, hm, logn);
         }
+        let mut sv = vec![0u16; hm.len()];
+        sv.clone_from_slice(hm);
+        let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
         sign_dyn(sv, &mut rng, f, g, F, G, hm, logn, atmp);
         signature[1..41].copy_from_slice(nonce);
         let u = 41;
