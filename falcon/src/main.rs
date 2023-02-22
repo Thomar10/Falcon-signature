@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-use crate::gen_kat::genkat;
 
 mod fft;
 mod fpr;
@@ -8,13 +7,13 @@ mod keygen;
 mod falcon;
 mod codec;
 mod vrfy;
-mod gen_kat;
 mod katrng;
 mod nist;
 mod rng;
 mod sign;
 mod common;
 mod tests;
+mod kat_tests;
 
 mod falcon_c {
     pub mod codec_c;
@@ -33,5 +32,5 @@ mod falcon_c {
 
 
 fn main() {
-    genkat();
+    println!("HEJ :)");
 }

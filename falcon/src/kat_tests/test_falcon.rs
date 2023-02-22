@@ -10,10 +10,10 @@ use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
 use crate::falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int, Sha1Context};
 use crate::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
-use crate::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint, };
+use crate::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint};
 use crate::keygen::keygen;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
-use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context, St};
+use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
 use crate::sign::{expand_privkey, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
 
@@ -51,7 +51,7 @@ fn test_sign_self(f: &[i8], g: &[i8],
     let mut sig = bytemuck::cast_slice_mut::<u16, i16>(sig);
     let mut tt = bytemuck::cast_slice_mut::<u16, u8>(inter);
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
 
@@ -66,7 +66,7 @@ fn test_sign_self(f: &[i8], g: &[i8],
     i_shake256_flip(&mut rng);
     for i in 0..100 {
         let mut sc: InnerShake256Context = InnerShake256Context {
-            st: St { a: [0; 25] },
+            st: [0; 25],
             dptr: 0,
         };
 
@@ -74,12 +74,12 @@ fn test_sign_self(f: &[i8], g: &[i8],
         i_shake256_init(&mut sc);
         i_shake256_inject(&mut sc, msg.as_mut_slice());
         i_shake256_flip(&mut sc);
-        let mut sc2: InnerShake256Context = unsafe {
+        let mut sc2: InnerShake256Context =
             InnerShake256Context {
-                st: St { a: sc.st.a },
+                st: sc.st,
                 dptr: sc.dptr,
-            }
-        };
+            };
+
         let mut hm2: Vec<u16> = vec![0; n];
         hash_to_point_vartime(&mut sc, hm, logn as u32);
         hash_to_point_ct(&mut sc2, hm2.as_mut_slice(), logn as u32, &mut tt);
@@ -103,7 +103,7 @@ fn test_sign_self(f: &[i8], g: &[i8],
     expand_privkey(expanded_key, f, g, F, G, logn as u32, &mut tt);
     for i in 0..100 {
         let mut sc: InnerShake256Context = InnerShake256Context {
-            st: St { a: [0; 25] },
+            st: [0; 25],
             dptr: 0,
         };
 
@@ -159,7 +159,7 @@ pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
         entropy_input[i] = i as u8;
     }
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     unsafe { nist_randombytes_init(entropy_input.as_ptr()) };
@@ -200,13 +200,13 @@ pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
         sk[0] = (0x50 + logn) as u8;
         let mut u = 1;
         let v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
-                                   f, logn, max_fg_bits[logn as usize] as u32);
+                               f, logn, max_fg_bits[logn as usize] as u32);
         if v == 0 {
             panic!("Error encoding sk(f)");
         }
         u += v;
         let v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
-                                   g, logn, max_fg_bits[logn as usize] as u32);
+                               g, logn, max_fg_bits[logn as usize] as u32);
         if v == 0 {
             panic!("Error encoding sk(g)");
         }
@@ -311,7 +311,7 @@ pub(crate) fn test_poly() {
 fn test_poly_inner(logn: usize, tmp: &mut [fpr], tlen: usize) {
     print!("[{}]", logn);
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut prng: Prng = Prng {
@@ -416,7 +416,7 @@ fn make_rand_poly(mut p: &mut Prng, f: &mut [fpr], logn: usize) {
 pub(crate) fn test_external_api() {
     print!("Test external API: ");
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
 
@@ -661,7 +661,7 @@ pub(crate) fn test_keygen() {
 #[allow(non_snake_case)]
 fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     print!("[{}]", logn);
@@ -692,7 +692,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
 
     for _ in 0..12 {
         let mut sc: InnerShake256Context = InnerShake256Context {
-            st: St { a: [0; 25] },
+            st: [0; 25],
             dptr: 0,
         };
         keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tt.as_mut_ptr());
@@ -727,7 +727,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
 pub(crate) fn test_rng() {
     print!("Test RNG: ");
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut prng: Prng = Prng {
@@ -775,7 +775,7 @@ fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
                    F: &[i8], G: &[i8], h: &[u16],
                    hexpubkey: &str, kat: &[&str], tmp: &mut [u8], tlen: usize) {
     let n: usize = 1 << logn;
-    let h2= bytemuck::cast_slice_mut::<u8, u16>(tmp);
+    let h2 = bytemuck::cast_slice_mut::<u8, u16>(tmp);
     let (h2, inter) = h2.split_at_mut(n);
     let (h2tmp, _) = inter.split_at_mut(n);
     let h2tmp = bytemuck::cast_slice_mut::<u16, u8>(h2tmp);
@@ -824,7 +824,7 @@ fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
     }
     for u in (0..kat.len()).step_by(3) {
         let mut rng: InnerShake256Context = InnerShake256Context {
-            st: St { a: [0; 25] },
+            st: [0; 25],
             dptr: 0,
         };
         let nonce = hex::decode(kat[u]).unwrap();
@@ -886,7 +886,7 @@ pub(crate) fn test_codec() {
 fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
     let n: usize = 1 << logn;
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     i_shake256_init(&mut rng);
@@ -1018,7 +1018,7 @@ pub(crate) fn test_shake256() {
 
 fn test_shake256_kat(hexsrc: &str, hexout: &str) {
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut inn = hex::decode(hexsrc).unwrap();
