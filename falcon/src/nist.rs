@@ -66,7 +66,8 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8], logn: usize) ->
     return true;
 }
 
-pub fn crypto_sign(mut sm: &mut [u8], mut m: &mut [u8], mlen: usize, mut sk: &mut [u8], logn: usize) -> (bool, usize) {
+#[allow(non_snake_case)]
+pub fn crypto_sign(sm: &mut [u8], mut m: &mut [u8], mlen: usize, sk: &mut [u8], logn: usize) -> (bool, usize) {
     let crypto_secretkeybytes: usize = if logn == 9 { 1281 } else { 2305 };
     let crypto_bytes: usize = if logn == 9 { 690 } else { 1330 };
     let mut tmp: Vec<u8> = vec![0; if logn == 9 { 80 * 512 } else { 80 * 1024 }];
