@@ -6,31 +6,122 @@ use std::slice::from_raw_parts_mut;
 
 use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
-use crate::common::hash_to_point_vartime;
+use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
 use crate::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
-use crate::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint};
+use crate::fpr::{fpr_add, fpr_div, fpr_double, fpr_half, fpr_lt, fpr_mul, fpr_neg, fpr_of, FPR_ONE, fpr_rint, FPR_SIGMA_MIN, fpr_sqr, fpr_sub, fpr_trunc, FPR_TWO, FPR_ZERO};
 use crate::keygen::keygen;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
-use crate::sign::sign_dyn;
+use crate::sign::{expand_privkey, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
 
-// TODO REFACTOR INTO BEING ABLE TO RUN ITSELF
 pub fn run_falcon_tests() {
     test_shake256();
     test_codec();
     test_vrfy();
     test_rng();
-    // test_fp_block();
-    test_poly();
-    // test_gaussian0_sampler();
-    // test_sampler();
-    // test_sign();
+    // test_poly();
+    test_sign();
     test_keygen();
     test_external_api();
     // test_nist_kat(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
     // test_nist_KAT(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
+}
+
+pub(crate) fn test_sign() {
+    print!("Test sign : ");
+    const TLEN: usize = 178176;
+    let mut tmp: [u8; TLEN] = [0; TLEN];
+    test_sign_self(&mut ntru_f_16, &mut ntru_g_16, &mut ntru_F_16, &mut ntru_G_16, &mut ntru_h_16, 4, &mut tmp);
+    test_sign_self(&mut ntru_f_512, &mut ntru_g_512, &mut ntru_F_512, &mut ntru_G_512, &ntru_h_512, 9, &mut tmp);
+    test_sign_self(&mut ntru_f_1024, &mut ntru_g_1024, &mut ntru_F_1024, &mut ntru_G_1024, &mut ntru_h_1024, 10, &mut tmp);
+
+    println!(" done");
+}
+
+fn test_sign_self(mut f: &mut [i8], mut g: &mut [i8],
+                  mut F: &mut [i8], G: &mut [i8], h_src: &[u16], logn: usize,
+                  tmp: &mut [u8]) {
+    let n = 1 << logn;
+    let inter = bytemuck::cast_slice_mut::<u8, u16>(tmp);
+    let (h, inter) = inter.split_at_mut(n);
+    let (hm, inter) = inter.split_at_mut(n);
+    let (sig, inter) = inter.split_at_mut(n);
+    let mut sig = bytemuck::cast_slice_mut::<u16, i16>(sig);
+    let mut tt = bytemuck::cast_slice_mut::<u16, u8>(inter);
+    let mut rng: InnerShake256Context = InnerShake256Context {
+        st: St { a: [0; 25] },
+        dptr: 0,
+    };
+
+    h.copy_from_slice(h_src);
+    to_ntt_monty(h, logn as u32);
+
+    let mut buf: [u8; 20] = [0; 20];
+    buf[..6].copy_from_slice(&mut [115, 105, 103, 110, 32, 48]);
+    buf[5] = (48 + logn) as u8;
+    i_shake256_init(&mut rng);
+    i_shake256_inject(&mut rng, &mut buf);
+    i_shake256_flip(&mut rng);
+    for i in 0..100 {
+        let mut sc: InnerShake256Context = InnerShake256Context {
+            st: St { a: [0; 25] },
+            dptr: 0,
+        };
+
+        let mut msg = i_shake256_extract(&mut rng, 50);
+        i_shake256_init(&mut sc);
+        i_shake256_inject(&mut sc, msg.as_mut_slice());
+        i_shake256_flip(&mut sc);
+        let mut sc2: InnerShake256Context = unsafe {
+            InnerShake256Context {
+                st: St { a: sc.st.a },
+                dptr: sc.dptr,
+            }
+        };
+        let mut hm2: Vec<u16> = vec![0; n];
+        hash_to_point_vartime(&mut sc, hm, logn as u32);
+        hash_to_point_ct(&mut sc2, hm2.as_mut_slice(), logn as u32, &mut tt);
+        for u in 0..n {
+            if hm2[u] != hm[u] {
+                panic!("hash_to_point mismatch");
+            }
+        }
+        sign_dyn(&mut sig, &mut rng, f, g, F, G, hm, logn as u32, tt);
+        if !verify_raw(hm, &mut sig, h, logn as u32, tt) {
+            panic!("self signature (dyn) not verified");
+        }
+        if i % 10 == 0 {
+            print!(".");
+        }
+    }
+
+    let (expanded_key, mut tt) = tt.split_at_mut((8 * logn + 40) * n);
+    let expanded_key = bytemuck::cast_slice_mut::<u8, fpr>(expanded_key);
+    let mut tt = bytemuck::cast_slice_mut::<u8, fpr>(tt);
+    expand_privkey(expanded_key, f, g, F, G, logn as u32, &mut tt);
+    for i in 0..100 {
+        let mut sc: InnerShake256Context = InnerShake256Context {
+            st: St { a: [0; 25] },
+            dptr: 0,
+        };
+
+        let mut msg = i_shake256_extract(&mut rng, 50);
+        i_shake256_init(&mut sc);
+        i_shake256_inject(&mut sc, msg.as_mut_slice());
+        i_shake256_flip(&mut sc);
+        hash_to_point_vartime(&mut sc, hm, logn as u32);
+        let mut tt = bytemuck::cast_slice_mut::<fpr, u8>(tt);
+        sign_tree(&mut sig, &mut rng, expanded_key, hm, logn as u32, &mut tt);
+        if !verify_raw(hm, sig, h, logn as u32, tt) {
+            panic!("self signature (tree) not verified");
+        }
+        if i % 10 == 0 {
+            print!(".");
+        }
+    }
+    print!(" ");
 }
 
 //
@@ -245,7 +336,7 @@ fn test_poly_inner(logn: usize, tmp: &mut [fpr], tlen: usize) {
         poly_split_fft(f0, f1, f, logn as u32);
 
         g0.clone_from_slice(&f0[..(n >> 1)]);
-        g1[..(n>> 1)].clone_from_slice(f1);
+        g1[..(n >> 1)].clone_from_slice(f1);
         ifft(g0, (logn - 1) as u32);
         ifft(g1, (logn - 1) as u32);
         for u in 0..(n >> 1) {

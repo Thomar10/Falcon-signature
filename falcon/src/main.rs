@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-extern crate core;
-
 use crate::test_falcon::run_falcon_tests;
 
 mod fft;
