@@ -7,7 +7,9 @@ use std::slice::from_raw_parts_mut;
 use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::hash_to_point_vartime;
-use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, shake_init_prng_from_seed};
+use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
+use crate::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
+use crate::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint};
 use crate::keygen::keygen;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
@@ -20,8 +22,8 @@ pub fn run_falcon_tests() {
     test_codec();
     test_vrfy();
     test_rng();
-    // test_FP_block();
-    // test_poly();
+    // test_fp_block();
+    test_poly();
     // test_gaussian0_sampler();
     // test_sampler();
     // test_sign();
@@ -156,6 +158,125 @@ pub fn run_falcon_tests() {
 //         print!(".");
 //     }
 // }
+
+pub(crate) fn test_poly() {
+    print!("Test polynomials: ");
+    const TLEN: usize = 40960;
+    let mut tmp: [u8; TLEN] = [0; TLEN];
+    for logn in 1..=10 {
+        test_poly_inner(logn, bytemuck::cast_slice_mut::<u8, fpr>(&mut tmp), TLEN);
+        if logn % 2 == 0 {
+            println!();
+        }
+    }
+    println!(" done.");
+}
+
+fn test_poly_inner(logn: usize, tmp: &mut [fpr], tlen: usize) {
+    print!("[{}]", logn);
+    let mut rng: InnerShake256Context = InnerShake256Context {
+        st: St { a: [0; 25] },
+        dptr: 0,
+    };
+    let mut prng: Prng = Prng {
+        buf: [0; 512],
+        ptr: 0,
+        state: State {
+            d: [0; 256]
+        },
+        typ: 0,
+    };
+    let n: usize = 1 << logn;
+    if tlen < 5 * n * 8 {
+        panic!("Insufficient buffer size");
+    }
+
+    i_shake256_init(&mut rng);
+    let xb = logn;
+    i_shake256_inject(&mut rng, &mut [logn as u8; 1]);
+    i_shake256_flip(&mut rng);
+    prng_init(&mut prng, &mut rng);
+    let num = 131072u64 >> logn;
+    for ctr in 0..num {
+        let (f, inter) = tmp.split_at_mut(n);
+        let (g, inter) = inter.split_at_mut(n);
+        let (h, inter) = inter.split_at_mut(n);
+        let (f0, inter) = inter.split_at_mut(n >> 1);
+        let (f1, inter) = inter.split_at_mut(n >> 1);
+        let (g0, g1) = inter.split_at_mut(n >> 1);
+        make_rand_poly(&mut prng, f, logn);
+        g.copy_from_slice(f);
+        fft(g, logn as u32);
+        ifft(g, logn as u32);
+        for u in 0..n {
+            if fpr_rint(f[u]) != fpr_rint(g[u]) {
+                panic!("FFT/IFFT error");
+            }
+        }
+
+        make_rand_poly(&mut prng, g, logn);
+        for u in 0..n {
+            h[u] = fpr_of(0);
+        }
+        for u in 0..n {
+            for v in 0..n {
+                let mut s = fpr_mul(f[u], g[v]);
+                let mut k = u + v;
+                if k >= n {
+                    k -= n;
+                    s = fpr_neg(s);
+                }
+                h[k] = fpr_add(h[k], s);
+            }
+        }
+        fft(f, logn as u32);
+        fft(g, logn as u32);
+        poly_mul_fft(f, g, logn as u32);
+        ifft(f, logn as u32);
+        for u in 0..n {
+            if fpr_rint(f[u]) != fpr_rint(h[u]) {
+                panic!("FFT mul error");
+            }
+        }
+
+        make_rand_poly(&mut prng, f, logn);
+        h.copy_from_slice(f);
+        fft(f, logn as u32);
+        poly_split_fft(f0, f1, f, logn as u32);
+
+        g0.clone_from_slice(&f0[..(n >> 1)]);
+        g1[..(n>> 1)].clone_from_slice(f1);
+        ifft(g0, (logn - 1) as u32);
+        ifft(g1, (logn - 1) as u32);
+        for u in 0..(n >> 1) {
+            if fpr_rint(g0[u]) != fpr_rint(h[u << 1])
+                || fpr_rint(g1[u]) != fpr_rint(h[(u << 1) + 1]) {
+                panic!("split error");
+            }
+        }
+
+        poly_merge_fft(g, f0, f1, logn as u32);
+        ifft(g, logn as u32);
+        for u in 0..n {
+            if fpr_rint(g[u]) != fpr_rint(h[u]) {
+                panic!("split/merge error");
+            }
+        }
+        if ((ctr + 1) & 0xFF) == 0 {
+            print!(".");
+        }
+    }
+}
+
+fn make_rand_poly(mut p: &mut Prng, f: &mut [fpr], logn: usize) {
+    let n = 1 << logn;
+    for u in 0..n {
+        let mut x: i32 = prng_get_u8(&mut p) as i32;
+        x = (x << 8) + prng_get_u8(&mut p) as i32;
+        x &= 0x3FF;
+        f[u] = fpr_of((x - 512) as i64);
+    }
+}
 
 pub(crate) fn test_external_api() {
     print!("Test external API: ");
@@ -429,7 +550,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     let (hm, inter) = inter.split_at_mut(n);
     let (_, inter, _) = bytemuck::pod_align_to_mut::<u16, i16>(inter);
     let (sig, inter) = inter.split_at_mut(n);
-    let nn = if logn == 1 {n + 2} else {n};
+    let nn = if logn == 1 { n + 2 } else { n };
     let (s1, tt) = inter.split_at_mut(nn);
 
     let (_, tt, _) = bytemuck::pod_align_to_mut::<i16, u8>(tt);
