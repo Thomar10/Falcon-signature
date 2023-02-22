@@ -2,8 +2,6 @@
 
 use std::ffi::c_char;
 
-use crate::test_falcon::Sha1Context;
-
 #[link(name = "testfalcon", kind = "static")]
 // Purely to access the SHA and 'nist_random' because of laziness.
 extern "C" {
@@ -16,4 +14,11 @@ extern "C" {
     pub fn sha1_out(sc: *const Sha1Context, dst: *const u8);
     pub fn save_drbg_state(state: *const u8);
     pub fn restore_drbg_state(state: *const u8);
+}
+
+#[repr(C)]
+pub struct Sha1Context {
+    pub buf: [u8; 64],
+    pub val: [u32; 5],
+    pub count: u64,
 }

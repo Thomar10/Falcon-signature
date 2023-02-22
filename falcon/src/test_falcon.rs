@@ -9,7 +9,7 @@ use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
-use crate::falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int};
+use crate::falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int, Sha1Context};
 use crate::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
 use crate::fpr::{fpr_add, fpr_div, fpr_double, fpr_half, fpr_lt, fpr_mul, fpr_neg, fpr_of, FPR_ONE, fpr_rint, FPR_SIGMA_MIN, fpr_sqr, fpr_sub, fpr_trunc, FPR_TWO, FPR_ZERO};
 use crate::keygen::keygen;
@@ -123,13 +123,6 @@ fn test_sign_self(mut f: &mut [i8], mut g: &mut [i8],
         }
     }
     print!(" ");
-}
-
-#[repr(C)]
-pub struct Sha1Context {
-    pub buf: [u8; 64],
-    pub val: [u32; 5],
-    count: u64,
 }
 
 
@@ -309,7 +302,7 @@ pub(crate) fn test_poly() {
     let mut tmp: [u8; TLEN] = [0; TLEN];
     for logn in 1..=10 {
         test_poly_inner(logn, bytemuck::cast_slice_mut::<u8, fpr>(&mut tmp), TLEN);
-        if logn % 2 == 0 {
+        if logn % 2 == 0 && logn != 10 {
             println!();
         }
     }
