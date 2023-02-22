@@ -16,7 +16,7 @@ mod tests {
         let entropy_c: [u8; 48] = [0; 48];
         unsafe { randombytes_init_func(entropy_c.as_ptr(), null(), 256); }
         randombytes_init(&mut entropy);
-        let res = crypto_sign_keypair(&mut pk, &mut sk);
+        let res = crypto_sign_keypair(&mut pk, &mut sk, 9);
         let res_c = unsafe { crypto_sign_keypair_func(pk_c.as_ptr(), sk_c.as_ptr()) };
         assert_eq!(res, res_c == 0);
         assert_eq!(sk, sk_c);
