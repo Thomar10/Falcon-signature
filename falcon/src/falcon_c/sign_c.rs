@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 use std::ffi::c_void;
 
 use crate::falcon_c::rng_c::Prng;
@@ -20,11 +19,8 @@ extern "C" {
     pub fn smallints_to_fpr_func(r: *const fpr, t: *const i8, logn: u32);
     pub fn falcon_inner_expand_privkey(expanded_key: *const fpr, f: *const i8, g: *const i8, F: *const i8, G: *const i8, logn: u32, tmp: *const u8);
     pub fn ffSampling_fft_dyntree_func(samp: samplerZ, samp_ctx: *const c_void, t0: *const fpr, t1: *const fpr, g00: *const fpr, g01: *const fpr, g11: *const fpr, orig_logn: u32, logn: u32, tmp: *const fpr);
-    #[allow(dead_code)]
     pub fn ffSampling_fft_func(samp: samplerZ, samp_ctx: *const c_void, z0: *const fpr, z1: *const fpr, t1: *const fpr, logn: u32, tmp: *const fpr);
-    #[allow(dead_code)]
     pub fn do_sign_tree_func(samp: samplerZ, samp_ctx: *const c_void, s2: *const i16, expanded_key: *const fpr, hm: *const u16, logn: *const u16, tmp: *const fpr) -> i32;
-    #[allow(dead_code)]
     pub fn do_sign_dyn_func(samt: samplerZ, samp_ctx: *const c_void, s2: *const i16, f: *const i8, g: *const i8, F: *const i8, G: *const i8, hm: *const u16, logn: u32, tmp: *const fpr) -> i32;
     pub fn falcon_inner_gaussian0_sampler(prng: *const Prng) -> i32;
     pub fn BerExp_func(prng: *const Prng, x: fpr, ccs: fpr) -> i32;

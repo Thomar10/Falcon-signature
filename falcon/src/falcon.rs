@@ -4,7 +4,7 @@ use std::slice::from_raw_parts_mut;
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::keygen::keygen;
-use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
+use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context};
 use crate::sign::{expand_privkey, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, to_ntt_monty, verify_raw};
 
@@ -282,7 +282,7 @@ pub fn falcon_sign_dyn(mut rng: &mut InnerShake256Context, signature: &mut [u8],
                        private_len: usize, data: &mut [u8],
                        tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut nonce = [0u8; 40];
@@ -357,7 +357,7 @@ pub fn falcon_sign_tree(mut rng: &mut InnerShake256Context, signature: &mut [u8]
                         data: &mut [u8],
                         tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut nonce = [0u8; 40];
@@ -466,12 +466,11 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
     shake256_flip(&mut hash_data);
 
     loop {
-        let mut hash_data_restart: &mut InnerShake256Context = &mut unsafe {
-            InnerShake256Context {
-                st: St { a: hash_data.st.a },
+        let mut hash_data_restart: &mut InnerShake256Context =
+            &mut InnerShake256Context {
+                st: hash_data.st,
                 dptr: hash_data.dptr,
-            }
-        };
+            };
         if signature_type == FALCON_SIG_CT {
             hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
         } else {
@@ -556,12 +555,11 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
     let atmp = bytemuck::cast_slice_mut::<u64, u8>(atmp);
     shake256_flip(&mut hash_data);
     loop {
-        let mut hash_data_restart: &mut InnerShake256Context = &mut unsafe {
-            InnerShake256Context {
-                st: St { a: hash_data.st.a },
+        let mut hash_data_restart: &mut InnerShake256Context =
+            &mut InnerShake256Context {
+                st: hash_data.st,
                 dptr: hash_data.dptr,
-            }
-        };
+            };
         if signature_type == FALCON_SIG_CT {
             hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
         } else {
@@ -614,7 +612,7 @@ pub fn falcon_verify(signature: &mut [u8], signature_len: usize, signature_type:
                      data: &mut [u8],
                      tmp: &mut [u8], tmp_len: usize) -> i32 {
     let mut hd: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let r = falcon_verify_start(&mut hd, signature, signature_len);

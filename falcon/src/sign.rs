@@ -95,32 +95,6 @@ pub fn smallints_to_fpr(r: &mut [fpr], t: &[i8], logn: u32) {
     }
 }
 
-//TODO check if skoffs are needed
-#[inline(always)]
-pub fn skoff_b00(_logn: u32) -> usize {
-    return 0;
-}
-
-#[inline(always)]
-pub fn skoff_b01(logn: u32) -> usize {
-    return MKN!(logn);
-}
-
-#[inline(always)]
-pub fn skoff_b10(logn: u32) -> usize {
-    return 2 * MKN!(logn);
-}
-
-#[inline(always)]
-pub fn skoff_b11(logn: u32) -> usize {
-    return 3 * MKN!(logn);
-}
-
-#[inline(always)]
-pub fn skoff_tree(logn: u32) -> usize {
-    return 4 * MKN!(logn);
-}
-
 #[allow(non_snake_case)]
 pub fn expand_privkey(expanded_key: &mut [fpr], f: &[i8], g: &[i8], F: &[i8],
                       G: &[i8], logn: u32, tmp: &mut [u64]) {

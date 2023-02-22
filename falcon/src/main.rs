@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use crate::gen_kat::genkat;
 
 mod fft;
 mod fpr;
@@ -32,5 +33,5 @@ mod falcon_c {
 
 
 fn main() {
-    // unsafe { genkat512(); }
+    genkat();
 }
