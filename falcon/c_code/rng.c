@@ -188,3 +188,17 @@ prng_get_bytes(prng *p, void *dst, size_t len)
 		}
 	}
 }
+
+
+uint64_t
+prng_get_u64_func(prng *p)
+{
+    return prng_get_u64(p);
+}
+
+unsigned
+prng_get_u8_func(prng *p)
+{
+	return prng_get_u8(p);
+}
+

@@ -10,8 +10,6 @@ thread_local!(static CONTEXT: RefCell<Aes256Drbg> = RefCell::new(Aes256Drbg {
 }););
 
 
-#[allow(dead_code)]
-
 // Does not have personalized string and security as they dont use them...
 pub fn randombytes_init(entropy: &mut [u8]) {
     CONTEXT.with(|aes| {

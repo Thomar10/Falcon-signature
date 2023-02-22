@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use crate::gen_kat::genkat512;
+use crate::test_falcon::run_falcon_tests;
 
 mod fft;
 mod fpr;
@@ -12,7 +13,9 @@ mod gen_kat;
 mod katrng;
 mod nist;
 mod rng;
+mod sign;
 mod common;
+mod test_falcon;
 
 mod falcon_c {
     pub mod codec_c;
@@ -22,6 +25,7 @@ mod falcon_c {
     pub mod shake_c;
     pub mod rng_c;
     pub mod common_c;
+    pub mod sign_c;
     pub mod vrfy_c;
     pub mod keygen_c;
 }
@@ -31,6 +35,7 @@ mod test {
     pub mod fpr_test;
     pub mod shake_test;
     pub mod rng_test;
+    pub mod sign_test;
     pub mod keygen_test;
     pub mod vrfy_test;
     pub mod codec_test;
@@ -41,5 +46,6 @@ mod test {
 
 
 fn main() {
-    unsafe { genkat512(); }
+    run_falcon_tests();
+    //unsafe { genkat512(); }
 }

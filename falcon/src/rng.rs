@@ -45,11 +45,10 @@ pub fn prng_init(p: &mut Prng, src: &mut InnerShake256Context) -> () {
     }
 
     unsafe {
-        tl = p.state.d32[12];
-        p.state.d32[12] = p.state.d32[13];
-        p.state.d32[13] = tl;
+        tl = p.state.d32[6];
+        let th = p.state.d32[7];
+        p.state.d32[6] = tl + ((th as u64) << 32) as u32;
     }
-
     prng_refill(p);
 }
 
@@ -146,7 +145,6 @@ pub fn prng_refill(p: &mut Prng) -> () {
     unsafe {
         p.state.d64[6] = cc;
     }
-
     p.ptr = 0;
 }
 
@@ -177,4 +175,32 @@ pub fn prng_get_bytes(p: &mut Prng, mut len: usize) -> Vec<u8> {
     }
 
     return output;
+}
+
+#[inline(always)]
+pub fn prng_get_u64(p: &mut Prng) -> u64 {
+    let mut u = p.ptr;
+    if u >= p.buf.len()  - 9 {
+        prng_refill(p);
+        u = 0;
+    }
+    p.ptr = u + 8;
+    return (p.buf[u] as u64)
+        | ((p.buf[u + 1] as u64) << 8)
+        | ((p.buf[u + 2] as u64) << 16)
+        | ((p.buf[u + 3] as u64) << 24)
+        | ((p.buf[u + 4] as u64) << 32)
+        | ((p.buf[u + 5] as u64) << 40)
+        | ((p.buf[u + 6] as u64) << 48)
+        | ((p.buf[u + 7] as u64) << 56);
+}
+
+#[inline(always)]
+pub fn prng_get_u8(p: &mut Prng) -> u8 {
+    let v = p.buf[p.ptr];
+    p.ptr += 1;
+    if p.ptr == p.buf.len() {
+        prng_refill(p);
+    }
+    v
 }
