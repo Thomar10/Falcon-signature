@@ -4,15 +4,11 @@ mod tests {
 
     use rand::Rng;
 
-    use crate::falcon_c::nist_c::{crypto_sign_keypair_func, randombytes_func, randombytes_init_func};
+    use crate::falcon_c::nist_c::{randombytes_func, randombytes_init_func};
     use crate::katrng::{randombytes, randombytes_init};
-    use crate::nist::crypto_sign_keypair;
 
     #[test]
     fn test_randombytes() {
-        let mut seed: [u8; 48] = [0; 48];
-        let seed_c: [u8; 48] = [0; 48];
-        let mut rng = rand::thread_rng();
         let mut entropy: [u8; 48] = [0; 48];
         let entropy_c: [u8; 48] = [0; 48];
         let mut seed: [u8; 48] = [0; 48];
