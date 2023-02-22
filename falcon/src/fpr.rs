@@ -159,7 +159,7 @@ pub fn fpr_scaled(mut i: i64, sc: i32) -> u64 {
     m >>= 9;
 
     t = (((i | -i) as u64) >> 63) as u32;
-    m &= !(t as u64).wrapping_add(1);
+    m &= (!(t as u64)).wrapping_add(1);
     e &= -(t as i32);
 
     fpr(s, e, m)
