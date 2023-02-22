@@ -16,16 +16,16 @@ use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_mon
 
 // TODO REFACTOR INTO BEING ABLE TO RUN ITSELF
 pub fn run_falcon_tests() {
-    // test_shake256();
-    // test_codec();
-    // test_vrfy();
-    // test_rng();
+    test_shake256();
+    test_codec();
+    test_vrfy();
+    test_rng();
     // test_FP_block();
     // test_poly();
     // test_gaussian0_sampler();
     // test_sampler();
     // test_sign();
-    // test_keygen();
+    test_keygen();
     test_external_api();
     // test_nist_kat(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
     // test_nist_KAT(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
@@ -402,6 +402,7 @@ pub(crate) fn test_keygen() {
     println!(" done. ");
 }
 
+#[allow(non_snake_case)]
 fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     let mut rng: InnerShake256Context = InnerShake256Context {
         st: St { a: [0; 25] },
@@ -418,62 +419,39 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     i_shake256_inject(&mut rng, buf);
     i_shake256_flip(&mut rng);
     let n: usize = 1 << logn;
-    let fp: *mut i8 = tmp.as_mut_ptr().cast();
-    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
-    let gp = fp.wrapping_add(n);
-    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
-    let Fp = gp.wrapping_add(n);
-    let F: &mut [i8] = unsafe { from_raw_parts_mut(Fp, n) };
-    let Gp = Fp.wrapping_add(n);
-    let G: &mut [i8] = unsafe { from_raw_parts_mut(Gp, n) };
-    let hp: *mut u16 = Gp.wrapping_add(n).cast();
-    let h: &mut [u16] = unsafe { from_raw_parts_mut(hp, n) };
-    let h2p = hp.wrapping_add(n);
-    let h2: &mut [u16] = unsafe { from_raw_parts_mut(h2p, n) };
-    let hmp = h2p.wrapping_add(n);
-    let hm: &mut [u16] = unsafe { from_raw_parts_mut(hmp, n) };
-    let sigp: *mut i16 = hmp.wrapping_add(n).cast();
-    let sig: &mut [i16] = unsafe { from_raw_parts_mut(sigp, n) };
-    let s1p = sigp.wrapping_add(n);
-    let s1: &mut [i16] = unsafe { from_raw_parts_mut(s1p, n) };
-    let mut ttp: *mut u8 = s1p.wrapping_add(n).cast();
-    let mut s1ttp: *mut i16 = s1p.wrapping_add(n).cast();
-    let tt: &mut [u8];
-    let s1tt: &mut [i16];
-    // TODO FIX HERNEDE!
-    if logn == 1 {
-        ttp = ttp.wrapping_add(4);
-        s1ttp = s1ttp.wrapping_add(2);
-        // tt = unsafe { from_raw_parts_mut(ttp, n + 4) };
-        tt = unsafe { from_raw_parts_mut(ttp, 50000) };
-        // s1tt = unsafe { from_raw_parts_mut(s1ttp, n + 2) };
-        s1tt = unsafe { from_raw_parts_mut(s1ttp, 25000) };
-    } else {
-        tt = unsafe { from_raw_parts_mut(ttp, 50000) };
-        // tt = unsafe { from_raw_parts_mut(ttp, n * 2) };
-        // s1tt = unsafe { from_raw_parts_mut(s1ttp, n) };
-        s1tt = unsafe { from_raw_parts_mut(s1ttp, 25000) };
-    }
+    let (f, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
+    let (F, inter) = inter.split_at_mut(n);
+    let (G, inter) = inter.split_at_mut(n);
+    let (_, inter, _) = bytemuck::pod_align_to_mut::<i8, u16>(inter);
+    let (h, inter) = inter.split_at_mut(n);
+    let (h2, inter) = inter.split_at_mut(n);
+    let (hm, inter) = inter.split_at_mut(n);
+    let (_, inter, _) = bytemuck::pod_align_to_mut::<u16, i16>(inter);
+    let (sig, inter) = inter.split_at_mut(n);
+    let nn = if logn == 1 {n + 2} else {n};
+    let (s1, tt) = inter.split_at_mut(nn);
+
+    let (_, tt, _) = bytemuck::pod_align_to_mut::<i16, u8>(tt);
+
     for _ in 0..12 {
         let mut sc: InnerShake256Context = InnerShake256Context {
             st: St { a: [0; 25] },
             dptr: 0,
         };
-        keygen(&mut rng, fp, gp, Fp, Gp, hp, logn, ttp);
+        keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tt.as_mut_ptr());
         let msg = i_shake256_extract(&mut rng, 50);
 
         i_shake256_init(&mut sc);
         i_shake256_inject(&mut sc, msg.as_slice());
         i_shake256_flip(&mut sc);
-        unsafe { hash_to_point_vartime(&mut sc, hm, logn); };
-
+        hash_to_point_vartime(&mut sc, hm, logn);
 
         sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tt);
-        let hmm: &[u8] = &tt[0..n * 2];
-        s1[..n].copy_from_slice(&s1tt[0..n]);
+        s1[..n].copy_from_slice(&bytemuck::cast_slice_mut(tt)[..n]);
         while !is_invertible(sig, logn, tt) {
             sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tt);
-            s1.copy_from_slice(&s1tt[..n]);
+            s1.copy_from_slice(&bytemuck::cast_slice_mut(tt)[..n]);
         }
         to_ntt_monty(h, logn);
         if !verify_raw(hm, sig, h, logn, tt) {

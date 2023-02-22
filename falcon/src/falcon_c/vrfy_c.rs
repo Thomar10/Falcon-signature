@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #[link(name = "vrfy", kind = "static")]
 extern "C" {
     pub fn mq_add_func(x: u32, y: u32) -> u32;

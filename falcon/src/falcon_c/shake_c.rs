@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #[link(name = "shake", kind = "static")]
 
 extern "C" {
