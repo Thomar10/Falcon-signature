@@ -36,5 +36,5 @@ mod falcon_c {
 
 fn main() {
     //run_falcon_tests();
-    unsafe { genkat512(); }
+    genkat512();
 }
