@@ -1,4 +1,5 @@
-use std::slice::{from_raw_parts_mut};
+use std::slice::from_raw_parts_mut;
+
 use crate::common::is_short;
 
 pub const Q: u32 = 12289;
@@ -220,12 +221,9 @@ pub fn complete_private(G: &mut [i8], f: &mut [i8], g: &mut [i8], F: &mut [i8], 
 
     let t1: *mut u16 = tmp.as_mut_ptr().cast();
     let t2: *mut u16 = t1.wrapping_add(n);
-    let t1s: &mut [u16];
-    let t2s: &mut [u16];
-    unsafe {
-        t1s = from_raw_parts_mut(t1, tmp.len() / 2);
-        t2s = from_raw_parts_mut(t2, tmp.len() / 2 - n);
-    }
+    let t1s: &mut [u16] = unsafe { from_raw_parts_mut(t1, n) };
+    let t2s: &mut [u16] = unsafe { from_raw_parts_mut(t2, n) };
+
     for u in 0..n {
         unsafe { *t1.wrapping_add(u) = mq_conv_small(g[u] as i32) as u16; }
         unsafe { *t2.wrapping_add(u) = mq_conv_small(F[u] as i32) as u16; }

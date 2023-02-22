@@ -499,7 +499,7 @@ pub fn poly_LDL_fft(g00: &mut [u64], g01: &mut [u64], g11: &mut [u64], logn: u32
 }
 
 #[allow(non_snake_case)]
-pub fn poly_LDLmv_fft(d11: &mut [u64], l10: &mut [u64], g00: &mut [u64], g01: &mut [u64], g11: &mut [u64], logn: u32) {
+pub fn poly_LDLmv_fft(d11: &mut [u64], l10: &mut [u64], g00: &[u64], g01: &mut [u64], g11: &[u64], logn: u32) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;

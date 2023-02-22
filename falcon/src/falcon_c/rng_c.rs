@@ -6,6 +6,8 @@ extern "C" {
     pub fn prng_init(p: *const Prng, src: *const InnerShake256Context);
     pub fn prng_refill(p: *const Prng);
     pub fn prng_get_bytes(p: *const Prng, dst: *const c_void, len: u64);
+    pub fn prng_get_u64_func(p: *const Prng) -> u64;
+    pub fn prng_get_u8_func(p: *const Prng) -> u8;
 }
 
 #[repr(C)]

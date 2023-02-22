@@ -28,6 +28,21 @@ pub const max_FG_bits: [u8; 11] = [
     8
 ];
 
+#[allow(non_upper_case_globals)]
+pub const max_sig_bits: [u8; 11] = [
+    0, /* unused */
+    10,
+    11,
+    11,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12
+];
+
 pub fn modq_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [u16], logn: u32) -> usize {
     let mut acc: u32;
     let mut acc_len: i32;
@@ -105,7 +120,7 @@ pub fn comp_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i1
 
     let mut acc: u32 = 0;
     let mut acc_len: u32 = 0;
-    let mut v: usize = out_index;
+    let mut v: usize = 0;
     for u in 0..n {
         acc <<= 1;
         let mut t: i32 = x[u] as i32;
@@ -130,7 +145,7 @@ pub fn comp_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i1
                 if v >= max_out {
                     return 0;
                 }
-                out[v] = (acc >> acc_len) as u8;
+                out[v + out_index] = (acc >> acc_len) as u8;
             }
             v += 1;
         }
@@ -140,7 +155,7 @@ pub fn comp_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i1
             if v >= max_out {
                 return 0;
             }
-            out[v] = (acc << (8 - acc_len)) as u8;
+            out[v + out_index] = (acc << (8 - acc_len)) as u8;
         }
         v += 1;
     }
