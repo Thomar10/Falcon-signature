@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
 
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::slice::from_raw_parts_mut;
 
 use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
@@ -10,11 +10,11 @@ use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
 use crate::falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int, Sha1Context};
 use crate::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
-use crate::fpr::{fpr_add, fpr_div, fpr_double, fpr_half, fpr_lt, fpr_mul, fpr_neg, fpr_of, FPR_ONE, fpr_rint, FPR_SIGMA_MIN, fpr_sqr, fpr_sub, fpr_trunc, FPR_TWO, FPR_ZERO};
+use crate::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint, };
 use crate::keygen::keygen;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context, St};
-use crate::sign::{expand_privkey, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_tree};
+use crate::sign::{expand_privkey, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
 
 pub fn run_falcon_tests() {
@@ -40,8 +40,8 @@ pub(crate) fn test_sign() {
     println!(" done");
 }
 
-fn test_sign_self(mut f: &[i8], mut g: &[i8],
-                  mut F: &[i8], G: &[i8], h_src: &[u16], logn: usize,
+fn test_sign_self(f: &[i8], g: &[i8],
+                  F: &[i8], G: &[i8], h_src: &[u16], logn: usize,
                   tmp: &mut [u8]) {
     let n = 1 << logn;
     let inter = bytemuck::cast_slice_mut::<u8, u16>(tmp);
@@ -97,7 +97,7 @@ fn test_sign_self(mut f: &[i8], mut g: &[i8],
         }
     }
 
-    let (expanded_key, mut tt) = tt.split_at_mut((8 * logn + 40) * n);
+    let (expanded_key, tt) = tt.split_at_mut((8 * logn + 40) * n);
     let expanded_key = bytemuck::cast_slice_mut::<u8, fpr>(expanded_key);
     let mut tt = bytemuck::cast_slice_mut::<u8, fpr>(tt);
     expand_privkey(expanded_key, f, g, F, G, logn as u32, &mut tt);
@@ -164,8 +164,8 @@ pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
     };
     unsafe { nist_randombytes_init(entropy_input.as_ptr()) };
     for i in 0..100 {
-        let mut smlen;
-        let mut seed = [0u8; 48];
+        let smlen;
+        let seed = [0u8; 48];
         let mut seed2 = [0u8; 48];
         let mut nonce = [0u8; 40];
         let drbg_sav = [0u8; 48];
@@ -179,10 +179,10 @@ pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
         let (h, inter) = inter.split_at_mut(n);
         let (hm, inter) = inter.split_at_mut(n);
         let (sig, inter) = inter.split_at_mut(n);
-        let mut sig = bytemuck::cast_slice_mut::<u16, i16>(sig);
+        let sig = bytemuck::cast_slice_mut::<u16, i16>(sig);
         let (sig2, inter) = inter.split_at_mut(n);
-        let mut sig2 = bytemuck::cast_slice_mut::<u16, i16>(sig2);
-        let mut inter = bytemuck::cast_slice_mut::<u16, u8>(inter);
+        let sig2 = bytemuck::cast_slice_mut::<u16, i16>(sig2);
+        let inter = bytemuck::cast_slice_mut::<u16, u8>(inter);
 
         unsafe { nist_randombytes(seed.as_ptr(), 48) };
         let mlen = 33 * (i + 1);
@@ -199,13 +199,13 @@ pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
                G.as_mut_ptr(), h.as_mut_ptr(), logn, inter.as_mut_ptr());
         sk[0] = (0x50 + logn) as u8;
         let mut u = 1;
-        let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+        let v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
                                    f, logn, max_fg_bits[logn as usize] as u32);
         if v == 0 {
             panic!("Error encoding sk(f)");
         }
         u += v;
-        let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+        let v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
                                    g, logn, max_fg_bits[logn as usize] as u32);
         if v == 0 {
             panic!("Error encoding sk(g)");
@@ -328,7 +328,6 @@ fn test_poly_inner(logn: usize, tmp: &mut [fpr], tlen: usize) {
     }
 
     i_shake256_init(&mut rng);
-    let xb = logn;
     i_shake256_inject(&mut rng, &mut [logn as u8; 1]);
     i_shake256_flip(&mut rng);
     prng_init(&mut prng, &mut rng);
@@ -667,7 +666,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     };
     print!("[{}]", logn);
     let mut string = String::from("keygen 0");
-    let mut buf: &mut [u8] = unsafe {
+    let buf: &mut [u8] = unsafe {
         string.as_bytes_mut()
     };
     buf[7] = "0".as_bytes()[0] + logn as u8;
@@ -760,8 +759,7 @@ pub(crate) fn test_rng() {
 
 pub(crate) fn test_vrfy() {
     print!("Test verify: ");
-
-    const TLEN: usize = 8192;
+    const TLEN: usize = 15000;
     let mut tmp: [u8; TLEN] = [0; TLEN];
     test_vrfy_inner(4, &ntru_f_16, &ntru_g_16, &ntru_F_16, &ntru_G_16,
                     &ntru_h_16, ntru_pkey_16, &KAT_SIG_16, &mut tmp, TLEN);
@@ -769,37 +767,35 @@ pub(crate) fn test_vrfy() {
                     &ntru_h_512, ntru_pkey_512, &KAT_SIG_512, &mut tmp, TLEN);
     test_vrfy_inner(10, &ntru_f_1024, &ntru_g_1024, &ntru_F_1024, &ntru_G_1024,
                     &ntru_h_1024, ntru_pkey_1024, &KAT_SIG_1024, &mut tmp, TLEN);
-
     println!(" done.");
 }
 
 
-fn test_vrfy_inner(logn: u32, mut f: &[i8], mut g: &[i8],
-                   mut F: &[i8], G: &[i8], mut h: &[u16],
+fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
+                   F: &[i8], G: &[i8], h: &[u16],
                    hexpubkey: &str, kat: &[&str], tmp: &mut [u8], tlen: usize) {
     let n: usize = 1 << logn;
-    let h2p: *mut u16 = tmp.as_mut_ptr().cast();
-    let h2: &mut [u16];
-    unsafe { h2 = from_raw_parts_mut(h2p, n); }
+    let h2= bytemuck::cast_slice_mut::<u8, u16>(tmp);
+    let (h2, inter) = h2.split_at_mut(n);
+    let (h2tmp, _) = inter.split_at_mut(n);
+    let h2tmp = bytemuck::cast_slice_mut::<u16, u8>(h2tmp);
     let ff = f.clone();
     let gg = g.clone();
     if tlen < 4 * n {
         panic!("Insufficient buffer size");
     }
-    if !compute_public(h2p, ff.as_mut_ptr(), gg.as_mut_ptr(), logn, h2p.wrapping_add(n).cast()) {
+    if !compute_public(h2.as_mut_ptr(), ff.as_ptr(), gg.as_ptr(), logn, h2tmp.as_mut_ptr()) {
         panic!("Compute public failed!");
     }
     assert_eq!(h, h2, "compute_public");
 
-    let G2p: *mut i8 = tmp.as_mut_ptr().cast();
-    let G2: &mut [i8];
-    unsafe { G2 = from_raw_parts_mut(G2p, n); }
+    let (G2, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
     if tlen < 5 * n {
         panic!("Insufficient buffer size");
     }
-    let g2_tmp: &mut [u8];
-    unsafe { g2_tmp = from_raw_parts_mut(G2p.wrapping_add(n).cast(), tmp.len() - n); };
-    if !complete_private(G2, &mut f, &mut g, &mut F, logn, g2_tmp) {
+    let (g2_tmp, _) = inter.split_at_mut(n);
+    let g2_tmp = bytemuck::cast_slice_mut(g2_tmp);
+    if !complete_private(G2, ff, &g, &F, logn, g2_tmp) {
         panic!("Compute public failed!");
     }
     assert_eq!(G, G2, "complete_private");
@@ -816,7 +812,7 @@ fn test_vrfy_inner(logn: u32, mut f: &[i8], mut g: &[i8],
         panic!("Insufficient buffer size");
     }
     tmp[0] = logn as u8;
-    let len2 = modq_encode(tmp, 1, tlen - pubkey_bytes.len() - 1, &mut h, logn);
+    let len2 = modq_encode(tmp, 1, tlen - pubkey_bytes.len() - 1, &h, logn);
     if len2 != (pubkey_bytes.len() - 1) {
         panic!("Wrong encoded public key length {}", len2);
     }
@@ -855,7 +851,7 @@ fn test_vrfy_inner(logn: u32, mut f: &[i8], mut g: &[i8],
         unsafe { tmp.as_mut_ptr().copy_from(sig2.as_mut_ptr().cast(), 2 * n); }
         let s2p: *mut i16 = tmp.as_mut_ptr().cast();
         let h2p: *mut u16 = s2p.wrapping_add(n).cast();
-        unsafe { h2p.copy_from(h.as_mut_ptr().cast(), n); }
+        unsafe { h2p.copy_from(h.as_ptr().cast(), n); }
         let mut h2: &mut [u16];
         unsafe { h2 = from_raw_parts_mut(h2p.cast(), n); }
         to_ntt_monty(&mut h2, logn);

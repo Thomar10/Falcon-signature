@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use crate::test_falcon::run_falcon_tests;
-
 mod fft;
 mod fpr;
 mod shake;
@@ -15,7 +13,6 @@ mod nist;
 mod rng;
 mod sign;
 mod common;
-mod test_falcon;
 mod tests;
 
 mod falcon_c {
@@ -35,6 +32,5 @@ mod falcon_c {
 
 
 fn main() {
-    run_falcon_tests();
     // unsafe { genkat512(); }
 }

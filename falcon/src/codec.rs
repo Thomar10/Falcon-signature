@@ -43,7 +43,7 @@ pub const max_sig_bits: [u8; 11] = [
     12
 ];
 
-pub fn modq_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [u16], logn: u32) -> usize {
+pub fn modq_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &[u16], logn: u32) -> usize {
     let mut acc: u32;
     let mut acc_len: i32;
     let n = 1usize << logn;
