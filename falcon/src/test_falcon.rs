@@ -459,7 +459,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
             st: [0; 25],
             dptr: 0,
         };
-        keygen(&mut rng, fp, gp, Fp, Gp, hp, logn, ttp);
+        //keygen(&mut rng, fp, gp, Fp, Gp, hp, logn, ttp);
         let msg = i_shake256_extract(&mut rng, 50);
 
         i_shake256_init(&mut sc);

@@ -1,3 +1,5 @@
+use std::ptr::null_mut;
+
 use crate::codec::{max_fg_bits, max_FG_bits};
 use crate::fft::{fft_pointer, ifft_pointer, poly_add_muladj_fft_pointer, poly_add_pointer, poly_adj_fft_pointer, poly_div_autoadj_fft_pointer, poly_invnorm2_fft_pointer, poly_mul_autoadj_fft_pointer, poly_mul_fft_pointer, poly_mulconst_pointer, poly_sub_pointer};
 use crate::fpr::{fpr_add, FPR_BNORM_MAX, fpr_lt, FPR_MTWO31M1, FPR_MTWO63M1, fpr_mul, fpr_of, FPR_ONE, FPR_ONEHALF, FPR_PTWO31, FPR_PTWO31M1, FPR_PTWO63M1, FPR_Q, fpr_rint, fpr_sqr, FPR_TWO, FPR_ZERO};
@@ -20,6 +22,9 @@ macro_rules! mkn {
         (1usize << ($arg))
     }
 }
+
+#[allow(non_camel_case_types)]
+type fpr = u64;
 
 #[inline(always)]
 pub fn modp_set(x: i32, p: u32) -> u32 {
@@ -2031,14 +2036,14 @@ pub fn poly_sub_scaled_pointer(F: *mut u32, Flen: usize, Fstride: usize, f: *mut
 
 #[allow(non_snake_case)]
 pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32], flen: usize, fstride: usize, k: &mut [i32], sch: u32, scl: u32, logn: u32, tmp: &mut [u32]) {
-    let (gm_index, igm_index, fk_index, t1_index, mut x_index, mut y_index): (usize, usize, usize, usize, usize, usize);
     let tlen: usize;
     let n = mkn!(logn);
     tlen = flen + 1;
-    gm_index = 0;
-    igm_index = n;
-    fk_index = 2 * n;
-    t1_index = 2 * n + n * tlen;
+    let (gm, inter) = tmp.split_at_mut(n);
+    let (igm, inter) = inter.split_at_mut(n);
+    let (fk, t1) = inter.split_at_mut(n * tlen);
+    println!("{}", fk.len());
+    println!("{}", tlen);
 
     for u in 0..tlen {
         let (p, p0i, r2, rx): (u32, u32, u32, u32);
@@ -2047,34 +2052,42 @@ pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [
         p0i = modp_ninv31(p);
         r2 = modp_R2(p, p0i);
         rx = modp_Rx(flen as u32, p, p0i, r2);
-        modp_mkgm2_index(tmp, gm_index, igm_index, logn, PRIMES[u].g, p, p0i);
+        modp_mkgm2(gm, igm, logn, PRIMES[u].g, p, p0i);
 
         for v in 0..n {
-            tmp[v + t1_index] = modp_set(k[v], p);
+            t1[v] = modp_set(k[v], p);
         }
-        modp_NTT2_index(tmp, t1_index, gm_index, logn, p, p0i);
-        y_index = 0;
-        x_index = fk_index + u;
+        modp_NTT2(t1, gm, logn, p, p0i);
+        let mut y = &mut *f;
+        let mut x_move = 0;
         for _ in 0..n {
-            tmp[x_index] = zint_mod_small_signed_index(f, y_index, flen, p, p0i, r2, rx);
-            y_index += fstride;
-            x_index += tlen;
+            let (_, x) = fk.split_at_mut(x_move + u);
+            x[0] = zint_mod_small_signed(y, flen, p, p0i, r2, rx);
+            let (_, yy) = y.split_at_mut(fstride);
+            y = yy;
+            x_move += tlen;
         }
-        modp_NTT2_ext_index(tmp, tlen, fk_index + u, gm_index, logn, p, p0i);
+        let (_, x) = fk.split_at_mut(u);
+        modp_NTT2_ext(x, tlen, gm, logn, p, p0i);
+        let mut x_move = 0;
         for v in 0..n {
-            tmp[x_index] = modp_montymul(
-                modp_montymul(tmp[v + t1_index], tmp[x_index], p, p0i), r2, p, p0i);
-            x_index += tlen;
+            let (_, x) = fk.split_at_mut(x_move + u);
+            x[0] = modp_montymul(
+                modp_montymul(t1[v], x[0], p, p0i), r2, p, p0i);
+            x_move += tlen;
         }
-        modp_iNTT2_ext_index(tmp, tlen, fk_index + u, igm_index, logn, p, p0i);
+        let (_, x) = fk.split_at_mut(u);
+        modp_iNTT2_ext(x, tlen, igm, logn, p, p0i);
     }
-    zint_rebuild_CRT_index(tmp, fk_index, tlen, tlen, n as u64, &PRIMES, true, t1_index);
-    x_index = 0;
-    y_index = fk_index;
+    zint_rebuild_CRT(fk, tlen, tlen, n as u64, &PRIMES, true, t1);
+    let mut x = F;
+    let mut y = fk;
     for _ in 0..n {
-        zint_sub_scaled_index(F, x_index, Flen, tmp, y_index, tlen, sch as usize, scl);
-        x_index += Fstride;
-        y_index += tlen;
+        zint_sub_scaled(x, Flen, y, tlen, sch as usize, scl);
+        let (_, xx) = x.split_at_mut(Fstride);
+        let (_, yy) = y.split_at_mut(tlen);
+        x = xx;
+        y = yy;
     }
 }
 
@@ -3457,81 +3470,80 @@ pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: *mut i8, logn: 
 
 
 #[allow(non_snake_case)]
-pub fn keygen(mut rng: &mut InnerShake256Context, f: *mut i8, g: *mut i8, F: *mut i8, G: *mut i8, h: *mut u16, logn: u32, tmp: *mut u8) {
+pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &mut [i8], h: &mut [u16], logn: u32, tmp: &mut [u8]) {
     let n = mkn!(logn);
-    let mut tmp2: *mut u16;
-    let mut h2: *mut u16;
+    let mut tmp2: &mut [u16] = &mut [];
+    let mut h2: &mut [u16];
     loop {
         let mut bnorm: u64;
         let mut lim: i32;
 
-        poly_small_mkgauss(&mut rng, f, logn);
-        poly_small_mkgauss(&mut rng, g, logn);
+        poly_small_mkgauss(&mut rng, f.as_mut_ptr(), logn);
+        poly_small_mkgauss(&mut rng, g.as_mut_ptr(), logn);
 
         lim = 1 << (max_fg_bits[logn as usize] - 1);
         for u in 0..n {
-            unsafe {
-                if *f.wrapping_add(u) as i32 >= lim ||
-                    *f.wrapping_add(u) as i32 <= -lim ||
-                    *g.wrapping_add(u) as i32 >= lim ||
-                    *g.wrapping_add(u) as i32 <= -lim {
-                    lim -= 1;
-                    break;
-                }
+            if f[u] as i32 >= lim ||
+                f[u] as i32 <= -lim ||
+                g[u] as i32 >= lim ||
+                g[u] as i32 <= -lim {
+                lim -= 1;
+                break;
             }
         }
         if lim < 0 {
             continue;
         }
 
-        let normf = poly_small_sqnorm_pointer(f, logn);
-        let normq = poly_small_sqnorm_pointer(g, logn);
+        let normf = poly_small_sqnorm_pointer(f.as_mut_ptr(), logn);
+        let normq = poly_small_sqnorm_pointer(g.as_mut_ptr(), logn);
         let norm = (normf + normq) | (!((normf | normq) >> 31)).wrapping_add(1);
         if norm >= 16823 {
             continue;
         }
 
-        let rt1: *mut u64 = tmp.cast();
-        let rt2 = rt1.wrapping_add(n);
-        let rt3 = rt2.wrapping_add(n);
-        poly_small_to_fp_pointer(rt1, f, logn);
-        poly_small_to_fp_pointer(rt2, g, logn);
-        fft_pointer(rt1, logn);
-        fft_pointer(rt2, logn);
-        poly_invnorm2_fft_pointer(rt3, rt1, rt2, logn);
-        poly_adj_fft_pointer(rt1, logn);
-        poly_adj_fft_pointer(rt2, logn);
-        poly_mulconst_pointer(rt1, FPR_Q, logn);
-        poly_mulconst_pointer(rt2, FPR_Q, logn);
-        poly_mul_autoadj_fft_pointer(rt1, rt3, logn);
-        poly_mul_autoadj_fft_pointer(rt2, rt3, logn);
-        ifft_pointer(rt1, logn);
-        ifft_pointer(rt2, logn);
+        let rt1: &mut [fpr] = bytemuck::cast_slice_mut::<u8, u64>(tmp);
+        let (rt1, inter) = rt1.split_at_mut(n);
+        let (rt2, rt3) = inter.split_at_mut(n);
+        poly_small_to_fp_pointer(rt1.as_mut_ptr(), f.as_mut_ptr(), logn);
+        poly_small_to_fp_pointer(rt2.as_mut_ptr(), g.as_mut_ptr(), logn);
+        fft_pointer(rt1.as_mut_ptr(), logn);
+        fft_pointer(rt2.as_mut_ptr(), logn);
+        poly_invnorm2_fft_pointer(rt3.as_mut_ptr(), rt1.as_mut_ptr(), rt2.as_mut_ptr(), logn);
+        poly_adj_fft_pointer(rt1.as_mut_ptr(), logn);
+        poly_adj_fft_pointer(rt2.as_mut_ptr(), logn);
+        poly_mulconst_pointer(rt1.as_mut_ptr(), FPR_Q, logn);
+        poly_mulconst_pointer(rt2.as_mut_ptr(), FPR_Q, logn);
+        poly_mul_autoadj_fft_pointer(rt1.as_mut_ptr(), rt3.as_mut_ptr(), logn);
+        poly_mul_autoadj_fft_pointer(rt2.as_mut_ptr(), rt3.as_mut_ptr(), logn);
+        ifft_pointer(rt1.as_mut_ptr(), logn);
+        ifft_pointer(rt2.as_mut_ptr(), logn);
         bnorm = FPR_ZERO;
 
         for u in 0..n {
-            unsafe { bnorm = fpr_add(bnorm, fpr_sqr(*rt1.wrapping_add(u))); }
-            unsafe { bnorm = fpr_add(bnorm, fpr_sqr(*rt2.wrapping_add(u))); }
+            bnorm = fpr_add(bnorm, fpr_sqr(rt1[u]));
+            bnorm = fpr_add(bnorm, fpr_sqr(rt2[u]));
         }
         if !(fpr_lt(bnorm, FPR_BNORM_MAX) != 0) {
             continue;
         }
 
-        if h.is_null() {
-            h2 = tmp.cast();
-            tmp2 = h2.wrapping_add(n);
+        if h.len() <= 0 {
+            h2 = bytemuck::cast_slice_mut(tmp);
+            (h2, tmp2) = h2.split_at_mut(n);
         } else {
             h2 = h;
-            tmp2 = tmp.cast();
+            tmp2 = bytemuck::cast_slice_mut(tmp);
         }
 
-        if !compute_public(h2,f, g, logn, tmp2.cast()) {
+
+        if !compute_public(h2.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), logn, tmp.as_mut_ptr()) {
             continue;
         }
 
 
         lim = (1 << (max_FG_bits[logn as usize] - 1)) - 1;
-        if !solve_ntru(logn, F, G, f, g, lim, tmp.cast()) {
+        if !solve_ntru(logn, F.as_mut_ptr(), null_mut(), f.as_mut_ptr(), g.as_mut_ptr(), lim, bytemuck::cast_slice_mut::<u8, u32>(tmp).as_mut_ptr()) {
             continue;
         }
 

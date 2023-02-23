@@ -1,4 +1,3 @@
-use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
@@ -164,7 +163,7 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
     unsafe { F_slice = from_raw_parts_mut(F.cast(), n); };
     let atmp: *mut u8 = F.wrapping_add(n);
 
-    keygen(rng, f.cast(), g.cast(), F.cast(), null_mut(), null_mut(), logn, atmp);
+    // keygen(&mut rng, &mut f, &mut g, &mut F, &mut [], &mut h, logn as u32, &mut tmp);
 
     let mut sk = private_key;
     let sk_len = falcon_privatekey_size!(logn) as usize;

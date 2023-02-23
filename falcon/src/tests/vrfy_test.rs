@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use crate::falcon_c::vrfy_c::{mq_add_func, mq_sub_func, mq_montymul_func, mq_rshift1_func, mq_montysqr_func, mq_div_12289_func, mq_NTT_func, mq_iNTT_func, mq_poly_tomonty_func, mq_poly_montymul_ntt_func, mq_poly_sub_func, falcon_inner_to_ntt_monty_func, falcon_inner_verify_raw_func, falcon_inner_compute_public_func, falcon_inner_count_nttzero_func, falcon_inner_is_invertible_func, falcon_inner_complete_private_func, falcon_inner_verify_recover_func};
+
+    use crate::falcon_c::vrfy_c::{falcon_inner_complete_private_func, falcon_inner_compute_public_func, falcon_inner_count_nttzero_func, falcon_inner_is_invertible_func, falcon_inner_to_ntt_monty_func, falcon_inner_verify_raw_func, falcon_inner_verify_recover_func, mq_add_func, mq_div_12289_func, mq_iNTT_func, mq_montymul_func, mq_montysqr_func, mq_NTT_func, mq_poly_montymul_ntt_func, mq_poly_sub_func, mq_poly_tomonty_func, mq_rshift1_func, mq_sub_func};
     use crate::falcon_tmpsize_keygen;
     use crate::keygen::keygen;
-    use crate::shake::{InnerShake256Context};
+    use crate::shake::InnerShake256Context;
     use crate::vrfy::{complete_private, compute_public, count_nttzero, is_invertible, mq_add, mq_div_12289, mq_innt, mq_montymul, mq_montysqr, mq_ntt, mq_poly_montymul_ntt, mq_poly_sub, mq_poly_tomonty, mq_rshift1, mq_sub, to_ntt_monty, verify_raw, verify_recover};
 
     #[test]
@@ -196,7 +197,7 @@ mod tests {
                 let mut G: Vec<i8> = vec![0; buffer_size];
                 let mut f: Vec<i8> = vec![0; buffer_size];
                 let mut g: Vec<i8> = vec![0; buffer_size];
-                keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tmp.as_mut_ptr());
+                keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, logn, &mut tmp);
                 let res = compute_public(h.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), logn, tmp.as_mut_ptr());
                 let res_c = unsafe { falcon_inner_compute_public_func(h.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), logn, tmp.as_mut_ptr()) };
                 assert_eq!(res, res_c != 0);
@@ -225,7 +226,7 @@ mod tests {
                 let G_c = G.clone();
                 let mut f: Vec<i8> = vec![0; buffer_size];
                 let mut g: Vec<i8> = vec![0; buffer_size];
-                keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G_gen.as_mut_ptr(), h.as_mut_ptr(), logn, tmp_gen.as_mut_ptr());
+                keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, logn, &mut tmp);
                 let res = complete_private(&mut G, &mut f, &mut g, &mut F, logn, &mut tmp);
                 let res_c = unsafe { falcon_inner_complete_private_func(G_c.as_ptr(), f.as_ptr(), g.as_ptr(), F.as_ptr(), logn, tmp_c.as_ptr()) };
                 assert_eq!(res, res_c != 0);
