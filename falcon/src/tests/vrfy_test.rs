@@ -186,7 +186,10 @@ mod tests {
     fn test_compute_public() {
         for _ in 0..10 {
             for logn in 1..11 {
-                let buffer_size = falcon_tmpsize_keygen!(logn);
+                let mut buffer_size = falcon_tmpsize_keygen!(logn);
+                while buffer_size % 8 != 0 {
+                    buffer_size += 1;
+                }
                 let mut rng_rust = InnerShake256Context {
                     st: [0; 25],
                     dptr: 10,
@@ -211,7 +214,10 @@ mod tests {
     fn test_complete_private() {
         for _ in 0..10 {
             for logn in 1..11 {
-                let buffer_size = falcon_tmpsize_keygen!(logn);
+                let mut buffer_size = falcon_tmpsize_keygen!(logn);
+                while buffer_size % 8 != 0 {
+                    buffer_size += 1;
+                }
                 let mut rng_rust = InnerShake256Context {
                     st: [0; 25],
                     dptr: 10,
@@ -226,13 +232,14 @@ mod tests {
                 let G_c = G.clone();
                 let mut f: Vec<i8> = vec![0; buffer_size];
                 let mut g: Vec<i8> = vec![0; buffer_size];
-                keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, logn, &mut tmp);
+                keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G_gen, &mut h, logn, &mut tmp);
+                tmp.fill(0);
                 let res = complete_private(&mut G, &mut f, &mut g, &mut F, logn, &mut tmp);
                 let res_c = unsafe { falcon_inner_complete_private_func(G_c.as_ptr(), f.as_ptr(), g.as_ptr(), F.as_ptr(), logn, tmp_c.as_ptr()) };
                 assert_eq!(res, res_c != 0);
-                assert_eq!(G, G_c);
-                assert_eq!(G, G_gen);
-                assert_eq!(tmp, tmp_c);
+                assert_eq!(G, G_c, "G");
+                assert_eq!(G, G_gen, "G_gen");
+                assert_eq!(tmp, tmp_c, "tmp");
             }
         }
     }

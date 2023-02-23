@@ -3532,7 +3532,7 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F:
         }
 
         if h.len() <= 0 {
-            (h22, tmp2) = tmp.split_at_mut(2* n);
+            (h22, tmp2) = tmp.split_at_mut(2 * n);
             h2 = bytemuck::cast_slice_mut(h22);
         } else {
             h2 = h;
@@ -3546,8 +3546,15 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F:
 
 
         lim = (1 << (max_FG_bits[logn as usize] - 1)) - 1;
-        if !solve_ntru(logn, F.as_mut_ptr(), null_mut(), f.as_mut_ptr(), g.as_mut_ptr(), lim, bytemuck::cast_slice_mut::<u8, u32>(tmp).as_mut_ptr()) {
-            continue;
+        //TODO REMOVE IF when not using ptr
+        if G.len() <= 0 {
+            if !solve_ntru(logn, F.as_mut_ptr(), null_mut(), f.as_mut_ptr(), g.as_mut_ptr(), lim, bytemuck::cast_slice_mut::<u8, u32>(tmp).as_mut_ptr()) {
+                continue;
+            }
+        } else {
+            if !solve_ntru(logn, F.as_mut_ptr(), G.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), lim, bytemuck::cast_slice_mut::<u8, u32>(tmp).as_mut_ptr()) {
+                continue;
+            }
         }
 
         break;

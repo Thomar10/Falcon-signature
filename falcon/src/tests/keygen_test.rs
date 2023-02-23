@@ -836,7 +836,7 @@ pub(crate) mod tests {
                 let (mut rng_rust, rng_c) = init_shake_with_random_context();
                 let mut f: [i8; 2048] = [0; 2048];
                 let f_c: [i8; 2048] = [0; 2048];
-                poly_small_mkgauss(&mut rng_rust, f.as_mut_ptr(), logn);
+                poly_small_mkgauss(&mut rng_rust, &mut f, logn);
                 unsafe { poly_small_mkgauss_func(&rng_c, f_c.as_ptr(), logn); }
                 assert_eq!(f, f_c);
             }
