@@ -169,14 +169,14 @@ pub fn to_ntt_monty(h: &mut [u16], logn: u32) {
     mq_poly_tomonty(h, logn);
 }
 
-pub fn mq_poly_montymul_ntt(mut f: &mut [u16], g: &mut [u16], logn: u32) {
+pub fn mq_poly_montymul_ntt(f: &mut [u16], g: &mut [u16], logn: u32) {
     let n = 1usize << logn;
     for u in 0..n {
         f[u] = mq_montymul(f[u] as u32, g[u] as u32) as u16;
     }
 }
 
-pub fn mq_poly_sub(mut f: &mut [u16], g: &mut [u16], logn: u32) {
+pub fn mq_poly_sub(f: &mut [u16], g: &mut [u16], logn: u32) {
     let n = 1usize << logn;
     for u in 0..n {
         f[u] = mq_sub(f[u] as u32, g[u] as u32) as u16;
@@ -218,15 +218,15 @@ pub fn complete_private(G: &mut [i8], f: &mut [i8], g: &mut [i8], F: &mut [i8], 
     let (t1, t2) = inter.split_at_mut(n);
 
     for u in 0..n {
-        unsafe { t1[u] = mq_conv_small(g[u] as i32) as u16; }
-        unsafe { t2[u] = mq_conv_small(F[u] as i32) as u16; }
+        t1[u] = mq_conv_small(g[u] as i32) as u16;
+        t2[u] = mq_conv_small(F[u] as i32) as u16;
     }
     mq_ntt(t1, logn);
     mq_ntt(t2, logn);
     mq_poly_tomonty(t1, logn);
     mq_poly_montymul_ntt(t1, t2, logn);
     for u in 0..n {
-        unsafe { t2[u] = mq_conv_small(f[u] as i32) as u16; }
+        t2[u] = mq_conv_small(f[u] as i32) as u16;
     }
     mq_ntt(t2, logn);
     for u in 0..n {

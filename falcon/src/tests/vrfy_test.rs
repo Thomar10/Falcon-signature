@@ -223,7 +223,6 @@ mod tests {
                     dptr: 10,
                 };
                 let mut h: Vec<u16> = vec![0u16; buffer_size];
-                let mut tmp_gen: Vec<u8> = vec![0; buffer_size * 4];
                 let mut tmp: Vec<u8> = vec![0; buffer_size * 4];
                 let tmp_c = tmp.clone();
                 let mut F: Vec<i8> = vec![0; buffer_size];

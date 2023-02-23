@@ -817,7 +817,7 @@ pub(crate) mod tests {
                 let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let g_c: [i8; 2048 * 4] = g.clone();
                 let lim: i32 = i32::MAX;
-                let res = solve_ntru(logn_top, F.as_mut_ptr(), G.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), lim, tmp.as_mut_ptr());
+                let res = solve_ntru(logn_top, &mut F, &mut G, &mut f, &mut g, lim, &mut tmp);
                 let res_c = unsafe { solve_NTRU_func(logn_top, F_c.as_ptr(), G_c.as_ptr(), f_c.as_ptr(), g_c.as_ptr(), lim, tmp_c.as_ptr()) };
                 assert_eq!(tmp, tmp_c);
                 assert_eq!(res, res_c != 0);
