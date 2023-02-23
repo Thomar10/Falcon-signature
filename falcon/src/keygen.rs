@@ -3474,7 +3474,8 @@ pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: &mut [i8], logn
 #[allow(non_snake_case)]
 pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &mut [i8], h: &mut [u16], logn: u32, tmp: &mut [u8]) {
     let n = mkn!(logn);
-    let mut tmp2: &mut [u16] = &mut [];
+    let mut tmp2: &mut [u8] = &mut [];
+    let mut h22: &mut [u8] = &mut [];
     let mut h2: &mut [u16];
     loop {
         let mut bnorm: u64;
@@ -3531,15 +3532,15 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F:
         }
 
         if h.len() <= 0 {
-            h2 = bytemuck::cast_slice_mut(tmp);
-            (h2, tmp2) = h2.split_at_mut(n);
+            (h22, tmp2) = tmp.split_at_mut(2* n);
+            h2 = bytemuck::cast_slice_mut(h22);
         } else {
             h2 = h;
-            tmp2 = bytemuck::cast_slice_mut(tmp);
+            tmp2 = tmp;
         }
 
 
-        if !compute_public(h2.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), logn, tmp.as_mut_ptr()) {
+        if !compute_public(h2, f, g, logn, tmp2) {
             continue;
         }
 

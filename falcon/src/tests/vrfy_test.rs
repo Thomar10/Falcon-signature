@@ -79,7 +79,7 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut h: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
                 let h_c = h.clone();
-                mq_ntt(h.as_mut_ptr(), logn);
+                mq_ntt(&mut h, logn);
                 unsafe { mq_NTT_func(h_c.as_ptr(), logn) };
                 assert_eq!(h, h_c);
             }
@@ -92,7 +92,7 @@ mod tests {
             let mut rng = rand::thread_rng();
             let mut h: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
             let h_c = h.clone();
-            mq_innt(h.as_mut_ptr(), logn);
+            mq_innt(&mut h, logn);
             unsafe { mq_iNTT_func(h_c.as_ptr(), logn) };
             assert_eq!(h, h_c);
         }
@@ -121,7 +121,7 @@ mod tests {
                 let f_c = f.clone();
                 let mut g: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
                 let g_c = g.clone();
-                mq_poly_montymul_ntt(f.as_mut_ptr(), &mut g, logn);
+                mq_poly_montymul_ntt(&mut f, &mut g, logn);
                 unsafe { mq_poly_montymul_ntt_func(f_c.as_ptr(), g.as_ptr(), logn) };
                 assert_eq!(f, f_c);
                 assert_eq!(g, g_c);
@@ -138,7 +138,7 @@ mod tests {
                 let f_c = f.clone();
                 let mut g: [u16; 512] = core::array::from_fn(|_| rng.gen::<u16>());
                 let g_c = g.clone();
-                mq_poly_sub(f.as_mut_ptr(), &mut g, logn);
+                mq_poly_sub(&mut f, &mut g, logn);
                 unsafe { mq_poly_sub_func(f_c.as_ptr(), g.as_ptr(), logn) };
                 assert_eq!(f, f_c);
                 assert_eq!(g, g_c);
@@ -198,7 +198,7 @@ mod tests {
                 let mut f: Vec<i8> = vec![0; buffer_size];
                 let mut g: Vec<i8> = vec![0; buffer_size];
                 keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, logn, &mut tmp);
-                let res = compute_public(h.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), logn, tmp.as_mut_ptr());
+                let res = compute_public(&mut h, &mut f, &mut g, logn, &mut tmp);
                 let res_c = unsafe { falcon_inner_compute_public_func(h.as_mut_ptr(), f.as_mut_ptr(), g.as_mut_ptr(), logn, tmp.as_mut_ptr()) };
                 assert_eq!(res, res_c != 0);
                 assert_eq!(res, true);

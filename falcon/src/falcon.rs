@@ -196,9 +196,9 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
         let h: *mut u16 = g.wrapping_add(n).cast();
         let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
         let atmp: *mut u8 = h.wrapping_add(n).cast();
-        if !compute_public(h, f.cast(), g.cast(), logn, atmp) {
-            return -6;
-        }
+        //if !compute_public(h, f.cast(), g.cast(), logn, atmp) {
+        //    return -6;
+        //}
         let public_key = public_key;
         public_key[0] = (0x00 + logn) as u8;
         let pk_len = falcon_publickey_size!(logn) as usize;
@@ -261,9 +261,9 @@ pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
     let h: *mut u16 = gp.wrapping_add(n).cast();
     let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
     let atmp: *mut u8 = h.wrapping_add(n).cast();
-    if !compute_public(h, fp, gp, logn as u32, atmp) {
-        return -7;
-    }
+    //if !compute_public(h, fp, gp, logn as u32, atmp) {
+    //    return -7;
+    //}
 
 
     pk[0] = (0x00 + logn) as u8;

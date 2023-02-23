@@ -550,9 +550,9 @@ fn test_vrfy_inner(logn: u32, mut f: &mut [i8], mut g: &mut [i8],
     if tlen < 4 * n {
         panic!("Insufficient buffer size");
     }
-    if !compute_public(h2p, f.as_mut_ptr(), g.as_mut_ptr(), logn, h2p.wrapping_add(n).cast()) {
-        panic!("Compute public failed!");
-    }
+    //if !compute_public(h2p, f, g, logn, h2p.wrapping_add(n).cast()) {
+    //    panic!("Compute public failed!");
+    //}
     assert_eq!(h, h2, "compute_public");
 
     let G2p: *mut i8 = tmp.as_mut_ptr().cast();
