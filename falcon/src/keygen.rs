@@ -1,7 +1,9 @@
+#![allow(dead_code)]
+
 use std::ptr::null_mut;
 
 use crate::codec::{max_fg_bits, max_FG_bits};
-use crate::fft::{fft_pointer, ifft_pointer, poly_add_muladj_fft_pointer, poly_add_pointer, poly_adj_fft_pointer, poly_div_autoadj_fft_pointer, poly_invnorm2_fft_pointer, poly_mul_autoadj_fft_pointer, poly_mul_fft_pointer, poly_mulconst_pointer, poly_sub_pointer};
+use crate::fft::{fft, fft_pointer, ifft, ifft_pointer, poly_add_muladj_fft_pointer, poly_add_pointer, poly_adj_fft, poly_adj_fft_pointer, poly_div_autoadj_fft_pointer, poly_invnorm2_fft, poly_invnorm2_fft_pointer, poly_mul_autoadj_fft, poly_mul_autoadj_fft_pointer, poly_mul_fft_pointer, poly_mulconst, poly_mulconst_pointer, poly_sub_pointer};
 use crate::fpr::{fpr_add, FPR_BNORM_MAX, fpr_lt, FPR_MTWO31M1, FPR_MTWO63M1, fpr_mul, fpr_of, FPR_ONE, FPR_ONEHALF, FPR_PTWO31, FPR_PTWO31M1, FPR_PTWO63M1, FPR_Q, fpr_rint, fpr_sqr, FPR_TWO, FPR_ZERO};
 use crate::shake::{i_shake256_extract, InnerShake256Context};
 use crate::vrfy::compute_public;
@@ -3443,7 +3445,7 @@ pub fn solve_ntru(logn: u32, F: *mut i8, mut G: *mut i8, f: *mut i8, g: *mut i8,
 }
 
 
-pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: *mut i8, logn: u32) {
+pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: &mut [i8], logn: u32) {
     let n = mkn!(logn);
     let mut mod2: u32 = 0;
     let mut u = 0;
@@ -3463,7 +3465,7 @@ pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: *mut i8, logn: 
         } else {
             mod2 ^= (s & 1) as u32;
         }
-        unsafe { *f.add(u) = s as i8; }
+        f[u] = s as i8;
         u += 1;
     }
 }
@@ -3478,8 +3480,8 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F:
         let mut bnorm: u64;
         let mut lim: i32;
 
-        poly_small_mkgauss(&mut rng, f.as_mut_ptr(), logn);
-        poly_small_mkgauss(&mut rng, g.as_mut_ptr(), logn);
+        poly_small_mkgauss(&mut rng, f, logn);
+        poly_small_mkgauss(&mut rng, g, logn);
 
         lim = 1 << (max_fg_bits[logn as usize] - 1);
         for u in 0..n {
@@ -3495,8 +3497,8 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F:
             continue;
         }
 
-        let normf = poly_small_sqnorm_pointer(f.as_mut_ptr(), logn);
-        let normq = poly_small_sqnorm_pointer(g.as_mut_ptr(), logn);
+        let normf = poly_small_sqnorm(f, logn);
+        let normq = poly_small_sqnorm(g, logn);
         let norm = (normf + normq) | (!((normf | normq) >> 31)).wrapping_add(1);
         if norm >= 16823 {
             continue;
@@ -3505,19 +3507,19 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F:
         let rt1: &mut [fpr] = bytemuck::cast_slice_mut::<u8, u64>(tmp);
         let (rt1, inter) = rt1.split_at_mut(n);
         let (rt2, rt3) = inter.split_at_mut(n);
-        poly_small_to_fp_pointer(rt1.as_mut_ptr(), f.as_mut_ptr(), logn);
-        poly_small_to_fp_pointer(rt2.as_mut_ptr(), g.as_mut_ptr(), logn);
-        fft_pointer(rt1.as_mut_ptr(), logn);
-        fft_pointer(rt2.as_mut_ptr(), logn);
-        poly_invnorm2_fft_pointer(rt3.as_mut_ptr(), rt1.as_mut_ptr(), rt2.as_mut_ptr(), logn);
-        poly_adj_fft_pointer(rt1.as_mut_ptr(), logn);
-        poly_adj_fft_pointer(rt2.as_mut_ptr(), logn);
-        poly_mulconst_pointer(rt1.as_mut_ptr(), FPR_Q, logn);
-        poly_mulconst_pointer(rt2.as_mut_ptr(), FPR_Q, logn);
-        poly_mul_autoadj_fft_pointer(rt1.as_mut_ptr(), rt3.as_mut_ptr(), logn);
-        poly_mul_autoadj_fft_pointer(rt2.as_mut_ptr(), rt3.as_mut_ptr(), logn);
-        ifft_pointer(rt1.as_mut_ptr(), logn);
-        ifft_pointer(rt2.as_mut_ptr(), logn);
+        poly_small_to_fp(rt1, f, logn);
+        poly_small_to_fp(rt2, g, logn);
+        fft(rt1, logn);
+        fft(rt2, logn);
+        poly_invnorm2_fft(rt3, rt1, rt2, logn);
+        poly_adj_fft(rt1, logn);
+        poly_adj_fft(rt2, logn);
+        poly_mulconst(rt1, FPR_Q, logn);
+        poly_mulconst(rt2, FPR_Q, logn);
+        poly_mul_autoadj_fft(rt1, rt3, logn);
+        poly_mul_autoadj_fft(rt2, rt3, logn);
+        ifft(rt1, logn);
+        ifft(rt2, logn);
         bnorm = FPR_ZERO;
 
         for u in 0..n {
