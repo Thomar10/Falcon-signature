@@ -2429,11 +2429,12 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
     zint_rebuild_CRT(fs, slen, slen, n as u64, &PRIMES, true, gm);
     // Now the more tricky, gs overflows into gm! take a copy of gm and give that, recopy the result as gm_copy is mutated.
     let (_, gs) = data.split_at_mut((hn * tlen * 2) + n * slen);
+    // TODO THE COPY SIZE SHOULD ONLY BE SLEN!
     let copy_size = gs.len() - (hn * tlen * 2) - (n * slen);
     let mut gm_copy = vec![0; copy_size];
     gm_copy.copy_from_slice(&gs[n * slen..n * slen + copy_size]);
     zint_rebuild_CRT(gs, slen, slen, n as u64, &PRIMES, true, &mut gm_copy);
-    gs[n * slen..n * slen +copy_size].clone_from_slice(&gm_copy);
+    gs[n * slen..n * slen + copy_size].clone_from_slice(&gm_copy);
 
     // Split arrays back to 'normal'
     let (fd, inter) = data.split_at_mut(hn * tlen);
@@ -2736,7 +2737,7 @@ pub fn solve_ntru_deepest(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [
     let len = MAX_BL_SMALL[logn_top as usize];
     let (_, fp) = tmp.split_at_mut(2 * len);
     make_fg(fp, f, g, logn_top, logn_top, false);
-    let (fp, t1) = fp.split_at_mut(2*len);
+    let (fp, t1) = fp.split_at_mut(2 * len);
     zint_rebuild_CRT(fp, len, len, 2, &PRIMES, false, t1);
 
     let (Fp, inter) = tmp.split_at_mut(len);
@@ -2760,7 +2761,7 @@ pub fn solve_ntru_deepest(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [
 }
 
 #[allow(non_snake_case)]
-pub fn solve_ntru_intermediate_point(logn_top: u32, f: *mut i8, g: *mut i8, depth: u32, tmp: *mut u32) -> bool {
+pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth: u32, tmp: &mut [u32]) -> bool {
     let logn = logn_top - depth;
     let n = mkn!(logn);
     let hn = n >> 1;
@@ -2769,38 +2770,31 @@ pub fn solve_ntru_intermediate_point(logn_top: u32, f: *mut i8, g: *mut i8, dept
     let dlen = MAX_BL_SMALL[(depth + 1) as usize];
     let llen = MAX_BL_LARGE[depth as usize];
 
-    let mut Fd = tmp;
-    let mut Gd = Fd.wrapping_add(dlen * hn);
-    let mut ft = Gd.wrapping_add(dlen * hn);
-    make_fg_pointer(ft, f, g, logn_top, depth, true);
+    let (_, ft) = tmp.split_at_mut(dlen * hn * 2);
+    make_fg(ft, f, g, logn_top, depth, true);
 
-    let mut Ft = tmp;
-    let mut Gt = Ft.wrapping_add(n * llen);
-    let mut t1 = Gt.wrapping_add(n * llen);
-    unsafe { t1.copy_from(ft, 2 * n * slen); }
-    ft = t1;
-    let gt = ft.wrapping_add(slen * n);
-    t1 = gt.wrapping_add(slen * n);
-    unsafe { t1.copy_from(Fd, 2 * hn * dlen); };
-    Fd = t1;
-    Gd = Fd.wrapping_add(hn * dlen);
+    // memmove(t1, ft, 2 * n * slen * sizeof *ft);
+    tmp.copy_within((2 * dlen * hn)..(2 * dlen * hn + 2 * n * slen), n * llen * 2);
+    // memmove(t1, Fd, 2 * hn * dlen * sizeof *Fd);
+    tmp.copy_within(0..2 * hn * dlen, 2 * slen * n + 2 * n * llen);
+    let (Ft, inter) = tmp.split_at_mut(n * llen);
+    let (Gt, inter) = inter.split_at_mut(n * llen + slen * n * 2);
+    let (Fd, Gd) = inter.split_at_mut(hn * dlen);
 
     for u in 0..llen {
         let p = PRIMES[u].p;
         let p0i = modp_ninv31(p);
         let r2 = modp_R2(p, p0i);
         let rx = modp_Rx(dlen as u32, p, p0i, r2);
-        let mut xs = Fd;
-        let mut ys = Gd;
-        let mut xd = Ft.wrapping_add(u);
-        let mut yd = Gt.wrapping_add(u);
+        let mut stride_d = 0;
+        let mut stride_s = 0;
         for _ in 0..hn {
-            unsafe { *xd = zint_mod_small_signed_pointer(xs, dlen, p, p0i, r2, rx); }
-            unsafe { *yd = zint_mod_small_signed_pointer(ys, dlen, p, p0i, r2, rx); }
-            xs = xs.wrapping_add(dlen);
-            ys = ys.wrapping_add(dlen);
-            xd = xd.wrapping_add(llen);
-            yd = yd.wrapping_add(llen);
+            let (_, xs) = Fd.split_at_mut(stride_s);
+            let (_, ys) = Gd.split_at_mut(stride_s);
+            Ft[u + stride_d] = zint_mod_small_signed(xs, dlen, p, p0i, r2, rx);
+            Gt[u + stride_d] = zint_mod_small_signed(ys, dlen, p, p0i, r2, rx);
+            stride_s += dlen;
+            stride_d += llen;
         }
     }
 
@@ -2810,215 +2804,212 @@ pub fn solve_ntru_intermediate_point(logn_top: u32, f: *mut i8, g: *mut i8, dept
         let r2 = modp_R2(p, p0i);
 
         if u == slen {
-            zint_rebuild_CRT_pointer(ft, slen, slen, n as u64, &PRIMES, true, t1);
-            zint_rebuild_CRT_pointer(gt, slen, slen, n as u64, &PRIMES, true, t1);
+            // The classic overflow so we reborrow
+            let (_, inter) = tmp.split_at_mut(2 * n * llen);
+            let (ft, t1) = inter.split_at_mut(2 * n * slen);
+            zint_rebuild_CRT(ft, slen, slen, n as u64, &PRIMES, true, t1);
+            let (_, inter) = tmp.split_at_mut(2 * n * llen + n * slen);
+            let (gt, t1) = inter.split_at_mut(2 * n * slen);
+            zint_rebuild_CRT(gt, slen, slen, n as u64, &PRIMES, true, t1);
         }
+        let (Ft, inter) = tmp.split_at_mut(n * llen);
+        let (Gt, inter) = inter.split_at_mut(n * llen);
+        let (ft, inter) = inter.split_at_mut(slen * n);
+        let (gt, inter) = inter.split_at_mut(slen * n);
+        let (gm, inter) = inter.split_at_mut(n);
+        let (igm, inter) = inter.split_at_mut(n);
+        let (fx, inter) = inter.split_at_mut(n);
+        let (gx, inter) = inter.split_at_mut(n);
 
-        let gm = t1;
-        let igm = gm.wrapping_add(n);
-        let fx = igm.wrapping_add(n);
-        let gx = fx.wrapping_add(n);
-        modp_mkgm2_pointer(gm, igm, logn, PRIMES[u].g, p, p0i);
+        modp_mkgm2(gm, igm, logn, PRIMES[u].g, p, p0i);
 
         if u < slen {
-            let mut x = ft.wrapping_add(u);
-            let mut y = gt.wrapping_add(u);
-            let mut fx_v = fx;
-            let mut gx_v = gx;
-            for _ in 0..n {
-                unsafe { *fx_v = *x; }
-                unsafe { *gx_v = *y; }
-                fx_v = fx_v.wrapping_add(1);
-                gx_v = gx_v.wrapping_add(1);
-                x = x.wrapping_add(slen);
-                y = y.wrapping_add(slen);
+            let mut stride = 0;
+            for v in 0..n {
+                fx[v] = ft[u + stride];
+                gx[v] = gt[u + stride];
+                stride += slen;
             }
-            modp_iNTT2_ext_pointer(ft.wrapping_add(u), slen, igm, logn, p, p0i);
-            modp_iNTT2_ext_pointer(gt.wrapping_add(u), slen, igm, logn, p, p0i);
+            let (_, ft_u) = ft.split_at_mut(u);
+            modp_iNTT2_ext(ft_u, slen, igm, logn, p, p0i);
+            let (_, gt_u) = gt.split_at_mut(u);
+            modp_iNTT2_ext(gt_u, slen, igm, logn, p, p0i);
         } else {
             let rx = modp_Rx(slen as u32, p, p0i, r2);
-            let mut x = ft;
-            let mut y = gt;
-            let mut fx_v = fx;
-            let mut gx_v = gx;
-            for _ in 0..n {
-                unsafe { *fx_v = zint_mod_small_signed_pointer(x, slen, p, p0i, r2, rx); }
-                unsafe { *gx_v = zint_mod_small_signed_pointer(y, slen, p, p0i, r2, rx); }
-                fx_v = fx_v.wrapping_add(1);
-                gx_v = gx_v.wrapping_add(1);
-                x = x.wrapping_add(slen);
-                y = y.wrapping_add(slen);
+            let mut stride = 0;
+            for v in 0..n {
+                let (_, x) = ft.split_at_mut(stride);
+                let (_, y) = gt.split_at_mut(stride);
+                fx[v] = zint_mod_small_signed(x, slen, p, p0i, r2, rx);
+                gx[v] = zint_mod_small_signed(y, slen, p, p0i, r2, rx);
+                stride += slen;
             }
-            modp_NTT2_pointer(fx, gm, logn, p, p0i);
-            modp_NTT2_pointer(gx, gm, logn, p, p0i);
+            modp_NTT2(fx, gm, logn, p, p0i);
+            modp_NTT2(gx, gm, logn, p, p0i);
         }
 
-        let Fp = gx.wrapping_add(n);
-        let Gp = Fp.wrapping_add(hn);
-        let mut Fp_v = Fp;
-        let mut Gp_v = Gp;
-        let mut x = Ft.wrapping_add(u);
-        let mut y = Gt.wrapping_add(u);
-        for _ in 0..hn {
-            unsafe { *Fp_v = *x; };
-            unsafe { *Gp_v = *y; };
-            Fp_v = Fp_v.wrapping_add(1);
-            Gp_v = Gp_v.wrapping_add(1);
-            x = x.wrapping_add(llen);
-            y = y.wrapping_add(llen);
+        let (Fp, Gp) = inter.split_at_mut(hn);
+        let mut stride = 0;
+        for v in 0..hn {
+            Fp[v] = Ft[u + stride];
+            Gp[v] = Gt[u + stride];
+            stride += llen;
         }
-        modp_NTT2_pointer(Fp, gm, logn - 1, p, p0i);
-        modp_NTT2_pointer(Gp, gm, logn - 1, p, p0i);
+        modp_NTT2(Fp, gm, logn - 1, p, p0i);
+        modp_NTT2(Gp, gm, logn - 1, p, p0i);
 
-        let mut x = Ft.wrapping_add(u);
-        let mut y = Gt.wrapping_add(u);
-        let mut Fp_v = Fp;
-        let mut Gp_v = Gp;
-        unsafe {
-            for v in 0..hn {
-                let ftA = *fx.wrapping_add(v << 1);
-                let ftB = *fx.wrapping_add((v << 1) + 1);
-                let gtA = *gx.wrapping_add(v << 1);
-                let gtB = *gx.wrapping_add((v << 1) + 1);
-                let mFp = modp_montymul(*Fp_v, r2, p, p0i);
-                let mGp = modp_montymul(*Gp_v, r2, p, p0i);
-                *x = modp_montymul(gtB, mFp, p, p0i);
-                *x.wrapping_add(llen) = modp_montymul(gtA, mFp, p, p0i);
-                *y = modp_montymul(ftB, mGp, p, p0i);
-                *y.wrapping_add(llen) = modp_montymul(ftA, mGp, p, p0i);
-                Fp_v = Fp_v.wrapping_add(1);
-                Gp_v = Gp_v.wrapping_add(1);
-                x = x.wrapping_add(llen << 1);
-                y = y.wrapping_add(llen << 1);
-            }
+        stride = 0;
+        for v in 0..hn {
+            let ftA = fx[v << 1];
+            let ftB = fx[(v << 1) + 1];
+            let gtA = gx[v << 1];
+            let gtB = gx[(v << 1) + 1];
+            let mFp = modp_montymul(Fp[v], r2, p, p0i);
+            let mGp = modp_montymul(Gp[v], r2, p, p0i);
+            Ft[u + stride] = modp_montymul(gtB, mFp, p, p0i);
+            Ft[u + stride + llen] = modp_montymul(gtA, mFp, p, p0i);
+            Gt[u + stride] = modp_montymul(ftB, mGp, p, p0i);
+            Gt[u + stride + llen] = modp_montymul(ftA, mGp, p, p0i);
+            stride += llen << 1;
         }
-        modp_iNTT2_ext_pointer(Ft.wrapping_add(u), llen, igm, logn, p, p0i);
-        modp_iNTT2_ext_pointer(Gt.wrapping_add(u), llen, igm, logn, p, p0i);
-    }
-    zint_rebuild_CRT_pointer(Ft, llen, llen, n as u64, &PRIMES, true, t1);
-    zint_rebuild_CRT_pointer(Gt, llen, llen, n as u64, &PRIMES, true, t1);
-
-    let rt3: *mut u64 = t1.cast();
-    let rt4 = rt3.wrapping_add(n);
-    let rt5 = rt4.wrapping_add(n);
-    let rt1 = rt5.wrapping_add(n >> 1);
-    let k: *mut i32 = rt1.cast();
-    let mut rt2: *mut u64 = k.wrapping_add(n).cast();
-
-    if rt2 < (rt1.wrapping_add(n)) {
-        rt2 = rt1.wrapping_add(n);
+        let (_, Ft_u) = Ft.split_at_mut(u);
+        modp_iNTT2_ext(Ft_u, llen, igm, logn, p, p0i);
+        let (_, Gt_u) = Gt.split_at_mut(u);
+        modp_iNTT2_ext(Gt_u, llen, igm, logn, p, p0i);
     }
 
-    let t1: *mut u32 = k.wrapping_add(n).cast();
+    let (Ft, inter) = tmp.split_at_mut(2 * llen * n);
+    let (_, t1) = inter.split_at_mut(2 * slen * n);
+    zint_rebuild_CRT(Ft, llen, llen, n as u64, &PRIMES, true, t1);
+    let mut gm_copy = vec![0; llen];
+    gm_copy.clone_from_slice(&tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen]);
+    let (_, Gt) = tmp.split_at_mut(llen * n);
+    zint_rebuild_CRT(Gt, llen, llen, n as u64, &PRIMES, true, gm_copy.as_mut_slice());
+    tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen].clone_from_slice(&gm_copy);
+
+    let (_, rt3) = tmp.split_at_mut(2 * llen * n + n * slen * 2);
+    let rt3 = bytemuck::cast_slice_mut::<u32, fpr>(rt3);
+    let (rt3, inter) = rt3.split_at_mut(n);
+    let (rt4, inter) = inter.split_at_mut(n);
+    let (rt5, inter) = inter.split_at_mut(n);
+    let (rt1, inter_rt1) = inter.split_at_mut(n >> 1);
+    let k = bytemuck::cast_slice_mut::<fpr, u32>(rt1);
+    let (_, inter) = k.split_at_mut(n);
+    let mut rt2 = bytemuck::cast_slice_mut::<u32, fpr>(inter);
+
+    if rt2.as_ptr() < (rt1.as_ptr().wrapping_add(n)) {
+        let (_, rt22) = inter_rt1.split_at_mut(n);
+        rt2 = rt22;
+    }
 
     let rlen = if slen > 10 { 10 } else { slen };
-    poly_big_to_fp_pointer(rt3, ft.wrapping_add(slen - rlen), rlen, slen, logn);
-    poly_big_to_fp_pointer(rt4, gt.wrapping_add(slen - rlen), rlen, slen, logn);
-
+    // // poly_big_to_fp(rt3, ft.wrapping_add(slen - rlen), rlen, slen, logn);
+    // // poly_big_to_fp(rt4, gt.wrapping_add(slen - rlen), rlen, slen, logn);
+    //
     let scale_fg = 31 * (slen - rlen) as i32;
 
     let minbl_fg = BITLENGTH[depth as usize].avg - 6 * BITLENGTH[depth as usize].std;
     let maxbl_fg = BITLENGTH[depth as usize].avg + 6 * BITLENGTH[depth as usize].std;
 
-    fft_pointer(rt3, logn);
-    fft_pointer(rt4, logn);
-    poly_invnorm2_fft_pointer(rt5, rt3, rt4, logn);
-    poly_adj_fft_pointer(rt3, logn);
-    poly_adj_fft_pointer(rt4, logn);
+    fft(rt3, logn);
+    fft(rt4, logn);
+    poly_invnorm2_fft(rt5, rt3, rt4, logn);
+    poly_adj_fft(rt3, logn);
+    poly_adj_fft(rt4, logn);
 
     let mut FGlen = llen;
     let mut maxbl_FG = 31 * llen as i32;
 
     let mut scale_k = maxbl_FG - minbl_fg;
 
-    loop {
-        let rlen = if FGlen > 10 { 10 } else { FGlen };
-        let scale_FG = 31 * (FGlen - rlen) as i32;
-        poly_big_to_fp_pointer(rt1, Ft.wrapping_add(FGlen - rlen), rlen, llen, logn);
-        poly_big_to_fp_pointer(rt2, Gt.wrapping_add(FGlen - rlen), rlen, llen, logn);
-
-        fft_pointer(rt1, logn);
-        fft_pointer(rt2, logn);
-        poly_mul_fft_pointer(rt1, rt3, logn);
-        poly_mul_fft_pointer(rt2, rt4, logn);
-        poly_add_pointer(rt2, rt1, logn);
-        poly_mul_autoadj_fft_pointer(rt2, rt5, logn);
-        ifft_pointer(rt2, logn);
-
-        let mut dc = scale_k - scale_FG + scale_fg;
-        let mut pt: u64;
-        if dc < 0 {
-            dc = -dc;
-            pt = FPR_TWO;
-        } else {
-            pt = FPR_ONEHALF;
-        }
-        let mut pdc = FPR_ONE;
-        while dc != 0 {
-            if (dc & 1) != 0 {
-                pdc = fpr_mul(pdc, pt);
-            }
-            dc >>= 1;
-            pt = fpr_sqr(pt);
-        }
-
-        unsafe {
-            for u in 0..n {
-                let xv = fpr_mul(*rt2.wrapping_add(u), pdc);
-                if !(fpr_lt(FPR_MTWO31M1, xv) != 0) || !(fpr_lt(xv, FPR_PTWO31M1) != 0) {
-                    return false;
-                }
-                *k.wrapping_add(u) = fpr_rint(xv) as i32;
-            }
-        }
-
-        let sch = (scale_k / 31) as u32;
-        let scl = (scale_k % 31) as u32;
-
-        if depth <= DEPTH_INT_FG {
-            poly_sub_scaled_ntt_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn, t1);
-            poly_sub_scaled_ntt_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn, t1);
-        } else {
-            poly_sub_scaled_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn);
-            poly_sub_scaled_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn);
-        }
-        let new_maxbl_FG = scale_k + maxbl_fg + 10;
-        if new_maxbl_FG < maxbl_FG {
-            maxbl_FG = new_maxbl_FG;
-            if FGlen as i32 * 31 >= maxbl_FG + 31 {
-                FGlen -= 1;
-            }
-        }
-
-        if scale_k <= 0 {
-            break;
-        }
-        scale_k -= 25;
-        if scale_k < 0 {
-            scale_k = 0;
-        }
-    }
-    if FGlen < slen {
-        for _ in 0..n {
-            let mut sw: u32;
-            unsafe { sw = (!(*Ft.wrapping_add(FGlen - 1) >> 30)).wrapping_add(1) >> 1; }
-            for v in FGlen..slen {
-                unsafe { *Ft.wrapping_add(v) = sw; }
-            }
-            unsafe { sw = (!(*Gt.wrapping_add(FGlen - 1) >> 30)).wrapping_add(1) >> 1; }
-            for v in FGlen..slen {
-                unsafe { *Gt.wrapping_add(v) = sw; }
-            }
-            Ft = Ft.wrapping_add(llen);
-            Gt = Gt.wrapping_add(llen);
-        }
-    }
-    let mut x = tmp;
-    let mut y = tmp;
+    // loop {
+    //     let rlen = if FGlen > 10 { 10 } else { FGlen };
+    //     let scale_FG = 31 * (FGlen - rlen) as i32;
+    //     poly_big_to_fp_pointer(rt1, Ft.wrapping_add(FGlen - rlen), rlen, llen, logn);
+    //     poly_big_to_fp_pointer(rt2, Gt.wrapping_add(FGlen - rlen), rlen, llen, logn);
+    //
+    //     fft_pointer(rt1, logn);
+    //     fft_pointer(rt2, logn);
+    //     poly_mul_fft_pointer(rt1, rt3, logn);
+    //     poly_mul_fft_pointer(rt2, rt4, logn);
+    //     poly_add_pointer(rt2, rt1, logn);
+    //     poly_mul_autoadj_fft_pointer(rt2, rt5, logn);
+    //     ifft_pointer(rt2, logn);
+    //
+    //     let mut dc = scale_k - scale_FG + scale_fg;
+    //     let mut pt: u64;
+    //     if dc < 0 {
+    //         dc = -dc;
+    //         pt = FPR_TWO;
+    //     } else {
+    //         pt = FPR_ONEHALF;
+    //     }
+    //     let mut pdc = FPR_ONE;
+    //     while dc != 0 {
+    //         if (dc & 1) != 0 {
+    //             pdc = fpr_mul(pdc, pt);
+    //         }
+    //         dc >>= 1;
+    //         pt = fpr_sqr(pt);
+    //     }
+    //
+    //     unsafe {
+    //         for u in 0..n {
+    //             let xv = fpr_mul(*rt2.wrapping_add(u), pdc);
+    //             if !(fpr_lt(FPR_MTWO31M1, xv) != 0) || !(fpr_lt(xv, FPR_PTWO31M1) != 0) {
+    //                 return false;
+    //             }
+    //             *k.wrapping_add(u) = fpr_rint(xv) as i32;
+    //         }
+    //     }
+    //
+    //     let sch = (scale_k / 31) as u32;
+    //     let scl = (scale_k % 31) as u32;
+    //
+    //     if depth <= DEPTH_INT_FG {
+    //         poly_sub_scaled_ntt_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn, t1);
+    //         poly_sub_scaled_ntt_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn, t1);
+    //     } else {
+    //         poly_sub_scaled_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn);
+    //         poly_sub_scaled_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn);
+    //     }
+    //     let new_maxbl_FG = scale_k + maxbl_fg + 10;
+    //     if new_maxbl_FG < maxbl_FG {
+    //         maxbl_FG = new_maxbl_FG;
+    //         if FGlen as i32 * 31 >= maxbl_FG + 31 {
+    //             FGlen -= 1;
+    //         }
+    //     }
+    //
+    //     if scale_k <= 0 {
+    //         break;
+    //     }
+    //     scale_k -= 25;
+    //     if scale_k < 0 {
+    //         scale_k = 0;
+    //     }
+    // }
+    // if FGlen < slen {
+    //     let mut stride = 0;
+    //     for _ in 0..n {
+    //         let mut sw: u32;
+    //         sw = (!(Ft[FGlen - 1 + stride] >> 30)).wrapping_add(1) >> 1;
+    //         for v in FGlen..slen {
+    //             Ft[v + stride] = sw;
+    //         }
+    //         sw = (!(Gt[FGlen - 1 + stride] >> 30)).wrapping_add(1) >> 1;
+    //         for v in FGlen..slen {
+    //             Gt[v + stride] = sw;
+    //         }
+    //         stride += llen;
+    //     }
+    // }
+    let mut x = 0;
+    let mut y = 0;
     for _ in 0..n << 1 {
-        unsafe { x.copy_from(y, slen); }
-        x = x.wrapping_add(slen);
-        y = y.wrapping_add(llen);
+        tmp.copy_within(y..y+slen, x);
+        y += llen;
+        x += slen;
     }
     true
 }
@@ -3397,7 +3388,7 @@ pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [
         depth = logn;
         while depth > 0 {
             depth -= 1;
-            if !solve_ntru_intermediate_point(logn, f.as_mut_ptr(), g.as_mut_ptr(), depth, tmp.as_mut_ptr()) {
+            if !solve_ntru_intermediate(logn, f, g, depth, tmp) {
                 return false;
             }
         }
@@ -3405,7 +3396,7 @@ pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [
         depth = logn;
         while depth > 2 {
             depth -= 1;
-            if !solve_ntru_intermediate_point(logn, f.as_mut_ptr(), g.as_mut_ptr(), depth, tmp.as_mut_ptr()) {
+            if !solve_ntru_intermediate(logn, f, g, depth, tmp) {
                 return false;
             }
         }
