@@ -1,3 +1,5 @@
+extern crate core;
+
 use crate::gen_kat::genkat;
 
 mod fft;
