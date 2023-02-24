@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #[link(name = "fpr", kind = "static")]
 
 extern "C" {

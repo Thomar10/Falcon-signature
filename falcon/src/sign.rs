@@ -506,8 +506,7 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let (g11, inter) = inter.split_at_mut(n);
     let (b11, inter) = inter.split_at_mut(n);
     let (b01, interrest) = inter.split_at_mut(n);
-    let (t0, inter) = interrest.split_at_mut(n);
-    let (t1, _) = inter.split_at_mut(n);
+    let (t0, t1) = interrest.split_at_mut(n);
 
     for u in 0..n {
         t0[u] = fpr_of(hm[u] as i64);
@@ -515,14 +514,14 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
 
     fft(t0, logn);
     let ni: u64 = FPR_INVERSE_OF_Q;
-    t1.copy_from_slice(t0);
+    t1[..n].copy_from_slice(t0);
     poly_mul_fft(t1, b01, logn);
     poly_mulconst(t1, fpr_neg(ni), logn);
     poly_mul_fft(t0, b11, logn);
     poly_mulconst(t0, ni, logn);
 
     b11.copy_from_slice(t0);
-    b01.copy_from_slice(t1);
+    b01.copy_from_slice(&t1[..n]);
 
     let t0 = b11;
     let t1 = b01;

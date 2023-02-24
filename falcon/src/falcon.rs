@@ -9,7 +9,7 @@ use crate::sign::{expand_privkey, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, to_ntt_monty, verify_raw};
 
 #[allow(non_camel_case_types)]
-type fpr = u64;
+pub type fpr = u64;
 
 pub const FALCON_SIG_COMPRESS: i32 = 1;
 pub const FALCON_SIG_PADDED: i32 = 2;

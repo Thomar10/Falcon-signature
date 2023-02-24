@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #[link(name = "nist", kind = "static")]
 extern "C" {
     pub fn randombytes_init_func(entropy_input: *const u8, personalization_string: *const u8, security_strength: i32);
