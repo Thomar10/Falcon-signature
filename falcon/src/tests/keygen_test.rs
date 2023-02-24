@@ -633,8 +633,8 @@ pub(crate) mod tests {
                     let data_c: [u32; 2048 * 4] = data.clone();
                     let in_ntt: bool = rand::random();
                     let in_out: bool = rand::random();
-                    make_fg_step(&mut data, logn, depth, in_ntt, in_out);
                     unsafe { make_fg_step_func(data_c.as_ptr(), logn, depth, in_ntt, in_out) };
+                    make_fg_step(&mut data, logn, depth, in_ntt, in_out);
                     assert_eq!(data, data_c);
                 }
             }
@@ -734,8 +734,8 @@ pub(crate) mod tests {
             let f_c: [i8; 2048 * 4] = f.clone();
             let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
             let g_c: [i8; 2048 * 4] = g.clone();
-            let res = solve_ntru_deepest(logn_top, f.as_mut_ptr(), g.as_mut_ptr(), tmp.as_mut_ptr());
             let res_c = unsafe { solve_NTRU_deepest_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), tmp_c.as_ptr()) };
+            let res = solve_ntru_deepest(logn_top, &mut f, &mut g, &mut tmp);
             assert_eq!(tmp, tmp_c);
             assert_eq!(res, res_c != 0);
         }
