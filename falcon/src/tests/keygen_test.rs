@@ -513,7 +513,7 @@ pub(crate) mod tests {
                 let lim: i32 = rand::random();
                 let res = poly_big_to_small(&mut d, &mut s, lim, logn);
                 let res_c = unsafe { poly_big_to_small_func(d_c.as_ptr(), s_c.as_ptr(), lim, logn) };
-                assert_eq!(res, res_c);
+                assert_eq!(res, res_c != 0);
                 assert_eq!(d, d_c);
             }
         }
@@ -792,7 +792,7 @@ pub(crate) mod tests {
                 let f_c: [i8; 2048 * 4] = f.clone();
                 let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let g_c: [i8; 2048 * 4] = g.clone();
-                let res = solve_ntru_binary_depth0(logn_top, f.as_mut_ptr(), g.as_mut_ptr(), tmp.as_mut_ptr());
+                let res = solve_ntru_binary_depth0(logn_top, &mut f, &mut g, &mut tmp);
                 let res_c = unsafe { solve_NTRU_binary_depth0_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), tmp_c.as_ptr()) };
                 assert_eq!(tmp, tmp_c);
                 assert_eq!(res, res_c != 0);

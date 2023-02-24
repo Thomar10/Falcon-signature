@@ -3250,13 +3250,12 @@ pub fn solve_ntru_binary_depth0(logn: u32, f: &mut [i8], g: &mut [i8], tmp: &mut
 
     let (Fp, inter) = tmp.split_at_mut(n);
     let (Gp, inter) = inter.split_at_mut(n);
-    let (t1, inter) = inter.split_at_mut(n);
-    //unsafe { Fp.copy_from(ft, 2 * n); }
+    let (t1, intert2) = inter.split_at_mut(n);
     Fp.clone_from_slice(Gp);
     Gp.clone_from_slice(t1);
-    let (t2, inter) = inter.split_at_mut(n);
-    let (t3, inter) = inter.split_at_mut(n);
-    let (t4, t5) = inter.split_at_mut(n);
+    let (t2, intert3) = intert2.split_at_mut(n);
+    let (t3, intert4) = intert3.split_at_mut(n);
+    let (t4, t5) = intert4.split_at_mut(n);
 
 
     modp_mkgm2(t1, t2, logn, PRIMES[0].g, p, p0i);
@@ -3310,19 +3309,15 @@ pub fn solve_ntru_binary_depth0(logn: u32, f: &mut [i8], g: &mut [i8], tmp: &mut
         t1[u] = modp_norm(t2[u], p) as u32;
         t2[u] = modp_norm(t3[u], p) as u32;
     }
-    // TODO WTF IS THIS SHIT
-    //let (_, rt3, _) = bytemuck::pod_align_to_mut::<u32, fpr>(t3);
-    //println!("{}", t3.len());
-    let rt3: &mut [fpr] = bytemuck::cast_slice_mut(t3);
-    //println!("{}", rt3.len());
-    //println!("{}", n);
+    let (_, intert33, _) = bytemuck::pod_align_to_mut::<u32, fpr>(intert3);
+    let (rt3, _) = intert33.split_at_mut(n);
     for u in 0..n  {
         rt3[u] = fpr_of(t2[u] as i32 as i64);
     }
     fft(rt3, logn);
-    let rt2: &mut [u64] = bytemuck::cast_slice_mut(t2);
-    rt2[..hn].clone_from_slice(&rt3[..hn]);
-    let (rt2, rt3) = rt2.split_at_mut(hn);
+    let (_, intert22, _) = bytemuck::pod_align_to_mut::<u32, fpr>(intert2);
+    let (rt2, rt3) = intert22.split_at_mut(hn);
+    rt2.clone_from_slice(&rt3[..hn]);
 
     for u in 0..n {
         rt3[u] = fpr_of(t1[u] as i32 as i64);
@@ -3334,7 +3329,8 @@ pub fn solve_ntru_binary_depth0(logn: u32, f: &mut [i8], g: &mut [i8], tmp: &mut
     for u in 0..n {
         t1[u] = modp_set(fpr_rint(rt3[u]) as i32, p);
     }
-    let (t1, inter) = t1.split_at_mut(n);
+
+    let (t1, inter) = inter.split_at_mut(n);
     let (t2, inter) = inter.split_at_mut(n);
     let (t3, inter) = inter.split_at_mut(n);
     let (t4, t5) = inter.split_at_mut(n);
