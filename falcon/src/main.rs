@@ -1,6 +1,4 @@
-extern crate core;
-
-use crate::gen_kat::genkat;
+#![allow(dead_code)]
 
 mod fft;
 mod fpr;
@@ -9,14 +7,13 @@ mod keygen;
 mod falcon;
 mod codec;
 mod vrfy;
-mod gen_kat;
 mod katrng;
 mod nist;
 mod rng;
 mod sign;
 mod common;
-mod test_falcon;
 mod tests;
+mod kat_tests;
 
 mod falcon_c {
     pub mod codec_c;
@@ -29,11 +26,11 @@ mod falcon_c {
     pub mod sign_c;
     pub mod vrfy_c;
     pub mod keygen_c;
+    pub mod test_falcon_c;
 }
 
 
 
 fn main() {
-    //run_falcon_tests();
-    genkat();
+    println!("HEJ :)");
 }

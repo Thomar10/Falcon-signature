@@ -144,7 +144,7 @@ pub fn mq_innt(a: &mut [u16], logn: u32) {
     }
 }
 
-pub fn compute_public(h: &mut [u16], f: &mut [i8], g: &mut [i8], logn: u32, tmp: &mut [u8]) -> bool {
+pub fn compute_public(h: &mut [u16], f: &[i8], g: &[i8], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
     let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
 
@@ -211,7 +211,7 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
 }
 
 #[allow(non_snake_case)]
-pub fn complete_private(G: &mut [i8], f: &mut [i8], g: &mut [i8], F: &mut [i8], logn: u32, tmp: &mut [u8]) -> bool {
+pub fn complete_private(G: &mut [i8], f: &[i8], g: &[i8], F: &[i8], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
 
     let inter = bytemuck::cast_slice_mut::<u8, u16>(tmp);

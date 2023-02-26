@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use std::ffi::c_void;
+
 use crate::falcon_c::rng_c::Prng;
 use crate::falcon_c::shake_c::InnerShake256Context;
 

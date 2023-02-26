@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #[link(name = "fft", kind = "static")]
 extern "C" {
     pub fn falcon_inner_FFT(f: *const u64, logn: u32);
