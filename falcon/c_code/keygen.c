@@ -3366,8 +3366,8 @@ solve_NTRU_intermediate(unsigned logn_top,
 	 * middle or the upper half of these top 10 words.
 	 */
 	rlen = (slen > 10) ? 10 : slen;
-//	poly_big_to_fp(rt3, ft + slen - rlen, rlen, slen, logn);
-//	poly_big_to_fp(rt4, gt + slen - rlen, rlen, slen, logn);
+	poly_big_to_fp(rt3, ft + slen - rlen, rlen, slen, logn);
+	poly_big_to_fp(rt4, gt + slen - rlen, rlen, slen, logn);
 
 
 
@@ -3432,159 +3432,161 @@ solve_NTRU_intermediate(unsigned logn_top,
 	 */
 	scale_k = maxbl_FG - minbl_fg;
 
-//	for (;;) {
-//		int scale_FG, dc, new_maxbl_FG;
-//		uint32_t scl, sch;
-//		fpr pdc, pt;
-//
-//		/*
-//		 * Convert current F and G into floating-point. We apply
-//		 * scaling if the current length is more than 10 words.
-//		 */
-//		rlen = (FGlen > 10) ? 10 : FGlen;
-//		scale_FG = 31 * (int)(FGlen - rlen);
-//		poly_big_to_fp(rt1, Ft + FGlen - rlen, rlen, llen, logn);
-//		poly_big_to_fp(rt2, Gt + FGlen - rlen, rlen, llen, logn);
-//
-//		/*
-//		 * Compute (F*adj(f)+G*adj(g))/(f*adj(f)+g*adj(g)) in rt2.
-//		 */
-//		Zf(FFT)(rt1, logn);
-//		Zf(FFT)(rt2, logn);
-//		Zf(poly_mul_fft)(rt1, rt3, logn);
-//		Zf(poly_mul_fft)(rt2, rt4, logn);
-//		Zf(poly_add)(rt2, rt1, logn);
-//		Zf(poly_mul_autoadj_fft)(rt2, rt5, logn);
-//		Zf(iFFT)(rt2, logn);
-//
-//		/*
-//		 * (f,g) are scaled by 'scale_fg', meaning that the
-//		 * numbers in rt3/rt4 should be multiplied by 2^(scale_fg)
-//		 * to have their true mathematical value.
-//		 *
-//		 * (F,G) are similarly scaled by 'scale_FG'. Therefore,
-//		 * the value we computed in rt2 is scaled by
-//		 * 'scale_FG-scale_fg'.
-//		 *
-//		 * We want that value to be scaled by 'scale_k', hence we
-//		 * apply a corrective scaling. After scaling, the values
-//		 * should fit in -2^31-1..+2^31-1.
-//		 */
-//		dc = scale_k - scale_FG + scale_fg;
-//
-//		/*
-//		 * We will need to multiply values by 2^(-dc). The value
-//		 * 'dc' is not secret, so we can compute 2^(-dc) with a
-//		 * non-constant-time process.
-//		 * (We could use ldexp(), but we prefer to avoid any
-//		 * dependency on libm. When using FP emulation, we could
-//		 * use our fpr_ldexp(), which is constant-time.)
-//		 */
-//		if (dc < 0) {
-//			dc = -dc;
-//			pt = fpr_two;
-//		} else {
-//			pt = fpr_onehalf;
-//		}
-//		pdc = fpr_one;
-//		while (dc != 0) {
-//			if ((dc & 1) != 0) {
-//				pdc = fpr_mul(pdc, pt);
-//			}
-//			dc >>= 1;
-//			pt = fpr_sqr(pt);
-//		}
-//
-//		for (u = 0; u < n; u ++) {
-//			fpr xv;
-//
-//			xv = fpr_mul(rt2[u], pdc);
-//			/*
-//			 * Sometimes the values can be out-of-bounds if
-//			 * the algorithm fails; we must not call
-//			 * fpr_rint() (and cast to int32_t) if the value
-//			 * is not in-bounds. Note that the test does not
-//			 * break constant-time discipline, since any
-//			 * failure here implies that we discard the current
-//			 * secret key (f,g).
-//			 */
-//			if (!fpr_lt(fpr_mtwo31m1, xv)
-//				|| !fpr_lt(xv, fpr_ptwo31m1))
-//			{
-//				return 0;
-//			}
-//			k[u] = (int32_t)fpr_rint(xv);
-//		}
-//
-//		/*
-//		 * Values in k[] are integers. They really are scaled
-//		 * down by maxbl_FG - minbl_fg bits.
-//		 *
-//		 * If we are at low depth, then we use the NTT to
-//		 * compute k*f and k*g.
-//		 */
-//		sch = (uint32_t)(scale_k / 31);
-//		scl = (uint32_t)(scale_k % 31);
-//		if (depth <= DEPTH_INT_FG) {
-//			poly_sub_scaled_ntt(Ft, FGlen, llen, ft, slen, slen,
-//				k, sch, scl, logn, t1);
-//			poly_sub_scaled_ntt(Gt, FGlen, llen, gt, slen, slen,
-//				k, sch, scl, logn, t1);
-//		} else {
-//			poly_sub_scaled(Ft, FGlen, llen, ft, slen, slen,
-//				k, sch, scl, logn);
-//			poly_sub_scaled(Gt, FGlen, llen, gt, slen, slen,
-//				k, sch, scl, logn);
-//		}
-//
-//		/*
-//		 * We compute the new maximum size of (F,G), assuming that
-//		 * (f,g) has _maximal_ length (i.e. that reduction is
-//		 * "late" instead of "early". We also adjust FGlen
-//		 * accordingly.
-//		 */
-//		new_maxbl_FG = scale_k + maxbl_fg + 10;
-//		if (new_maxbl_FG < maxbl_FG) {
-//			maxbl_FG = new_maxbl_FG;
-//			if ((int)FGlen * 31 >= maxbl_FG + 31) {
-//				FGlen --;
-//			}
-//		}
-//
-//		/*
-//		 * We suppose that scaling down achieves a reduction by
-//		 * at least 25 bits per iteration. We stop when we have
-//		 * done the loop with an unscaled k.
-//		 */
-//		if (scale_k <= 0) {
-//			break;
-//		}
-//		scale_k -= 25;
-//		if (scale_k < 0) {
-//			scale_k = 0;
-//		}
-//	}
+	for (;;) {
+		int scale_FG, dc, new_maxbl_FG;
+		uint32_t scl, sch;
+		fpr pdc, pt;
+
+		/*
+		 * Convert current F and G into floating-point. We apply
+		 * scaling if the current length is more than 10 words.
+		 */
+		rlen = (FGlen > 10) ? 10 : FGlen;
+		scale_FG = 31 * (int)(FGlen - rlen);
+		poly_big_to_fp(rt1, Ft + FGlen - rlen, rlen, llen, logn);
+		poly_big_to_fp(rt2, Gt + FGlen - rlen, rlen, llen, logn);
+
+		/*
+		 * Compute (F*adj(f)+G*adj(g))/(f*adj(f)+g*adj(g)) in rt2.
+		 */
+		Zf(FFT)(rt1, logn);
+		Zf(FFT)(rt2, logn);
+		Zf(poly_mul_fft)(rt1, rt3, logn);
+		Zf(poly_mul_fft)(rt2, rt4, logn);
+		Zf(poly_add)(rt2, rt1, logn);
+		Zf(poly_mul_autoadj_fft)(rt2, rt5, logn);
+		Zf(iFFT)(rt2, logn);
+
+		/*
+		 * (f,g) are scaled by 'scale_fg', meaning that the
+		 * numbers in rt3/rt4 should be multiplied by 2^(scale_fg)
+		 * to have their true mathematical value.
+		 *
+		 * (F,G) are similarly scaled by 'scale_FG'. Therefore,
+		 * the value we computed in rt2 is scaled by
+		 * 'scale_FG-scale_fg'.
+		 *
+		 * We want that value to be scaled by 'scale_k', hence we
+		 * apply a corrective scaling. After scaling, the values
+		 * should fit in -2^31-1..+2^31-1.
+		 */
+		dc = scale_k - scale_FG + scale_fg;
+
+		/*
+		 * We will need to multiply values by 2^(-dc). The value
+		 * 'dc' is not secret, so we can compute 2^(-dc) with a
+		 * non-constant-time process.
+		 * (We could use ldexp(), but we prefer to avoid any
+		 * dependency on libm. When using FP emulation, we could
+		 * use our fpr_ldexp(), which is constant-time.)
+		 */
+		if (dc < 0) {
+			dc = -dc;
+			pt = fpr_two;
+		} else {
+			pt = fpr_onehalf;
+		}
+		pdc = fpr_one;
+		while (dc != 0) {
+			if ((dc & 1) != 0) {
+				pdc = fpr_mul(pdc, pt);
+			}
+			dc >>= 1;
+			pt = fpr_sqr(pt);
+		}
+
+		for (u = 0; u < n; u ++) {
+			fpr xv;
+
+			xv = fpr_mul(rt2[u], pdc);
+			/*
+			 * Sometimes the values can be out-of-bounds if
+			 * the algorithm fails; we must not call
+			 * fpr_rint() (and cast to int32_t) if the value
+			 * is not in-bounds. Note that the test does not
+			 * break constant-time discipline, since any
+			 * failure here implies that we discard the current
+			 * secret key (f,g).
+			 */
+			if (!fpr_lt(fpr_mtwo31m1, xv)
+				|| !fpr_lt(xv, fpr_ptwo31m1))
+			{
+				return 0;
+			}
+			k[u] = (int32_t)fpr_rint(xv);
+		}
+
+		/*
+		 * Values in k[] are integers. They really are scaled
+		 * down by maxbl_FG - minbl_fg bits.
+		 *
+		 * If we are at low depth, then we use the NTT to
+		 * compute k*f and k*g.
+		 */
+		sch = (uint32_t)(scale_k / 31);
+		scl = (uint32_t)(scale_k % 31);
+
+		if (depth <= DEPTH_INT_FG) {
+			poly_sub_scaled_ntt(Ft, FGlen, llen, ft, slen, slen,
+				k, sch, scl, logn, t1);
+			poly_sub_scaled_ntt(Gt, FGlen, llen, gt, slen, slen,
+				k, sch, scl, logn, t1);
+		} else {
+			poly_sub_scaled(Ft, FGlen, llen, ft, slen, slen,
+				k, sch, scl, logn);
+			poly_sub_scaled(Gt, FGlen, llen, gt, slen, slen,
+				k, sch, scl, logn);
+		}
+
+
+		/*
+		 * We compute the new maximum size of (F,G), assuming that
+		 * (f,g) has _maximal_ length (i.e. that reduction is
+		 * "late" instead of "early". We also adjust FGlen
+		 * accordingly.
+		 */
+		new_maxbl_FG = scale_k + maxbl_fg + 10;
+		if (new_maxbl_FG < maxbl_FG) {
+			maxbl_FG = new_maxbl_FG;
+			if ((int)FGlen * 31 >= maxbl_FG + 31) {
+				FGlen --;
+			}
+		}
+
+		/*
+		 * We suppose that scaling down achieves a reduction by
+		 * at least 25 bits per iteration. We stop when we have
+		 * done the loop with an unscaled k.
+		 */
+		if (scale_k <= 0) {
+			break;
+		}
+		scale_k -= 25;
+		if (scale_k < 0) {
+			scale_k = 0;
+		}
+	}
 
 	/*
 	 * If (F,G) length was lowered below 'slen', then we must take
 	 * care to re-extend the sign.
 	 */
-//	if (FGlen < slen) {
-//	  printf("HEJ\n");
-//		for (u = 0; u < n; u ++, Ft += llen, Gt += llen) {
-//			size_t v;
-//			uint32_t sw;
-//
-//			sw = -(Ft[FGlen - 1] >> 30) >> 1;
-//			for (v = FGlen; v < slen; v ++) {
-//				Ft[v] = sw;
-//			}
-//			sw = -(Gt[FGlen - 1] >> 30) >> 1;
-//			for (v = FGlen; v < slen; v ++) {
-//				Gt[v] = sw;
-//			}
-//		}
-//	}
+	if (FGlen < slen) {
+
+		for (u = 0; u < n; u ++, Ft += llen, Gt += llen) {
+			size_t v;
+			uint32_t sw;
+
+			sw = -(Ft[FGlen - 1] >> 30) >> 1;
+			for (v = FGlen; v < slen; v ++) {
+				Ft[v] = sw;
+			}
+			sw = -(Gt[FGlen - 1] >> 30) >> 1;
+			for (v = FGlen; v < slen; v ++) {
+				Gt[v] = sw;
+			}
+		}
+	}
 
 	/*
 	 * Compress encoding of all values to 'slen' words (this is the

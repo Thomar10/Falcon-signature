@@ -753,8 +753,8 @@ pub(crate) mod tests {
                     let f_c: [i8; 2048 * 4] = f.clone();
                     let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                     let g_c: [i8; 2048 * 4] = g.clone();
-                    let res = solve_ntru_intermediate(logn_top, &mut f, &mut g, depth, &mut tmp);
                     let res_c = unsafe { solve_NTRU_intermediate_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), depth, tmp_c.as_ptr()) };
+                    let res = solve_ntru_intermediate(logn_top, &mut f, &mut g, depth, &mut tmp);
                     assert_eq!(tmp, tmp_c);
                     assert_eq!(res, res_c != 0);
                 }

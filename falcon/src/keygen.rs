@@ -3,7 +3,7 @@
 use std::ptr::null_mut;
 
 use crate::codec::{max_fg_bits, max_FG_bits};
-use crate::fft::{fft, fft_pointer, ifft, ifft_pointer, poly_add_muladj_fft, poly_add_muladj_fft_pointer, poly_add_pointer, poly_adj_fft, poly_adj_fft_pointer, poly_div_autoadj_fft, poly_div_autoadj_fft_pointer, poly_invnorm2_fft, poly_invnorm2_fft_pointer, poly_mul_autoadj_fft, poly_mul_autoadj_fft_pointer, poly_mul_fft, poly_mul_fft_pointer, poly_mulconst, poly_mulconst_pointer, poly_sub, poly_sub_pointer};
+use crate::fft::{fft, fft_pointer, ifft, ifft_pointer, poly_add, poly_add_muladj_fft, poly_add_muladj_fft_pointer, poly_add_pointer, poly_adj_fft, poly_adj_fft_pointer, poly_div_autoadj_fft, poly_div_autoadj_fft_pointer, poly_invnorm2_fft, poly_invnorm2_fft_pointer, poly_mul_autoadj_fft, poly_mul_autoadj_fft_pointer, poly_mul_fft, poly_mul_fft_pointer, poly_mulconst, poly_mulconst_pointer, poly_sub, poly_sub_pointer};
 use crate::fpr::{fpr_add, FPR_BNORM_MAX, fpr_lt, FPR_MTWO31M1, FPR_MTWO63M1, fpr_mul, fpr_of, FPR_ONE, FPR_ONEHALF, FPR_PTWO31, FPR_PTWO31M1, FPR_PTWO63M1, FPR_Q, fpr_rint, fpr_sqr, FPR_TWO, FPR_ZERO};
 use crate::shake::{i_shake256_extract, InnerShake256Context};
 use crate::vrfy::compute_public;
@@ -1767,7 +1767,7 @@ pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &mut [u32], ylen: usize, s
         wys = ((wy << scl) & 0x7FFFFFFF) | tw;
         tw = wy >> (31 - scl);
 
-        w = x[u] - wys - cc;
+        w = x[u].wrapping_sub(wys).wrapping_sub(cc);
         x[u] = w & 0x7FFFFFFF;
         cc = w >> 31;
     }
@@ -2887,25 +2887,28 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
     zint_rebuild_CRT(Gt, llen, llen, n as u64, &PRIMES, true, gm_copy.as_mut_slice());
     tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen].clone_from_slice(&gm_copy);
 
-    let (_, rt3) = tmp.split_at_mut(2 * llen * n + n * slen * 2);
-    let rt3 = bytemuck::cast_slice_mut::<u32, fpr>(rt3);
+    let (Ft, inter) = tmp.split_at_mut(llen * n);
+    let (Gt, inter) = inter.split_at_mut(llen * n);
+    let (ft, inter) = inter.split_at_mut(slen * n);
+    let (gt, inter) = inter.split_at_mut(slen * n);
+    let rt3 = bytemuck::cast_slice_mut::<u32, fpr>(inter);
     let (rt3, inter) = rt3.split_at_mut(n);
     let (rt4, inter) = inter.split_at_mut(n);
-    let (rt5, inter) = inter.split_at_mut(n);
-    let (rt1, inter_rt1) = inter.split_at_mut(n >> 1);
-    let k = bytemuck::cast_slice_mut::<fpr, u32>(rt1);
-    let (_, inter) = k.split_at_mut(n);
-    let mut rt2 = bytemuck::cast_slice_mut::<u32, fpr>(inter);
+    let (rt5, inter_rt1) = inter.split_at_mut(n >> 1);
 
-    if rt2.as_ptr() < (rt1.as_ptr().wrapping_add(n)) {
-        let (_, rt22) = inter_rt1.split_at_mut(n);
-        rt2 = rt22;
-    }
+    //let k = bytemuck::cast_slice_mut::<fpr, u32>(rt1);
+    //let (mut rt2, inter) = inter_rt1.split_at_mut(n);
+    //let mut rt2 = bytemuck::cast_slice_mut::<u32, fpr>(inter);
+
+    //if rt2.as_ptr() < (rt1.as_ptr().wrapping_add(n)) {
+    //    let (_, rt22) = inter_rt1.split_at_mut(n);
+    //    rt2 = rt22;
+    //}
 
     let rlen = if slen > 10 { 10 } else { slen };
-    // // poly_big_to_fp(rt3, ft.wrapping_add(slen - rlen), rlen, slen, logn);
-    // // poly_big_to_fp(rt4, gt.wrapping_add(slen - rlen), rlen, slen, logn);
-    //
+    poly_big_to_fp(rt3, &mut ft.split_at_mut(slen - rlen).1, rlen, slen, logn);
+    poly_big_to_fp(rt4, gt.split_at_mut(slen - rlen).1, rlen, slen, logn);
+
     let scale_fg = 31 * (slen - rlen) as i32;
 
     let minbl_fg = BITLENGTH[depth as usize].avg - 6 * BITLENGTH[depth as usize].std;
@@ -2922,92 +2925,100 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
 
     let mut scale_k = maxbl_FG - minbl_fg;
 
-    // loop {
-    //     let rlen = if FGlen > 10 { 10 } else { FGlen };
-    //     let scale_FG = 31 * (FGlen - rlen) as i32;
-    //     poly_big_to_fp_pointer(rt1, Ft.wrapping_add(FGlen - rlen), rlen, llen, logn);
-    //     poly_big_to_fp_pointer(rt2, Gt.wrapping_add(FGlen - rlen), rlen, llen, logn);
-    //
-    //     fft_pointer(rt1, logn);
-    //     fft_pointer(rt2, logn);
-    //     poly_mul_fft_pointer(rt1, rt3, logn);
-    //     poly_mul_fft_pointer(rt2, rt4, logn);
-    //     poly_add_pointer(rt2, rt1, logn);
-    //     poly_mul_autoadj_fft_pointer(rt2, rt5, logn);
-    //     ifft_pointer(rt2, logn);
-    //
-    //     let mut dc = scale_k - scale_FG + scale_fg;
-    //     let mut pt: u64;
-    //     if dc < 0 {
-    //         dc = -dc;
-    //         pt = FPR_TWO;
-    //     } else {
-    //         pt = FPR_ONEHALF;
-    //     }
-    //     let mut pdc = FPR_ONE;
-    //     while dc != 0 {
-    //         if (dc & 1) != 0 {
-    //             pdc = fpr_mul(pdc, pt);
-    //         }
-    //         dc >>= 1;
-    //         pt = fpr_sqr(pt);
-    //     }
-    //
-    //     unsafe {
-    //         for u in 0..n {
-    //             let xv = fpr_mul(*rt2.wrapping_add(u), pdc);
-    //             if !(fpr_lt(FPR_MTWO31M1, xv) != 0) || !(fpr_lt(xv, FPR_PTWO31M1) != 0) {
-    //                 return false;
-    //             }
-    //             *k.wrapping_add(u) = fpr_rint(xv) as i32;
-    //         }
-    //     }
-    //
-    //     let sch = (scale_k / 31) as u32;
-    //     let scl = (scale_k % 31) as u32;
-    //
-    //     if depth <= DEPTH_INT_FG {
-    //         poly_sub_scaled_ntt_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn, t1);
-    //         poly_sub_scaled_ntt_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn, t1);
-    //     } else {
-    //         poly_sub_scaled_pointer(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn);
-    //         poly_sub_scaled_pointer(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn);
-    //     }
-    //     let new_maxbl_FG = scale_k + maxbl_fg + 10;
-    //     if new_maxbl_FG < maxbl_FG {
-    //         maxbl_FG = new_maxbl_FG;
-    //         if FGlen as i32 * 31 >= maxbl_FG + 31 {
-    //             FGlen -= 1;
-    //         }
-    //     }
-    //
-    //     if scale_k <= 0 {
-    //         break;
-    //     }
-    //     scale_k -= 25;
-    //     if scale_k < 0 {
-    //         scale_k = 0;
-    //     }
-    // }
-    // if FGlen < slen {
-    //     let mut stride = 0;
-    //     for _ in 0..n {
-    //         let mut sw: u32;
-    //         sw = (!(Ft[FGlen - 1 + stride] >> 30)).wrapping_add(1) >> 1;
-    //         for v in FGlen..slen {
-    //             Ft[v + stride] = sw;
-    //         }
-    //         sw = (!(Gt[FGlen - 1 + stride] >> 30)).wrapping_add(1) >> 1;
-    //         for v in FGlen..slen {
-    //             Gt[v + stride] = sw;
-    //         }
-    //         stride += llen;
-    //     }
-    // }
+    loop {
+        let (rt1, inter) = inter_rt1.split_at_mut(n);
+        let (rt2, _) = inter.split_at_mut(n);
+        let rlen = if FGlen > 10 { 10 } else { FGlen };
+        let scale_FG = 31 * (FGlen - rlen) as i32;
+        poly_big_to_fp(rt1, Ft.split_at_mut(FGlen - rlen).1, rlen, llen, logn);
+        poly_big_to_fp(rt2, Gt.split_at_mut(FGlen - rlen).1, rlen, llen, logn);
+
+        fft(rt1, logn);
+        fft(rt2, logn);
+        poly_mul_fft(rt1, rt3, logn);
+        poly_mul_fft(rt2, rt4, logn);
+        poly_add(rt2, rt1, logn);
+        poly_mul_autoadj_fft(rt2, rt5, logn);
+        ifft(rt2, logn);
+
+        let mut dc = scale_k - scale_FG + scale_fg;
+        let mut pt: u64;
+        if dc < 0 {
+            dc = -dc;
+            pt = FPR_TWO;
+        } else {
+            pt = FPR_ONEHALF;
+        }
+        let mut pdc = FPR_ONE;
+        while dc != 0 {
+            if (dc & 1) != 0 {
+                pdc = fpr_mul(pdc, pt);
+            }
+            dc >>= 1;
+            pt = fpr_sqr(pt);
+        }
+
+        let k = bytemuck::cast_slice_mut::<fpr, i32>(rt1);
+        for u in 0..n {
+            let xv = fpr_mul(rt2[u], pdc);
+            if !(fpr_lt(FPR_MTWO31M1, xv) != 0) || !(fpr_lt(xv, FPR_PTWO31M1) != 0) {
+                return false;
+            }
+            k[u] = fpr_rint(xv) as i32;
+        }
+
+
+        let sch = (scale_k / 31) as u32;
+        let scl = (scale_k % 31) as u32;
+
+
+        let inter_kt1 = bytemuck::cast_slice_mut::<fpr, i32>(inter_rt1);
+        let (k, inter_t1) = inter_kt1.split_at_mut(n);
+        let t1 = bytemuck::cast_slice_mut::<i32, u32>(inter_t1);
+        if depth <= DEPTH_INT_FG {
+            poly_sub_scaled_ntt(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn, t1);
+            poly_sub_scaled_ntt(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn, t1);
+        } else {
+            poly_sub_scaled(Ft, FGlen, llen, ft, slen, slen, k, sch, scl, logn);
+            poly_sub_scaled(Gt, FGlen, llen, gt, slen, slen, k, sch, scl, logn);
+        }
+
+
+        let new_maxbl_FG = scale_k + maxbl_fg + 10;
+        if new_maxbl_FG < maxbl_FG {
+            maxbl_FG = new_maxbl_FG;
+            if FGlen as i32 * 31 >= maxbl_FG + 31 {
+                FGlen -= 1;
+            }
+        }
+
+        if scale_k <= 0 {
+            break;
+        }
+        scale_k -= 25;
+        if scale_k < 0 {
+            scale_k = 0;
+        }
+    }
+       if FGlen < slen {
+            let mut stride = 0;
+            for _ in 0..n {
+                let mut sw: u32;
+                sw = (!(Ft[FGlen - 1 + stride] >> 30)).wrapping_add(1) >> 1;
+                for v in FGlen..slen {
+                    Ft[v + stride] = sw;
+                }
+                sw = (!(Gt[FGlen - 1 + stride] >> 30)).wrapping_add(1) >> 1;
+                for v in FGlen..slen {
+                    Gt[v + stride] = sw;
+                }
+                stride += llen;
+            }
+        }
     let mut x = 0;
     let mut y = 0;
     for _ in 0..n << 1 {
-        tmp.copy_within(y..y+slen, x);
+        tmp.copy_within(y..y + slen, x);
         y += llen;
         x += slen;
     }
