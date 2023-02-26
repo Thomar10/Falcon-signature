@@ -1,5 +1,3 @@
-use std::slice::from_raw_parts_mut;
-
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::keygen::keygen;
@@ -140,7 +138,7 @@ pub(crate) fn set_fpu_cw(x: u32) -> u32 {
 }
 
 #[allow(non_snake_case)]
-pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key: &mut [u8],
+pub fn falcon_keygen_make(mut rng: &mut InnerShake256Context, logn: u32, private_key: &mut [u8],
                           private_len: usize, public_key: &mut [u8], public_len: usize,
                           tmp: &mut [u8], tmp_len: usize) -> i32 {
     if logn < 1 || logn > 10 {
@@ -152,38 +150,33 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
         return -2;
     }
     let n = 1usize << logn;
-    let f: *mut u8 = tmp.as_mut_ptr().cast();
-    let mut f_slice;
-    unsafe { f_slice = from_raw_parts_mut(f.cast(), n); };
-    let g = f.wrapping_add(n);
-    let mut g_slice;
-    unsafe { g_slice = from_raw_parts_mut(g.cast(), n); };
-    let F = g.wrapping_add(n);
-    let mut F_slice;
-    unsafe { F_slice = from_raw_parts_mut(F.cast(), n); };
-    let atmp: *mut u8 = F.wrapping_add(n);
+    let inter = bytemuck::cast_slice_mut::<u8, i8>(tmp);
+    let (f, inter) = inter.split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
+    let (F, atmp) = inter.split_at_mut(n);
+    let atmp = bytemuck::cast_slice_mut::<i8, u8>(atmp);
 
-    // keygen(&mut rng, &mut f, &mut g, &mut F, &mut [], &mut h, logn as u32, &mut tmp);
+    keygen(&mut rng, f, g, F, &mut [], &mut [], logn as u32, atmp);
 
     let mut sk = private_key;
     let sk_len = falcon_privatekey_size!(logn) as usize;
     sk[0] = (0x50 + logn) as u8;
     let mut u = 1;
     let mut v = trim_i8_encode(&mut sk, u, sk_len - u,
-                               &mut f_slice, logn, max_fg_bits[logn as usize] as u32);
+                               f, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
         return -6;
     }
     u += v;
     v = trim_i8_encode(sk, u, sk_len - u,
-                       &mut g_slice, logn, max_fg_bits[logn as usize] as u32);
+                       g, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
         return -6;
     }
 
     u += v;
     v = trim_i8_encode(sk, u, sk_len - u,
-                       &mut F_slice, logn, max_FG_bits[logn as usize] as u32);
+                       F, logn, max_FG_bits[logn as usize] as u32);
 
     if v == 0 {
         return -6;
@@ -193,16 +186,19 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
         return -6;
     }
     if public_key.len() > 0 {
-        let h: *mut u16 = g.wrapping_add(n).cast();
-        let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
-        let atmp: *mut u8 = h.wrapping_add(n).cast();
-        //if !compute_public(h, f.cast(), g.cast(), logn, atmp) {
-        //    return -6;
-        //}
+        let inter = bytemuck::cast_slice_mut::<u8, i8>(tmp);
+        let (f, inter) = inter.split_at_mut(n);
+        let (g, inter) = inter.split_at_mut(n);
+        let inter = unsafe { inter.align_to_mut::<u16>().1 };
+        let (h, inter) = inter.split_at_mut(n);
+        let atmp = bytemuck::cast_slice_mut(inter);
+        if !compute_public(h, f, g, logn, atmp) {
+            return -6;
+        }
         let public_key = public_key;
         public_key[0] = (0x00 + logn) as u8;
         let pk_len = falcon_publickey_size!(logn) as usize;
-        v = modq_encode(public_key, 1, pk_len - 1, &mut h_slice, logn);
+        v = modq_encode(public_key, 1, pk_len - 1, h, logn);
         if v != pk_len - 1 {
             return -6;
         }
@@ -242,10 +238,9 @@ pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
         return -6;
     }
     let n: usize = 1 << logn;
-    let fp: *mut i8 = tmp.as_mut_ptr().cast();
-    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
-    let gp = fp.wrapping_add(n);
-    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
+    let tmp = bytemuck::cast_slice_mut::<u8, i8>(tmp);
+    let (f, inter) = tmp.split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
     let mut u = 1;
     let mut v = trim_i8_decode(f, logn as u32, max_fg_bits[logn] as u32,
                                &mut sk, u, private_len - u);
@@ -258,19 +253,20 @@ pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
     if v == 0 {
         return -6;
     }
-    let h: *mut u16 = gp.wrapping_add(n).cast();
-    let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
-    let atmp: *mut u8 = h.wrapping_add(n).cast();
-    //if !compute_public(h, fp, gp, logn as u32, atmp) {
-    //    return -7;
-    //}
+    let inter = bytemuck::cast_slice_mut::<i8, u16>(inter);
+    let (h, inter) = inter.split_at_mut(n);
+
+    let atmp = bytemuck::cast_slice_mut::<u16, u8>(inter);
+    if !compute_public(h, f, g, logn as u32, atmp) {
+        return -7;
+    }
 
 
     pk[0] = (0x00 + logn) as u8;
     let pk_len = falcon_publickey_size!(logn) as usize;
-    v = modq_encode(pk, 1, pk_len - 1, &mut h_slice, logn as u32);
+    v = modq_encode(pk, 1, pk_len - 1, h, logn as u32);
     if v != pk_len - 1 {
-        return -8;
+        return -6;
     }
     0
 }
@@ -694,10 +690,12 @@ pub fn falcon_verify_finish(signature: &mut [u8], signature_len: usize, signatur
     }
 
     let n: usize = 1 << logn;
-    let h: &mut [u16] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().cast(), n) };
-    let hm = unsafe { from_raw_parts_mut(h.as_mut_ptr().wrapping_add(n), n) };
-    let sv: &mut [i16] = unsafe { from_raw_parts_mut(hm.as_mut_ptr().wrapping_add(n).cast(), n) };
-    let atmp: &mut [u8] = unsafe { from_raw_parts_mut(sv.as_mut_ptr().wrapping_add(n).cast(), n) };
+    let inter = bytemuck::pod_align_to_mut::<u8, u16>(tmp).1;
+    let (h, inter) = inter.split_at_mut(n);
+    let (hm, inter) = inter.split_at_mut(n);
+    let inter = bytemuck::cast_slice_mut::<u16, i16>(inter);
+    let (sv, inter) = inter.split_at_mut(n);
+    let atmp = bytemuck::pod_align_to_mut::<i16, u8>(inter).1;
 
     if modq_decode(h, logn as u32, public_key, 1, public_len - 1) != public_len - 1 {
         return -6;

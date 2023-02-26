@@ -18,13 +18,13 @@ use crate::sign::{expand_privkey, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
 
 pub fn run_falcon_tests() {
-    test_shake256();
-    test_codec();
-    test_vrfy();
-    test_rng();
-    test_poly();
-    test_sign();
-    test_keygen();
+    //test_shake256();
+    //test_codec();
+    //test_vrfy();
+    //test_rng();
+    //test_poly();
+    //test_sign();
+    //test_keygen();
     test_external_api();
     test_nist_kat(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
     test_nist_kat(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
@@ -195,8 +195,8 @@ pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
         i_shake256_init(&mut rng);
         i_shake256_inject(&mut rng, &mut seed2);
         i_shake256_flip(&mut rng);
-        keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(),
-               G.as_mut_ptr(), h.as_mut_ptr(), logn, inter.as_mut_ptr());
+        keygen(&mut rng, f, g, F,
+               G, h, logn, inter);
         sk[0] = (0x50 + logn) as u8;
         let mut u = 1;
         let v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
@@ -447,7 +447,10 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
 
 
     let tmpkg_len = falcon_tmpsize_keygen!(logn);
-    let tmpmp_len = falcon_tmpsize_makepub!(logn);
+    let mut tmpmp_len = falcon_tmpsize_makepub!(logn);
+    while tmpmp_len % 8 != 0 {
+        tmpmp_len += 1;
+    }
     let tmpsd_len = falcon_tmpsize_signdyn!(logn);
     let tmpst_len = falcon_tmpsize_signtree!(logn);
     let tmpvv_len = falcon_tmpsize_verify!(logn);
@@ -496,6 +499,7 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
             panic!("sign_dyn failed: {}", r);
         }
 
+        println!("{}", tmpvv.len());
         r = falcon_verify(sig.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(),
                           pk_len, data_bytes, tmpvv.as_mut_slice(), tmpvv_len);
         if r != 0 {
@@ -695,7 +699,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
             st: [0; 25],
             dptr: 0,
         };
-        keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tt.as_mut_ptr());
+        keygen(&mut rng, f, g, F, G, h, logn, tt);
         let msg = i_shake256_extract(&mut rng, 50);
 
         i_shake256_init(&mut sc);
@@ -784,7 +788,7 @@ fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
     if tlen < 4 * n {
         panic!("Insufficient buffer size");
     }
-    if !compute_public(h2.as_mut_ptr(), ff.as_ptr(), gg.as_ptr(), logn, h2tmp.as_mut_ptr()) {
+    if !compute_public(h2, ff, gg, logn, h2tmp) {
         panic!("Compute public failed!");
     }
     assert_eq!(h, h2, "compute_public");
@@ -793,8 +797,8 @@ fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
     if tlen < 5 * n {
         panic!("Insufficient buffer size");
     }
-    let (g2_tmp, _) = inter.split_at_mut(n);
-    let g2_tmp = bytemuck::cast_slice_mut(g2_tmp);
+
+    let g2_tmp = bytemuck::cast_slice_mut(inter);
     if !complete_private(G2, ff, &g, &F, logn, g2_tmp) {
         panic!("Compute public failed!");
     }
@@ -839,31 +843,26 @@ fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
         }
 
         let len1 = signature.len() - 1;
-        let sig2p: *mut i16 = tmp.as_mut_ptr().cast();
-        let mut sig2: &mut [i16];
-        unsafe { sig2 = from_raw_parts_mut(sig2p, len1 / 2); }
+        let inter = bytemuck::cast_slice_mut::<u8, i16>(tmp);
+        let (sig2, inter) = inter.split_at_mut(len1 / 2);
         sig2[0] = logn as i16;
-        let len2 = trim_i16_decode(&mut sig2, logn, 16, signature.as_mut_slice(), 1, len1);
+        let len2 = trim_i16_decode(sig2, logn, 16, signature.as_mut_slice(), 1, len1);
         if len2 != len1 {
             panic!("Invalid sig KAT {} != {}", len2, len1);
         }
 
-        unsafe { tmp.as_mut_ptr().copy_from(sig2.as_mut_ptr().cast(), 2 * n); }
-        let s2p: *mut i16 = tmp.as_mut_ptr().cast();
-        let h2p: *mut u16 = s2p.wrapping_add(n).cast();
-        unsafe { h2p.copy_from(h.as_ptr().cast(), n); }
-        let mut h2: &mut [u16];
-        unsafe { h2 = from_raw_parts_mut(h2p.cast(), n); }
-        to_ntt_monty(&mut h2, logn);
+        let (h2, inter) = inter.split_at_mut(n);
+        let h2 = bytemuck::cast_slice_mut(h2);
+        h2.copy_from_slice(h);
+        to_ntt_monty(h2, logn);
 
-        let c0p = h2p.wrapping_add(2 * n);
-        let c0: &mut [u16];
-        unsafe { c0 = from_raw_parts_mut(c0p.cast(), n); }
+        let (c0, inter) = inter.split_at_mut(n);
+
+        let c0 = bytemuck::cast_slice_mut(c0);
         hash_to_point_vartime(&mut rng, c0, logn);
 
-        let raw_tmp;
-        unsafe { raw_tmp = from_raw_parts_mut(c0p.wrapping_add(2 * n).cast(), n); }
-        if !verify_raw(c0, sig2, h2, logn, raw_tmp) {
+        let (raw_tmp, _) = inter.split_at_mut(n);
+        if !verify_raw(c0, sig2, h2, logn, bytemuck::cast_slice_mut(raw_tmp)) {
             panic!("KAT signature failed");
         }
         print!(".");

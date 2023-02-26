@@ -1,5 +1,3 @@
-use std::slice::from_raw_parts_mut;
-
 use crate::common::is_short;
 
 pub const Q: u32 = 12289;
@@ -146,7 +144,7 @@ pub fn mq_innt(a: &mut [u16], logn: u32) {
 
 pub fn compute_public(h: &mut [u16], f: &[i8], g: &[i8], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
-    let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
+    let tt: &mut [u16] = unsafe { tmp.align_to_mut::<u16>().1 };
 
     for u in 0..n {
         tt[u] = mq_conv_small(f[u] as i32) as u16;
