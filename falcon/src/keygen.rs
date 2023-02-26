@@ -739,7 +739,7 @@ pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32]
             zint_add_scaled_mul_small(
                 x, Flen, y, flen, kf, sch as usize, scl);
             if u + v == n - 1 {
-                x_index = 0;
+                x_stride = 0;
                 kf = -kf;
             } else {
                 x_stride += Fstride;

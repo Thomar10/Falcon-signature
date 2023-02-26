@@ -195,17 +195,14 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
     mq_poly_montymul_ntt(tt, h, logn);
     mq_innt(tt, logn);
     mq_poly_sub(tt, c0, logn);
-
+    let tt = bytemuck::cast_slice_mut::<u16, i16>(tt);
     for u in 0..n {
         let mut w: i32 = tt[u] as i32;
         w -= (Q & (!(((Q >> 1).wrapping_sub(w as u32)) >> 31)).wrapping_add(1)) as i32;
-        unsafe {
-            let x: *mut i16 = tt.as_mut_ptr().wrapping_add(u).cast();
-            *x = w as i16;
-        }
+            tt[u] = w as i16;
+
     }
-    let tt_int: *mut i16 = tt.as_mut_ptr().cast();
-    is_short(tt_int, s2, logn) != 0
+    is_short(tt, s2, logn) != 0
 }
 
 #[allow(non_snake_case)]
@@ -288,7 +285,7 @@ pub fn verify_recover(h: &mut [u16], c0: &mut [u16], s1: &mut [i16], s2: &mut [i
     }
     mq_innt(h, logn);
 
-    r = !r & (-is_short(s1.as_mut_ptr(), s2, logn)) as u32;
+    r = !r & (-is_short(s1, s2, logn)) as u32;
     (r >> 31) != 0
 }
 

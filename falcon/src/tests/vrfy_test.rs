@@ -186,10 +186,7 @@ mod tests {
     fn test_compute_public() {
         for _ in 0..10 {
             for logn in 1..11 {
-                let mut buffer_size = falcon_tmpsize_keygen!(logn);
-                while buffer_size % 8 != 0 {
-                    buffer_size += 1;
-                }
+                let buffer_size = falcon_tmpsize_keygen!(logn);
                 let mut rng_rust = InnerShake256Context {
                     st: [0; 25],
                     dptr: 10,
@@ -214,10 +211,7 @@ mod tests {
     fn test_complete_private() {
         for _ in 0..10 {
             for logn in 1..11 {
-                let mut buffer_size = falcon_tmpsize_keygen!(logn);
-                while buffer_size % 8 != 0 {
-                    buffer_size += 1;
-                }
+                let buffer_size = falcon_tmpsize_keygen!(logn);
                 let mut rng_rust = InnerShake256Context {
                     st: [0; 25],
                     dptr: 10,
