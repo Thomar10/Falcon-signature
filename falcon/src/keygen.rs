@@ -387,18 +387,6 @@ pub fn zint_negate(a: &mut [u32], len: usize, ctl: u32) {
     }
 }
 
-pub fn zint_negate_index(a: &mut [u32], a_index: usize, len: usize, ctl: u32) {
-    let mut cc = ctl;
-    let m = (!ctl).wrapping_add(1) >> 1;
-    for u in 0..len {
-        let mut aw;
-        aw = a[u + a_index];
-        aw = (aw ^ m).wrapping_add(cc);
-        a[u + a_index] = aw & 0x7FFFFFFF;
-        cc = aw >> 31;
-    }
-}
-
 pub fn zint_co_reduce(a: &mut [u32], b: &mut [u32], len: usize, xa: i64, xb: i64, ya: i64, yb: i64) -> u32 {
     let mut cca: i64 = 0;
     let mut ccb: i64 = 0;
@@ -707,19 +695,6 @@ pub fn poly_big_to_small(d: &mut [i8], s: &mut [u32], lim: i32, logn: u32) -> bo
             return false;
         }
         d[u] = z as i8;
-    }
-    true
-}
-
-pub fn poly_big_to_small_pointer(d: *mut i8, s: *mut u32, lim: i32, logn: u32) -> bool {
-    let n = mkn!(logn);
-    for u in 0..n {
-        let z: i32;
-        unsafe { z = zint_one_to_plain(*s.wrapping_add(u)); }
-        if z < -lim || z > lim {
-            return false;
-        }
-        unsafe { *d.wrapping_add(u) = z as i8; }
     }
     true
 }
@@ -1684,7 +1659,7 @@ pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [
     let n = mkn!(logn);
     let mut depth: u32;
     let r: u32;
-    let GG: *mut i8;
+
 
     if !solve_ntru_deepest(logn, f, g, tmp) {
         return false;
@@ -1713,28 +1688,27 @@ pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [
             return false;
         }
     }
-    if G.len() <= 0 {
-        GG = tmp.as_mut_ptr().wrapping_add(2 * n).cast();
-    } else {
-        GG = G.as_mut_ptr();
-    }
-
-
-    let (tmp1, tmp2) = tmp.split_at_mut(n);
-    if !poly_big_to_small(F, tmp1, lim, logn)
-        || !poly_big_to_small_pointer(GG, tmp2.as_mut_ptr(), lim, logn) {
-        return false;
-    }
     let (Gt, inter) = tmp.split_at_mut(n);
     let (ft, inter) = inter.split_at_mut(n);
     let (gt, inter) = inter.split_at_mut(n);
     let (Ft, gm) = inter.split_at_mut(n);
+    let GG: &mut [i8];
+    if G.len() <= 0 {
+        GG = bytemuck::pod_align_to_mut:: < u32, i8 > (gt).1;
+    } else {
+        GG = G;
+    }
+
+    if !poly_big_to_small(F, Gt, lim, logn)
+        || !poly_big_to_small(GG, ft, lim, logn) {
+        return false;
+    }
 
     let p = PRIMES[0].p;
     let p0i = modp_ninv31(p);
     modp_mkgm2(gm, Gt, logn, PRIMES[0].g, p, p0i);
     for u in 0..n {
-        unsafe { Gt[u] = modp_set((*GG.wrapping_add(u)) as i32, p); }
+        Gt[u] = modp_set((GG[u]) as i32, p);
     }
 
     for u in 0..n {

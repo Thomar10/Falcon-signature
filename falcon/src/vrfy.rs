@@ -195,13 +195,13 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
     mq_poly_montymul_ntt(tt, h, logn);
     mq_innt(tt, logn);
     mq_poly_sub(tt, c0, logn);
-    let tt = bytemuck::cast_slice_mut::<u16, i16>(tt);
     for u in 0..n {
         let mut w: i32 = tt[u] as i32;
         w -= (Q & (!(((Q >> 1).wrapping_sub(w as u32)) >> 31)).wrapping_add(1)) as i32;
-            tt[u] = w as i16;
+            tt[u] = w as u16;
 
     }
+    let tt = bytemuck::cast_slice_mut::<u16, i16>(tt);
     is_short(tt, s2, logn) != 0
 }
 
