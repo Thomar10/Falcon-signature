@@ -786,10 +786,7 @@ pub(crate) mod tests {
     fn test_keygen() {
         for _ in 0..10 {
             for logn in 1..11 {
-                let mut buffer_size = falcon_tmpsize_keygen!(logn);
-                while buffer_size % 8 != 0 {
-                    buffer_size += 1;
-                }
+                let buffer_size = falcon_tmpsize_keygen!(logn);
                 let (mut rng_rust, rng_c) = init_shake_with_random_context();
                 let mut h: Vec<u16> = vec![0u16; buffer_size];
                 let h_c: Vec<u16> = vec![0u16; buffer_size];

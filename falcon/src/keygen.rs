@@ -427,35 +427,6 @@ pub fn zint_co_reduce(a: &mut [u32], b: &mut [u32], len: usize, xa: i64, xb: i64
     nega | (negb << 1)
 }
 
-pub fn zint_co_reduce_index(a: &mut [u32], a_index: usize, b_index: usize, len: usize, xa: i64, xb: i64, ya: i64, yb: i64) -> u32 {
-    let mut cca: i64 = 0;
-    let mut ccb: i64 = 0;
-    for u in 0..len {
-        let (wa, wb): (u32, u32);
-        let (za, zb): (u64, u64);
-
-        wa = a[u + a_index];
-        wb = a[u + b_index];
-        za = (wa as u64).wrapping_mul(xa as u64).wrapping_add((wb as u64).wrapping_mul(xb as u64)).wrapping_add(cca as u64);
-        zb = (wa as u64).wrapping_mul(ya as u64).wrapping_add((wb as u64).wrapping_mul(yb as u64)).wrapping_add(ccb as u64);
-        if u > 0 {
-            a[u - 1 + a_index] = (za as u32) & 0x7FFFFFFF;
-            a[u - 1 + b_index] = (zb as u32) & 0x7FFFFFFF;
-        }
-        cca = (za as i64) >> 31;
-        ccb = (zb as i64) >> 31;
-    }
-    a[len - 1 + a_index] = cca as u32;
-    a[len - 1 + b_index] = ccb as u32;
-
-    let nega = ((cca as u64) >> 63) as u32;
-    let negb = ((ccb as u64) >> 63) as u32;
-    zint_negate_index(a, a_index, len, nega);
-    zint_negate_index(a, b_index, len, negb);
-    nega | (negb << 1)
-}
-
-
 pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &mut [u32], neg: u32) {
     let mut cc = 0;
     for u in 0..len {
@@ -473,28 +444,6 @@ pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &mut [u32], neg: u32) {
         mw = (m[u] ^ xm) & ym;
         aw = aw.wrapping_sub(mw).wrapping_sub(cc);
         a[u] = aw & 0x7FFFFFFF;
-        cc = aw >> 31;
-    }
-}
-
-
-pub fn zint_finish_mod_index(a: &mut [u32], a_index: usize, len: usize, m: &mut [u32], neg: u32) {
-    let mut cc = 0;
-    for u in 0..len {
-        cc = (a[u + a_index].wrapping_sub(m[u]).wrapping_sub(cc)) >> 31;
-    }
-
-
-    let xm = (!neg).wrapping_add(1) >> 1;
-    let ym = (!(neg | (1 - cc))).wrapping_add(1);
-    cc = neg;
-    for u in 0..len {
-        let (mut aw, mw): (u32, u32);
-
-        aw = a[u + a_index];
-        mw = (m[u] ^ xm) & ym;
-        aw = aw.wrapping_sub(mw).wrapping_sub(cc);
-        a[u + a_index] = aw & 0x7FFFFFFF;
         cc = aw >> 31;
     }
 }
@@ -531,38 +480,6 @@ pub fn zint_co_reduce_mod(a: &mut [u32], b: &mut [u32], m: &mut [u32], len: usiz
     zint_finish_mod(b, len, m, ((ccb as u64) >> 63) as u32);
 }
 
-pub fn zint_co_reduce_mod_index(a: &mut [u32], a_index: usize, b: &mut [u32], b_index: usize, m: &mut [u32], len: usize, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64) {
-    let mut cca: i64 = 0;
-    let mut ccb: i64 = 0;
-    let fa = (a[a_index].wrapping_mul(xa as u32).wrapping_add(b[b_index].wrapping_mul(xb as u32)).wrapping_mul(m0i)) & 0x7FFFFFFF;
-    let fb = (a[a_index].wrapping_mul(ya as u32).wrapping_add(b[b_index].wrapping_mul(yb as u32)).wrapping_mul(m0i)) & 0x7FFFFFFF;
-    for u in 0..len {
-        let (wa, wb): (u32, u32);
-        let (za, zb): (u64, u64);
-
-        wa = a[u + a_index];
-        wb = b[u + b_index];
-
-        za = (wa as u64).wrapping_mul(xa as u64).wrapping_add((wb as u64).wrapping_mul(xb as u64))
-            .wrapping_add((m[u] as u64).wrapping_mul(fa as u64)).wrapping_add(cca as u64);
-        zb = (wa as u64).wrapping_mul(ya as u64).wrapping_add((wb as u64).wrapping_mul(yb as u64))
-            .wrapping_add((m[u] as u64).wrapping_mul(fb as u64)).wrapping_add(ccb as u64);
-
-        if u > 0 {
-            a[u - 1 + a_index] = (za as u32) & 0x7FFFFFFF;
-            b[u - 1 + b_index] = (zb as u32) & 0x7FFFFFFF;
-        }
-        cca = (za as i64) >> 31;
-        ccb = (zb as i64) >> 31;
-    }
-    a[len - 1 + a_index] = cca as u32;
-    b[len - 1 + b_index] = ccb as u32;
-
-
-    zint_finish_mod_index(a, a_index, len, m, ((cca as u64) >> 63) as u32);
-    zint_finish_mod_index(b, b_index, len, m, ((ccb as u64) >> 63) as u32);
-}
-
 pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], len: usize, tmp: &mut [u32]) -> i32 {
     let (u1_index, v1_index, a_index, b_index): (usize, usize, usize, usize);
     let (x0i, y0i): (u32, u32);
@@ -592,6 +509,9 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
     tmp[v1_index..a_index].copy_from_slice(&x);
     tmp[v1_index] -= 1;
 
+    let (u1, inter) = tmp.split_at_mut(len);
+    let (v1, inter) = inter.split_at_mut(len);
+    let (a, b) = inter.split_at_mut(len);
 
     num = 62 * (len as u32) + 30;
     while num >= 30 {
@@ -614,8 +534,8 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
             j -= 1;
             let (aw, bw): (u32, u32);
 
-            aw = tmp[a_index + j];
-            bw = tmp[b_index + j];
+            aw = a[j];
+            bw = b[j];
             a0 ^= (a0 ^ aw) & c0;
             a1 ^= (a1 ^ aw) & c1;
             b0 ^= (b0 ^ bw) & c0;
@@ -631,8 +551,8 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
         b0 &= !c1;
         a_hi = ((a0 as u64) << 31) + a1 as u64;
         b_hi = ((b0 as u64) << 31) + b1 as u64;
-        a_lo = tmp[a_index];
-        b_lo = tmp[b_index];
+        a_lo = a[0];
+        b_lo = b[0];
 
 
         pa = 1;
@@ -673,14 +593,14 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
         }
 
 
-        r = zint_co_reduce_index(tmp, a_index, b_index, len, pa, pb, qa, qb);
+        r = zint_co_reduce(a, b, len, pa, pb, qa, qb);
         pa -= (pa + pa) & -((r & 1) as i64);
         pb -= (pb + pb) & -((r & 1) as i64);
         qa -= (qa + qa) & -((r >> 1) as i64);
         qb -= (qb + qb) & -((r >> 1) as i64);
 
-        zint_co_reduce_mod_index(u, 0, tmp, u1_index, y, len, y0i, pa, pb, qa, qb);
-        zint_co_reduce_mod_index(v, 0, tmp, v1_index, x, len, x0i, pa, pb, qa, qb);
+        zint_co_reduce_mod(u, u1, y, len, y0i, pa, pb, qa, qb);
+        zint_co_reduce_mod(v, v1, x, len, x0i, pa, pb, qa, qb);
 
         num -= 30;
     }
@@ -715,30 +635,6 @@ pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &mut [u32], ylen
         cc = ccu as i32;
     }
 }
-
-pub fn zint_add_scaled_mul_small_index(x: &mut [u32], x_index: usize, xlen: usize, y: &mut [u32], y_index: usize, ylen: usize, k: i32, sch: usize, scl: u32) {
-    let mut cc: i32;
-    let mut tw: u32;
-    if ylen == 0 {
-        return;
-    }
-    let ysign = (!(y[ylen - 1 + y_index] >> 30)).wrapping_add(1) >> 1;
-    tw = 0;
-    cc = 0;
-    for u in sch..xlen {
-        let v: usize = u - sch;
-        let wy = if v < ylen { y[v + y_index] } else { ysign };
-        let wys: u32 = ((wy << scl) & 0x7FFFFFFF) | tw;
-        tw = wy >> (31 - scl);
-
-        let z = ((wys as i64) * (k as i64) + (x[u + x_index] as i64) + (cc as i64)) as u64;
-        x[u + x_index] = (z as u32) & 0x7FFFFFFF;
-
-        let ccu = (z >> 31) as u32;
-        cc = ccu as i32;
-    }
-}
-
 
 pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &mut [u32], ylen: usize, sch: usize, scl: u32) {
     if ylen == 0 {
@@ -833,22 +729,22 @@ pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32]
     let n = mkn!(logn);
     for u in 0..n {
         let mut kf: i32;
-        let mut x_index: usize;
-        let mut y_index: usize;
 
         kf = -k[u];
-        x_index = u * Fstride;
-        y_index = 0;
+        let mut x_stride = u * Fstride;
+        let mut y_stride = 0;
         for v in 0..n {
-            zint_add_scaled_mul_small_index(
-                F, x_index, Flen, f, y_index, flen, kf, sch as usize, scl);
+            let x = F.split_at_mut(x_stride).1;
+            let y = f.split_at_mut(y_stride).1;
+            zint_add_scaled_mul_small(
+                x, Flen, y, flen, kf, sch as usize, scl);
             if u + v == n - 1 {
                 x_index = 0;
                 kf = -kf;
             } else {
-                x_index += Fstride;
+                x_stride += Fstride;
             }
-            y_index += fstride;
+            y_stride += fstride;
         }
     }
 }
@@ -1043,7 +939,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
         }
     }
 
-    // We reborrow everyting as they overflow here again. Reborrowing such that fs allows for overflow
+    // We reborrow everything as they overflow here again. Borrowing such that fs allows for overflow
     let (_, fs) = data.split_at_mut(2 * hn * tlen);
     let (fs, gm) = fs.split_at_mut(2 * n * slen);
     zint_rebuild_CRT(fs, slen, slen, n as u64, &PRIMES, true, gm);
@@ -1125,7 +1021,6 @@ pub fn make_fg(data: &mut [u32], f: &mut [i8], g: &mut [i8], logn: u32, depth: u
     if depth == 0 && out_ntt {
         let p = PRIMES[0].p;
         let p0i = modp_ninv31(p);
-        // Intermediate split to avoid borrow errors :)
         let (gtt, b) = gt.split_at_mut(n);
         let (gm, igm) = b.split_at_mut(n);
         modp_mkgm2(gm, igm, logn, PRIMES[0].g, p, p0i);
