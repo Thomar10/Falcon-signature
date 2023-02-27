@@ -14,7 +14,7 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8], logn: usize) ->
     let crypto_secretkeybytes: usize = if logn == 9 { 1281 } else { 2305 };
     let crypto_publickeybytes: usize = if logn == 9 { 897 } else { 1793 };
     let buff_size: usize = if logn == 9 { 512 } else { 1024 };
-    let mut tmp: Vec<u8> = vec![0; if logn == 9 { 14336+32000 } else { 28672+32000 }];
+    let mut tmp: Vec<u8> = vec![0; if logn == 9 { 14336 } else { 28672 }];
     let mut f: Vec<i8> = vec![0; buff_size];
     let mut g: Vec<i8> = vec![0; buff_size];
     let mut F: Vec<i8> = vec![0; buff_size];

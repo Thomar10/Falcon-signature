@@ -447,10 +447,7 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
 
 
     let tmpkg_len = falcon_tmpsize_keygen!(logn);
-    let mut tmpmp_len = falcon_tmpsize_makepub!(logn);
-    while tmpmp_len % 8 != 0 {
-        tmpmp_len += 1;
-    }
+    let tmpmp_len = falcon_tmpsize_makepub!(logn);
     let tmpsd_len = falcon_tmpsize_signdyn!(logn);
     let tmpst_len = falcon_tmpsize_signtree!(logn);
     let tmpvv_len = falcon_tmpsize_verify!(logn);

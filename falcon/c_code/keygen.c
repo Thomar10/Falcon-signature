@@ -3525,7 +3525,6 @@ solve_NTRU_intermediate(unsigned logn_top,
 		 */
 		sch = (uint32_t)(scale_k / 31);
 		scl = (uint32_t)(scale_k % 31);
-
 		if (depth <= DEPTH_INT_FG) {
 			poly_sub_scaled_ntt(Ft, FGlen, llen, ft, slen, slen,
 				k, sch, scl, logn, t1);
@@ -3537,7 +3536,6 @@ solve_NTRU_intermediate(unsigned logn_top,
 			poly_sub_scaled(Gt, FGlen, llen, gt, slen, slen,
 				k, sch, scl, logn);
 		}
-
 
 		/*
 		 * We compute the new maximum size of (F,G), assuming that
@@ -3572,7 +3570,6 @@ solve_NTRU_intermediate(unsigned logn_top,
 	 * care to re-extend the sign.
 	 */
 	if (FGlen < slen) {
-
 		for (u = 0; u < n; u ++, Ft += llen, Gt += llen) {
 			size_t v;
 			uint32_t sw;

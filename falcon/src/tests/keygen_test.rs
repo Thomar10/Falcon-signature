@@ -561,8 +561,8 @@ pub(crate) mod tests {
                     let tmp_c: [u32; 7 * 1024] = tmp.clone();
                     let sch: u32 = rand::random();
                     let scl: u32 = rand::random();
-                    let lengthF = 3;
-                    let lengthf = 3;
+                    let lengthF = 205;
+                    let lengthf = 205;
                     poly_sub_scaled_ntt(&mut F, lengthF, stride, &mut f, lengthf, stride, &mut k, sch, scl, logn, &mut tmp);
                     unsafe { poly_sub_scaled_ntt_func(F_c.as_ptr(), lengthF, stride, f_c.as_ptr(), lengthf, stride, k_c.as_ptr(), sch, scl, logn, tmp_c.as_ptr()) };
                     assert_eq!(F, F_c);

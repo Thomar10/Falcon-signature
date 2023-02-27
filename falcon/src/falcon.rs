@@ -253,12 +253,12 @@ pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
     if v == 0 {
         return -6;
     }
-    let inter = bytemuck::cast_slice_mut::<i8, u16>(inter);
+    let inter = bytemuck::pod_align_to_mut::<i8, u16>(inter).1;
     let (h, inter) = inter.split_at_mut(n);
 
-    let atmp = bytemuck::cast_slice_mut::<u16, u8>(inter);
+    let atmp = bytemuck::pod_align_to_mut::<u16, u8>(inter).1;
     if !compute_public(h, f, g, logn as u32, atmp) {
-        return -7;
+        return -6;
     }
 
 

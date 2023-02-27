@@ -920,8 +920,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
     zint_rebuild_CRT(fs, slen, slen, n as u64, &PRIMES, true, gm);
     // Now the more tricky, gs overflows into gm! take a copy of gm and give that, recopy the result as gm_copy is mutated.
     let (_, gs) = data.split_at_mut((hn * tlen * 2) + n * slen);
-    // TODO THE COPY SIZE SHOULD ONLY BE SLEN!
-    let copy_size = gs.len() - (hn * tlen * 2) - (n * slen);
+    let copy_size = 2*slen;
     let mut gm_copy = vec![0; copy_size];
     gm_copy.copy_from_slice(&gs[n * slen..n * slen + copy_size]);
     zint_rebuild_CRT(gs, slen, slen, n as u64, &PRIMES, true, &mut gm_copy);
