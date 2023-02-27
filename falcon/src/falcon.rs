@@ -189,7 +189,7 @@ pub fn falcon_keygen_make(mut rng: &mut InnerShake256Context, logn: u32, private
         let inter = bytemuck::cast_slice_mut::<u8, i8>(tmp);
         let (f, inter) = inter.split_at_mut(n);
         let (g, inter) = inter.split_at_mut(n);
-        let inter = unsafe { inter.align_to_mut::<u16>().1 };
+        let inter = bytemuck::pod_align_to_mut::<i8, u16>(inter).1;
         let (h, inter) = inter.split_at_mut(n);
         let atmp = bytemuck::cast_slice_mut(inter);
         if !compute_public(h, f, g, logn, atmp) {
