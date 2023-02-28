@@ -9,7 +9,7 @@ mod tests {
 
     #[test]
     fn run_test_falcon() {
-        run_falcon_tests();
+       run_falcon_tests();
         assert_eq!(1, 1);
     }
 

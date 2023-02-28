@@ -1,5 +1,3 @@
-use std::ptr::null_mut;
-
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::hash_to_point_vartime;
 use crate::katrng::randombytes;
@@ -31,24 +29,24 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8], logn: usize) ->
     i_shake256_inject(&mut rng, &mut seed);
     i_shake256_flip(&mut rng);
 
-    keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), null_mut(), h.as_mut_ptr(), logn as u32, tmp.as_mut_ptr());
+    keygen(&mut rng, &mut f, &mut g, &mut F, &mut [], &mut h, logn as u32, &mut tmp);
     sk[0] = (0x50 + logn) as u8;
     let mut u = 1;
     let mut v = trim_i8_encode(&mut sk, u, crypto_secretkeybytes - u,
-                               f.as_mut_slice(), logn as u32, max_fg_bits[logn] as u32);
+                               f.as_slice(), logn as u32, max_fg_bits[logn] as u32);
     if v == 0 {
         return false;
     }
     u += v;
     v = trim_i8_encode(sk, u, crypto_secretkeybytes - u,
-                       g.as_mut_slice(), logn as u32, max_fg_bits[logn] as u32);
+                       g.as_slice(), logn as u32, max_fg_bits[logn] as u32);
     if v == 0 {
         return false;
     }
 
     u += v;
     v = trim_i8_encode(sk, u, crypto_secretkeybytes - u,
-                       F.as_mut_slice(), logn as u32, max_FG_bits[logn] as u32);
+                       F.as_slice(), logn as u32, max_FG_bits[logn] as u32);
 
     if v == 0 {
         return false;
@@ -59,7 +57,7 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8], logn: usize) ->
     }
 
     pk[0] = (0x00 + logn) as u8;
-    v = modq_encode(&mut pk, 1, crypto_publickeybytes - 1, h.as_mut_slice(), logn as u32);
+    v = modq_encode(&mut pk, 1, crypto_publickeybytes - 1, h.as_slice(), logn as u32);
     if v != crypto_publickeybytes - 1 {
         return false;
     }
@@ -106,7 +104,7 @@ pub fn crypto_sign(sm: &mut [u8], mut m: &mut [u8], mlen: usize, sk: &mut [u8], 
     if u != crypto_secretkeybytes {
         return (false, 0);
     }
-    if !complete_private(G.as_mut_slice(), f.as_mut_slice(), g.as_mut_slice(), F.as_mut_slice(), logn as u32, tmp.as_mut_slice()) {
+    if !complete_private(G.as_mut_slice(), f.as_slice(), g.as_slice(), F.as_slice(), logn as u32, tmp.as_mut_slice()) {
         return (false, 0);
     }
 
@@ -124,12 +122,12 @@ pub fn crypto_sign(sm: &mut [u8], mut m: &mut [u8], mlen: usize, sk: &mut [u8], 
     i_shake256_inject(&mut rng, &mut seed);
     i_shake256_flip(&mut rng);
 
-    sign_dyn(sig.as_mut_slice(), &mut rng, f.as_mut_slice(), g.as_mut_slice(), F.as_mut_slice(), G.as_mut_slice(), h.as_mut_slice(), logn as u32, tmp.as_mut_slice());
+    sign_dyn(sig.as_mut_slice(), &mut rng, f.as_slice(), g.as_slice(), F.as_slice(), G.as_slice(), h.as_slice(), logn as u32, tmp.as_mut_slice());
 
     esig[0] = (0x20 + logn) as u8;
     let esig_len = esig.len() - 1;
 
-    let mut sig_len = comp_encode(&mut esig, 1, esig_len, sig.as_mut_slice(), logn);
+    let mut sig_len = comp_encode(&mut esig, 1, esig_len, sig.as_slice(), logn);
     if sig_len == 0 {
         return (false, 0);
     }
@@ -184,7 +182,7 @@ pub fn crypto_sign_open(msg: &mut [u8], signature: &mut [u8], slen: usize, pk: &
 
     hash_to_point_vartime(&mut rng, &mut hm, logn as u32);
 
-    if !verify_raw(hm.as_mut_slice(), sig.as_mut_slice(), h.as_mut_slice(), logn as u32, b.as_mut_slice()) {
+    if !verify_raw(hm.as_slice(), sig.as_slice(), h.as_slice(), logn as u32, b.as_mut_slice()) {
         return (false, 0);
     }
     msg.copy_from_slice(&mut signature[2 + NONCE..2 + NONCE + msg_len]);

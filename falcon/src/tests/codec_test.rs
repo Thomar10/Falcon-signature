@@ -13,21 +13,21 @@ mod tests {
         let mut rng = rand::thread_rng();
         // Values must not be above / below (1 << bits) - 1. Below ensures this.
         let f: [i8; 512] = core::array::from_fn(|_| rng.gen::<i8>());
-        let mut vec = f.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
-        let mut f_input = vec.as_mut_slice();
+        let vec = f.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
+        let f_input = vec.as_slice();
 
         let g: [i8; 512] = core::array::from_fn(|_| rng.gen::<i8>());
-        let mut vec = g.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
-        let mut g_input = vec.as_mut_slice();
+        let vec = g.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
+        let g_input = vec.as_slice();
 
         let ff: [i8; 512] = core::array::from_fn(|_| rng.gen::<i8>());
-        let mut vec = ff.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
-        let mut ff_input = vec.as_mut_slice();
+        let vec = ff.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
+        let ff_input = vec.as_slice();
         sk[0] = 0x50 + 9;
         sk_c[0] = 0x50 + 9;
         let mut u_r = 1;
         let mut u_c = 1;
-        let mut size_r = trim_i8_encode(&mut sk, u_r, max_out - u_r, &mut f_input, 9, max_fg_bits[9] as u32);
+        let mut size_r = trim_i8_encode(&mut sk, u_r, max_out - u_r, f_input, 9, max_fg_bits[9] as u32);
         let mut size_c = unsafe {
             let x: *mut u8 = sk_c.as_mut_ptr().add(u_c);
             falcon_inner_trim_i8_encode(x.cast(), max_out - u_c, f_input.as_ptr(), 9, max_fg_bits[9] as u32)
@@ -36,7 +36,7 @@ mod tests {
         u_c += size_c;
         assert_eq!(size_c, size_r);
         assert_eq!(sk, sk_c);
-        size_r = trim_i8_encode(&mut sk, u_r, max_out - u_r, &mut g_input, 9, max_fg_bits[9] as u32);
+        size_r = trim_i8_encode(&mut sk, u_r, max_out - u_r, g_input, 9, max_fg_bits[9] as u32);
         size_c = unsafe {
             let x: *mut u8 = sk_c.as_mut_ptr().add(u_c);
             falcon_inner_trim_i8_encode(x.cast(), max_out - u_c, g_input.as_ptr(), 9, max_fg_bits[9] as u32)
@@ -45,7 +45,7 @@ mod tests {
         u_c += size_c;
         assert_eq!(size_c, size_r);
         assert_eq!(sk, sk_c);
-        size_r = trim_i8_encode(&mut sk, u_r, max_out - u_r, &mut ff_input, 9, max_FG_bits[9] as u32);
+        size_r = trim_i8_encode(&mut sk, u_r, max_out - u_r, ff_input, 9, max_FG_bits[9] as u32);
         size_c = unsafe {
             let x: *mut u8 = sk_c.as_mut_ptr().add(u_c);
             falcon_inner_trim_i8_encode(x.cast(), max_out - u_c, ff_input.as_ptr(), 9, max_FG_bits[9] as u32)
@@ -66,13 +66,13 @@ mod tests {
         let mut rng = rand::thread_rng();
         // Values must not be above / below (1 << bits) - 1. Below ensures this.
         let f: [i16; 512] = core::array::from_fn(|_| rng.gen::<i16>());
-        let mut vec = f.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
-        let mut f_input = vec.as_mut_slice();
+        let vec = f.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
+        let f_input = vec.as_slice();
         sk[0] = 0x50 + 9;
         sk_c[0] = 0x50 + 9;
         let u_r = 1;
         let u_c = 1;
-        let size_r = trim_i16_encode(&mut sk, u_r, max_out - u_r, &mut f_input, 9, max_fg_bits[9] as u32);
+        let size_r = trim_i16_encode(&mut sk, u_r, max_out - u_r, f_input, 9, max_fg_bits[9] as u32);
         let size_c = unsafe {
             let x: *mut u8 = sk_c.as_mut_ptr().add(u_c);
             falcon_inner_trim_i16_encode(x.cast(), max_out - u_c, f_input.as_ptr(), 9, max_fg_bits[9] as u32)
@@ -88,20 +88,20 @@ mod tests {
         let mut sk_c: [u8; 1281] = [0; 1281];
         let mut rng = rand::thread_rng();
         let f: [i16; 512] = core::array::from_fn(|_| rng.gen::<i16>());
-        let mut vec = f.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
-        let mut f_input = vec.as_mut_slice();
+        let vec = f.iter().map(|x| x & ((1 << 4) - 1)).collect::<Vec<_>>();
+        let f_input = vec.as_slice();
         sk[0] = 0x50 + 9;
         sk_c[0] = 0x50 + 9;
         let u_r = 1;
         let u_c = 1;
-        trim_i16_encode(&mut sk, u_r, max_out - u_r, &mut f_input, 9, max_fg_bits[9] as u32);
+        trim_i16_encode(&mut sk, u_r, max_out - u_r, f_input, 9, max_fg_bits[9] as u32);
         unsafe {
             let x: *mut u8 = sk_c.as_mut_ptr().add(u_c);
             falcon_inner_trim_i16_encode(x.cast(), max_out - u_c, f_input.as_ptr(), 9, max_fg_bits[9] as u32)
         };
         let mut x: [i16; 512] = [0; 512];
         let x_c: [i16; 512] = [0; 512];
-        let in_sizer = trim_i16_decode(&mut x, 9, max_fg_bits[9] as u32, &mut sk, 0, 512 - 1);
+        let in_sizer = trim_i16_decode(&mut x, 9, max_fg_bits[9] as u32, &sk, 0, 512 - 1);
         let in_sizec = unsafe { falcon_inner_trim_i16_decode(x_c.as_ptr(), 9, max_fg_bits[9] as u32, sk_c.as_ptr().cast(), 512 - 1) };
         assert_eq!(x, x_c);
         assert_eq!(in_sizer, in_sizec);
@@ -127,7 +127,7 @@ mod tests {
         };
         let mut x: [i8; 512] = [0; 512];
         let x_c: [i8; 512] = [0; 512];
-        let in_sizer = trim_i8_decode(&mut x, 9, max_fg_bits[9] as u32, &mut sk, 0, 512 - 1);
+        let in_sizer = trim_i8_decode(&mut x, 9, max_fg_bits[9] as u32, &sk, 0, 512 - 1);
         let in_sizec = unsafe { falcon_inner_trim_i8_decode(x_c.as_ptr(), 9, max_fg_bits[9] as u32, sk_c.as_ptr().cast(), 512 - 1) };
         assert_eq!(x, x_c);
         assert_eq!(in_sizer, in_sizec);

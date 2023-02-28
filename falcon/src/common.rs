@@ -1,5 +1,3 @@
-use std::slice::from_raw_parts_mut;
-
 use crate::shake::{i_shake256_extract, InnerShake256Context};
 
 const L2BOUND: [u32; 11] = [
@@ -53,8 +51,7 @@ pub fn hash_to_point_vartime(sc: &mut InnerShake256Context, x: &mut [u16], logn:
 pub fn hash_to_point_ct(sc: &mut InnerShake256Context, x: &mut [u16], logn: u32, tmp: &mut [u8]) {
     let over: u32;
     let n = 1usize << logn;
-    let tt: *mut u16 = tmp.as_mut_ptr().cast();
-    let tt1: &mut [u16] = unsafe { from_raw_parts_mut(tt, n) };
+    let tt1: &mut [u16] = bytemuck::pod_align_to_mut(tmp).1;
 
     let mut tt2: [u16; 63] = [0; 63];
     let n2 = n << 1;
@@ -121,26 +118,24 @@ pub fn hash_to_point_ct(sc: &mut InnerShake256Context, x: &mut [u16], logn: u32,
     }
 }
 
-pub fn is_short(s1: *mut i16, s2: &mut [i16], logn: u32) -> i32 {
+pub fn is_short(s1: &[i16], s2: &[i16], logn: u32) -> i32 {
     let n = 1usize << logn;
     let mut s: u32 = 0;
     let mut ng: u32 = 0;
-    let mut s1: *mut i16 = s1;
     for u in 0..n {
         let mut z: i32;
-        unsafe { z = *s1 as i32; }
+        z = s1[u] as i32;
         s = s.wrapping_add((z * z) as u32);
         ng |= s;
         z = s2[u] as i32;
         s = s.wrapping_add((z * z) as u32);
         ng |= s;
-        s1 = s1.wrapping_add(1);
     }
     s |= (!(ng >> 31)).wrapping_add(1);
     return (s <= L2BOUND[logn as usize]) as i32;
 }
 
-pub fn is_short_half(mut sqn: u32, s2: &mut [i16], logn: u32) -> i32 {
+pub fn is_short_half(mut sqn: u32, s2: &[i16], logn: u32) -> i32 {
     let n = 1usize << logn;
     let mut ng = (!(sqn >> 31)).wrapping_add(1);
     for u in 0..n {

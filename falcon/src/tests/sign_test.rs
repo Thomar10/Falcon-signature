@@ -7,7 +7,7 @@ mod tests {
     use crate::common::hash_to_point_vartime;
     use crate::falcon_c::keygen_c::falcon_inner_keygen;
     use crate::falcon_c::rng_c::Prng as PrngC;
-    use crate::falcon_c::shake_c::{InnerShake256Context as InnerShake256ContextC};
+    use crate::falcon_c::shake_c::InnerShake256Context as InnerShake256ContextC;
     use crate::falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, smallints_to_fpr_func as smallints_to_fpr_c};
     use crate::fpr::{fpr_div, fpr_of, FPR_SIGMA_MIN};
     use crate::keygen::keygen;
@@ -338,7 +338,7 @@ mod tests {
             i_shake256_flip(&mut sc);
             hash_to_point_vartime(&mut sc, &mut hm, LOGN as u32);
 
-            keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), LOGN as u32, tmp.as_mut_ptr());
+            keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, LOGN as u32, &mut tmp);
 
             unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), LOGN as u32, tmp_c.as_ptr()); }
 
@@ -391,7 +391,7 @@ mod tests {
             let mut G: [i8; 1024] = [0; 1024];
 
             let mut tmp_keygen: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
-            keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), LOGN as u32, tmp_keygen.as_mut_ptr());
+            keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, LOGN as u32, &mut tmp_keygen);
 
             const EXKLENGTH: usize = (LOGN + 40) << LOGN;
             let mut expanded_key: [fpr; EXKLENGTH] = [0; EXKLENGTH];

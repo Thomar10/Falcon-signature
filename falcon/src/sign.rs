@@ -151,7 +151,6 @@ pub struct SamplerContext {
 
 type SamplerZ = fn(&mut SamplerContext, fpr, fpr) -> i32;
 
-//TODO test
 #[allow(non_snake_case)]
 pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0: &mut [fpr],
                               t1: &mut [fpr], g00: &mut [fpr], g01: &mut [fpr], g11: &mut [fpr],
@@ -207,10 +206,9 @@ pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0:
     poly_merge_fft(t0, z00, z01, logn);
 }
 
-//TODO test
 #[allow(non_snake_case)]
 pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [fpr],
-                      z1: &mut [fpr], tree: &mut [fpr], t0: &mut [fpr], t1: &mut [fpr], logn: u32, tmp: &mut [fpr]) {
+                      z1: &mut [fpr], tree: &[fpr], t0: &mut [fpr], t1: &[fpr], logn: u32, tmp: &mut [fpr]) {
 
     if logn == 2 {
         let (_, treerest) = tree.split_at(4);
@@ -356,7 +354,7 @@ pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [f
     let n: usize = 1 << logn;
     let hn: usize = n >> 1;
 
-    let tree1: &mut [fpr] = &mut tree[n + ffLDL_treesize(logn - 1) as usize..];
+    let tree1: &[fpr] = &tree[n + ffLDL_treesize(logn - 1) as usize..];
 
 
     let (z10, z11) = z1.split_at_mut(hn);
@@ -372,7 +370,7 @@ pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [f
     poly_add(tmp, t0, logn);
 
 
-    let tree0: &mut [fpr] = &mut tree[n..];
+    let tree0: &[fpr] = &tree[n..];
 
     let (z00, z01) = z0.split_at_mut(hn);
     poly_split_fft(z00, z01, tmp, logn);
@@ -384,15 +382,15 @@ pub fn ffSampling_fft(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [f
 
 
 pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
-                    expanded_key: &mut [fpr], hm: &[u16], logn: u32, tmp: &mut [fpr]) -> bool {
+                    expanded_key: &[fpr], hm: &[u16], logn: u32, tmp: &mut [fpr]) -> bool {
     let n: usize = MKN!(logn);
     let (t0, tmprest) = tmp.split_at_mut(n);
     let (t1, tmprest) = tmprest.split_at_mut(n);
 
-    let (b00, inter) = expanded_key.split_at_mut(n);
-    let (b01, inter) = inter.split_at_mut(n);
-    let (b10, inter) = inter.split_at_mut(n);
-    let (b11, tree) = inter.split_at_mut(n);
+    let (b00, inter) = expanded_key.split_at(n);
+    let (b01, inter) = inter.split_at(n);
+    let (b10, inter) = inter.split_at(n);
+    let (b11, tree) = inter.split_at(n);
 
     for u in 0..n {
         t0[u] = fpr_of(hm[u] as i64);
@@ -452,7 +450,6 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
     return false;
 }
 
-//TODO test
 #[allow(non_snake_case)]
 pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
                    f: &[i8], g: &[i8], F: &[i8], G: &[i8], hm: &[u16], logn: u32, tmp: &mut [fpr]) -> bool {
@@ -809,7 +806,7 @@ pub fn BerExp(p: &mut Prng, x: fpr, ccs: fpr) -> i32 {
 }
 
 
-pub fn sign_tree(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: &mut [fpr], hm: &[u16],
+pub fn sign_tree(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: &[fpr], hm: &[u16],
                  logn: u32, tmp: &mut [u8]) {
 
     let ftmp: &mut [fpr] = bytemuck::cast_slice_mut(tmp);

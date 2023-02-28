@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+
 use aes::Aes256;
 use aes::cipher::{BlockEncrypt, KeyInit};
 use aes::cipher::generic_array::GenericArray;
@@ -11,7 +12,7 @@ thread_local!(static CONTEXT: RefCell<Aes256Drbg> = RefCell::new(Aes256Drbg {
 
 
 // Does not have personalized string and security as they dont use them...
-pub fn randombytes_init(entropy: &mut [u8]) {
+pub fn randombytes_init(entropy: &[u8]) {
     CONTEXT.with(|aes| {
         aes.borrow_mut().key = [0; 32];
         aes.borrow_mut().v = [0; 16];
@@ -63,7 +64,7 @@ fn aes_ecb(buffer: &mut [u8]) {
     });
 }
 
-fn aes_ctr_update(provided_data: &mut [u8]) {
+fn aes_ctr_update(provided_data: &[u8]) {
     let mut tmp: [u8; 48] = [0; 48];
 
     for i in 0..3 {

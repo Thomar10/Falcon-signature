@@ -1,6 +1,3 @@
-use std::ptr::null_mut;
-use std::slice::from_raw_parts_mut;
-
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::keygen::keygen;
@@ -111,7 +108,7 @@ pub fn shake256_init(rng: &mut InnerShake256Context) {
     i_shake256_init(rng);
 }
 
-pub fn shake256_inject(rng: &mut InnerShake256Context, data: &mut [u8]) {
+pub fn shake256_inject(rng: &mut InnerShake256Context, data: &[u8]) {
     i_shake256_inject(rng, data);
 }
 
@@ -119,7 +116,6 @@ pub fn shake256_flip(rng: &mut InnerShake256Context) {
     i_shake256_flip(rng);
 }
 
-// TODO EXTRACT MUTATE INSTEAD?
 pub fn shake256_extract(rng: &mut InnerShake256Context, out: &mut [u8], len: usize) {
     let vec = i_shake256_extract(rng, len);
     out.copy_from_slice(vec.as_slice());
@@ -149,7 +145,7 @@ pub(crate) fn set_fpu_cw(x: u32) -> u32 {
 }
 
 #[allow(non_snake_case)]
-pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key: &mut [u8],
+pub fn falcon_keygen_make(mut rng: &mut InnerShake256Context, logn: u32, mut sk: &mut [u8],
                           private_len: usize, public_key: &mut [u8], public_len: usize,
                           tmp: &mut [u8], tmp_len: usize) -> i32 {
     if logn < 1 || logn > 10 {
@@ -161,38 +157,32 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
         return -2;
     }
     let n = 1usize << logn;
-    let f: *mut u8 = tmp.as_mut_ptr().cast();
-    let mut f_slice;
-    unsafe { f_slice = from_raw_parts_mut(f.cast(), n); };
-    let g = f.wrapping_add(n);
-    let mut g_slice;
-    unsafe { g_slice = from_raw_parts_mut(g.cast(), n); };
-    let F = g.wrapping_add(n);
-    let mut F_slice;
-    unsafe { F_slice = from_raw_parts_mut(F.cast(), n); };
-    let atmp: *mut u8 = F.wrapping_add(n);
+    let inter = bytemuck::cast_slice_mut::<u8, i8>(tmp);
+    let (f, inter) = inter.split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
+    let (F, atmp) = inter.split_at_mut(n);
+    let atmp = bytemuck::cast_slice_mut::<i8, u8>(atmp);
 
-    keygen(rng, f.cast(), g.cast(), F.cast(), null_mut(), null_mut(), logn, atmp);
+    keygen(&mut rng, f, g, F, &mut [], &mut [], logn as u32, atmp);
 
-    let mut sk = private_key;
     let sk_len = falcon_privatekey_size!(logn) as usize;
     sk[0] = (0x50 + logn) as u8;
     let mut u = 1;
     let mut v = trim_i8_encode(&mut sk, u, sk_len - u,
-                               &mut f_slice, logn, max_fg_bits[logn as usize] as u32);
+                               f, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
         return -6;
     }
     u += v;
     v = trim_i8_encode(sk, u, sk_len - u,
-                       &mut g_slice, logn, max_fg_bits[logn as usize] as u32);
+                       g, logn, max_fg_bits[logn as usize] as u32);
     if v == 0 {
         return -6;
     }
 
     u += v;
     v = trim_i8_encode(sk, u, sk_len - u,
-                       &mut F_slice, logn, max_FG_bits[logn as usize] as u32);
+                       F, logn, max_FG_bits[logn as usize] as u32);
 
     if v == 0 {
         return -6;
@@ -202,16 +192,18 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
         return -6;
     }
     if public_key.len() > 0 {
-        let h: *mut u16 = g.wrapping_add(n).cast();
-        let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
-        let atmp: *mut u8 = h.wrapping_add(n).cast();
-        if !compute_public(h, f.cast(), g.cast(), logn, atmp) {
+        let inter = bytemuck::cast_slice_mut::<u8, i8>(tmp);
+        let (f, inter) = inter.split_at_mut(n);
+        let (g, inter) = inter.split_at_mut(n);
+        let inter = bytemuck::pod_align_to_mut::<i8, u16>(inter).1;
+        let (h, inter) = inter.split_at_mut(n);
+        let atmp = bytemuck::cast_slice_mut(inter);
+        if !compute_public(h, f, g, logn, atmp) {
             return -6;
         }
-        let public_key = public_key;
         public_key[0] = (0x00 + logn) as u8;
         let pk_len = falcon_publickey_size!(logn) as usize;
-        v = modq_encode(public_key, 1, pk_len - 1, &mut h_slice, logn);
+        v = modq_encode(public_key, 1, pk_len - 1, h, logn);
         if v != pk_len - 1 {
             return -6;
         }
@@ -220,7 +212,7 @@ pub fn falcon_keygen_make(rng: &mut InnerShake256Context, logn: u32, private_key
     0
 }
 
-pub fn falcon_get_logn(key: &mut [u8], len: usize) -> i32 {
+pub fn falcon_get_logn(key: &[u8], len: usize) -> i32 {
     if len == 0 {
         return -1;
     }
@@ -231,7 +223,7 @@ pub fn falcon_get_logn(key: &mut [u8], len: usize) -> i32 {
     logn
 }
 
-pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
+pub fn falcon_make_public(sk: &[u8], private_len: usize,
                           pk: &mut [u8], public_len: usize,
                           tmp: &mut [u8], tmp_len: usize) -> i32 {
     if private_len == 0 {
@@ -251,43 +243,43 @@ pub fn falcon_make_public(mut sk: &mut [u8], private_len: usize,
         return -6;
     }
     let n: usize = 1 << logn;
-    let fp: *mut i8 = tmp.as_mut_ptr().cast();
-    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
-    let gp = fp.wrapping_add(n);
-    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
+    let tmp = bytemuck::cast_slice_mut::<u8, i8>(tmp);
+    let (f, inter) = tmp.split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
     let mut u = 1;
     let mut v = trim_i8_decode(f, logn as u32, max_fg_bits[logn] as u32,
-                               &mut sk, u, private_len - u);
+                               &sk, u, private_len - u);
     if v == 0 {
         return -6;
     }
     u += v;
     v = trim_i8_decode(g, logn as u32, max_fg_bits[logn] as u32,
-                       &mut sk, u, private_len - u);
+                       &sk, u, private_len - u);
     if v == 0 {
         return -6;
     }
-    let h: *mut u16 = gp.wrapping_add(n).cast();
-    let mut h_slice = unsafe { from_raw_parts_mut(h, n) };
-    let atmp: *mut u8 = h.wrapping_add(n).cast();
-    if !compute_public(h, fp, gp, logn as u32, atmp) {
-        return -7;
+    let inter = bytemuck::pod_align_to_mut::<i8, u16>(inter).1;
+    let (h, inter) = inter.split_at_mut(n);
+
+    let atmp = bytemuck::pod_align_to_mut::<u16, u8>(inter).1;
+    if !compute_public(h, f, g, logn as u32, atmp) {
+        return -6;
     }
 
 
     pk[0] = (0x00 + logn) as u8;
     let pk_len = falcon_publickey_size!(logn) as usize;
-    v = modq_encode(pk, 1, pk_len - 1, &mut h_slice, logn as u32);
+    v = modq_encode(pk, 1, pk_len - 1, h, logn as u32);
     if v != pk_len - 1 {
-        return -8;
+        return -6;
     }
     0
 }
 
 
 pub fn falcon_sign_dyn(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                       signature_type: i32, private_key: &mut [u8],
-                       private_len: usize, data: &mut [u8],
+                       signature_type: i32, private_key: &[u8],
+                       private_len: usize, data: &[u8],
                        tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
@@ -302,7 +294,7 @@ pub fn falcon_sign_dyn(mut rng: &mut InnerShake256Context, signature: &mut [u8],
 
 #[allow(non_snake_case)]
 pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
-                                sk: &mut [u8], sk_len: usize,
+                                sk: &[u8], sk_len: usize,
                                 tmp: &mut [u8], tmp_len: usize) -> i32 {
     if sk_len == 0 {
         return -6;
@@ -361,8 +353,8 @@ pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
 }
 
 pub fn falcon_sign_tree(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                        signature_type: i32, expanded_key: &mut [u8],
-                        data: &mut [u8],
+                        signature_type: i32, expanded_key: &[u8],
+                        data: &[u8],
                         tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
@@ -383,21 +375,10 @@ pub fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
     0
 }
 
-fn align_fpr(tmp: &mut [u16]) -> &mut [u8] {
-    // let offset = tmp.as_mut_ptr().align_offset(align_of::<fpr>());
-    // if offset < tmp.len() - 1 {
-    //     let fpr_ptr = tmp.as_mut_ptr().add(offset).cast::<fpr>();
-    //     bytemuck::pod_align_to_mut()
-    // } else {
-    //     panic!("Alignment indexes out of bound");
-    // }
-    let (_, fpr, _) = bytemuck::pod_align_to_mut::<u16, fpr>(tmp);
-    bytemuck::cast_slice_mut(fpr)
-}
 
 #[allow(non_snake_case)]
 pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                              signature_type: i32, private_key: &mut [u8],
+                              signature_type: i32, private_key: &[u8],
                               private_len: usize,
                               mut hash_data: &mut InnerShake256Context, nonce: &mut [u8],
                               tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
@@ -443,9 +424,9 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
     let (g, inter) = inter.split_at_mut(n);
     let (F, inter) = inter.split_at_mut(n);
     let (G, inter) = inter.split_at_mut(n);
-    let (_, inter, _) = bytemuck::pod_align_to_mut::<i8, u16>(inter);
+    let inter = bytemuck::pod_align_to_mut::<i8, u16>(inter).1;
     let (hm, inter) = inter.split_at_mut(n);
-    let atmp: &mut [u8] = align_fpr(inter);
+    let atmp: &mut [u8] = bytemuck::cast_slice_mut(bytemuck::pod_align_to_mut::<u16, fpr>(inter).1);
     let mut u = 1;
     let mut v = trim_i8_decode(f, logn, max_fg_bits[logn as usize] as u32, sk, u,
                                private_len - u);
@@ -526,7 +507,7 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
 }
 
 pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                               signature_type: i32, expanded_key: &mut [u8],
+                               signature_type: i32, expanded_key: &[u8],
                                mut hash_data: &mut InnerShake256Context,
                                nonce: &mut [u8],
                                tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
@@ -541,8 +522,8 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
     if signature_len < 41 {
         return (-6, 0);
     }
-    let (_, expkey) = expanded_key.split_at_mut(8); // alignment
-    let expkey = bytemuck::cast_slice_mut(expkey);
+    let (_, expkey) = expanded_key.split_at(8); // alignment
+    let expkey = bytemuck::cast_slice(expkey);
     match signature_type {
         FALCON_SIG_COMPRESS => {}
         FALCON_SIG_PADDED => {
@@ -615,8 +596,8 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
     }
 }
 
-pub fn falcon_verify(signature: &mut [u8], signature_len: usize, signature_type: i32,
-                     public_key: &mut [u8], public_len: usize,
+pub fn falcon_verify(signature: &[u8], signature_len: usize, signature_type: i32,
+                     public_key: &[u8], public_len: usize,
                      data: &mut [u8],
                      tmp: &mut [u8], tmp_len: usize) -> i32 {
     let mut hd: InnerShake256Context = InnerShake256Context {
@@ -631,17 +612,17 @@ pub fn falcon_verify(signature: &mut [u8], signature_len: usize, signature_type:
     falcon_verify_finish(signature, signature_len, signature_type, public_key, public_len, &mut hd, tmp, tmp_len)
 }
 
-pub fn falcon_verify_start(mut hash_data: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize) -> i32 {
+pub fn falcon_verify_start(mut hash_data: &mut InnerShake256Context, signature: &[u8], signature_len: usize) -> i32 {
     if signature_len < 41 {
         return -6;
     }
     shake256_init(&mut hash_data);
-    shake256_inject(&mut hash_data, &mut signature[1..41]);
+    shake256_inject(&mut hash_data, &signature[1..41]);
     0
 }
 
-pub fn falcon_verify_finish(signature: &mut [u8], signature_len: usize, signature_type: i32,
-                            public_key: &mut [u8], public_len: usize,
+pub fn falcon_verify_finish(signature: &[u8], signature_len: usize, signature_type: i32,
+                            public_key: &[u8], public_len: usize,
                             mut hash_data: &mut InnerShake256Context,
                             tmp: &mut [u8], tmp_len: usize) -> i32 {
     if signature_len < 41 || public_len == 0 {
@@ -703,10 +684,12 @@ pub fn falcon_verify_finish(signature: &mut [u8], signature_len: usize, signatur
     }
 
     let n: usize = 1 << logn;
-    let h: &mut [u16] = unsafe { from_raw_parts_mut(tmp.as_mut_ptr().cast(), n) };
-    let hm = unsafe { from_raw_parts_mut(h.as_mut_ptr().wrapping_add(n), n) };
-    let sv: &mut [i16] = unsafe { from_raw_parts_mut(hm.as_mut_ptr().wrapping_add(n).cast(), n) };
-    let atmp: &mut [u8] = unsafe { from_raw_parts_mut(sv.as_mut_ptr().wrapping_add(n).cast(), n) };
+    let inter = bytemuck::pod_align_to_mut::<u8, u16>(tmp).1;
+    let (h, inter) = inter.split_at_mut(n);
+    let (hm, inter) = inter.split_at_mut(n);
+    let inter = bytemuck::cast_slice_mut::<u16, i16>(inter);
+    let (sv, inter) = inter.split_at_mut(n);
+    let atmp = bytemuck::pod_align_to_mut::<i16, u8>(inter).1;
 
     if modq_decode(h, logn as u32, public_key, 1, public_len - 1) != public_len - 1 {
         return -6;
