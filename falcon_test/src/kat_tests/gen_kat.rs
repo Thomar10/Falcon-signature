@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -21,8 +23,8 @@ pub fn genkat_logn(logn: usize) {
     let check_file = File::open(check_file_path).expect("Could not open file!");
     let buf_reader = BufReader::new(check_file);
 
-    let pk_len: usize = if logn == 9 {897} else {1793};
-    let sk_len: usize = if logn == 9 {1281} else {2305};
+    let pk_len: usize = if logn == 9 { 897 } else { 1793 };
+    let sk_len: usize = if logn == 9 { 1281 } else { 2305 };
     let mut pk: Vec<u8> = vec![0; pk_len];
     let mut sk: Vec<u8> = vec![0; sk_len];
     let mut seed: Vec<u8>;

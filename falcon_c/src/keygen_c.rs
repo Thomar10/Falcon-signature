@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 
-use crate::falcon_c::shake_c::InnerShake256Context;
+use crate::shake_c::InnerShake256Context;
 
 #[link(name = "keygen", kind = "static")]
 extern "C" {

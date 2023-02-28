@@ -367,7 +367,7 @@ pub fn falcon_sign_tree(mut rng: &mut InnerShake256Context, signature: &mut [u8]
                             &mut hd, &mut nonce, tmp, tmp_len)
 }
 
-pub fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
+fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
                          mut hash_data: &mut InnerShake256Context) -> i32 {
     shake256_extract(&mut rng, nonce, nonce.len());
     shake256_init(&mut hash_data);
@@ -377,7 +377,7 @@ pub fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
 
 
 #[allow(non_snake_case)]
-pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                               signature_type: i32, private_key: &[u8],
                               private_len: usize,
                               mut hash_data: &mut InnerShake256Context, nonce: &mut [u8],
@@ -506,7 +506,7 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
     }
 }
 
-pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
+fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                                signature_type: i32, expanded_key: &[u8],
                                mut hash_data: &mut InnerShake256Context,
                                nonce: &mut [u8],
@@ -598,7 +598,7 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
 
 pub fn falcon_verify(signature: &[u8], signature_len: usize, signature_type: i32,
                      public_key: &[u8], public_len: usize,
-                     data: &mut [u8],
+                     data: &[u8],
                      tmp: &mut [u8], tmp_len: usize) -> i32 {
     let mut hd: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
@@ -612,7 +612,7 @@ pub fn falcon_verify(signature: &[u8], signature_len: usize, signature_type: i32
     falcon_verify_finish(signature, signature_len, signature_type, public_key, public_len, &mut hd, tmp, tmp_len)
 }
 
-pub fn falcon_verify_start(mut hash_data: &mut InnerShake256Context, signature: &[u8], signature_len: usize) -> i32 {
+fn falcon_verify_start(mut hash_data: &mut InnerShake256Context, signature: &[u8], signature_len: usize) -> i32 {
     if signature_len < 41 {
         return -6;
     }
@@ -621,7 +621,7 @@ pub fn falcon_verify_start(mut hash_data: &mut InnerShake256Context, signature: 
     0
 }
 
-pub fn falcon_verify_finish(signature: &[u8], signature_len: usize, signature_type: i32,
+fn falcon_verify_finish(signature: &[u8], signature_len: usize, signature_type: i32,
                             public_key: &[u8], public_len: usize,
                             mut hash_data: &mut InnerShake256Context,
                             tmp: &mut [u8], tmp_len: usize) -> i32 {

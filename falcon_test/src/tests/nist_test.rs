@@ -2,7 +2,8 @@
 mod tests {
     use core::ptr::null;
 
-    use crate::falcon_c::nist_c::{crypto_sign_keypair_func, randombytes_init_func};
+    use falcon_c::nist_c::{crypto_sign_keypair_func, randombytes_init_func};
+
     use crate::katrng::randombytes_init;
     use crate::nist::crypto_sign_keypair;
 

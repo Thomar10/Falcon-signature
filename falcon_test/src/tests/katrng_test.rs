@@ -4,7 +4,8 @@ mod tests {
 
     use rand::Rng;
 
-    use crate::falcon_c::nist_c::{randombytes_func, randombytes_init_func};
+    use falcon_c::nist_c::{randombytes_func, randombytes_init_func};
+
     use crate::katrng::{randombytes, randombytes_init};
 
     #[test]

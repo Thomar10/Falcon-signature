@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(FalconC C)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 add_library(codec STATIC codec.c api.h fpr.h inner.h)
 add_library(common STATIC common.c api.h fpr.h inner.h)
 add_library(fft STATIC fft.c api.h fpr.h inner.h)

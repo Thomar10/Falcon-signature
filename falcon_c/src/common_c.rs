@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::falcon_c::shake_c::InnerShake256Context;
+use crate::shake_c::InnerShake256Context;
 
 #[link(name = "common", kind = "static")]
 
