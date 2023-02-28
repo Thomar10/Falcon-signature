@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(non_snake_case)]
 
 use crate::falcon_c::shake_c::InnerShake256Context;
 
@@ -53,6 +54,7 @@ extern "C" {
 }
 
 #[repr(C)]
+#[allow(non_camel_case_types)]
 pub struct small_prime {
     pub p: u32,
     pub g: u32,

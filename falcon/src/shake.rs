@@ -1,6 +1,8 @@
+use alloc::vec::Vec;
+
 pub struct InnerShake256Context {
-    pub(crate) st: [u64; 25],
-    pub(crate) dptr: u64,
+    pub st: [u64; 25],
+    pub dptr: u64,
 }
 
 //Round constants

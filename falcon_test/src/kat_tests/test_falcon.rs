@@ -2,20 +2,20 @@
 #![allow(non_snake_case)]
 
 use std::ffi::CString;
-use std::slice::from_raw_parts_mut;
 
-use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
-use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
-use crate::common::{hash_to_point_ct, hash_to_point_vartime};
-use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
+use falcon::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
+use falcon::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
+use falcon::common::{hash_to_point_ct, hash_to_point_vartime};
+use falcon::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
+use falcon::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
+use falcon::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint};
+use falcon::keygen::keygen;
+use falcon::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
+use falcon::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
+use falcon::sign::{expand_privkey, sign_dyn, sign_tree};
+use falcon::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
+
 use crate::falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int, Sha1Context};
-use crate::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
-use crate::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint};
-use crate::keygen::keygen;
-use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
-use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
-use crate::sign::{expand_privkey, sign_dyn, sign_tree};
-use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
 
 pub fn run_falcon_tests() {
     test_shake256();
@@ -30,7 +30,7 @@ pub fn run_falcon_tests() {
     test_nist_kat(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
 }
 
-pub(crate) fn test_sign() {
+pub fn test_sign() {
     print!("Test sign : ");
     const TLEN: usize = 178176;
     let mut tmp: [u8; TLEN] = [0; TLEN];
@@ -125,7 +125,7 @@ fn test_sign_self(f: &[i8], g: &[i8],
 }
 
 
-pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
+pub fn test_nist_kat(logn: u32, srefhash: &str) {
     print!("Test NIST KAT {}: ", logn);
 
     let mut entropy_input = [0u8; 48];
@@ -295,7 +295,7 @@ pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
     println!(" done.");
 }
 
-pub(crate) fn test_poly() {
+pub fn test_poly() {
     print!("Test polynomials: ");
     const TLEN: usize = 40960;
     let mut tmp: [u8; TLEN] = [0; TLEN];
@@ -413,7 +413,7 @@ fn make_rand_poly(mut p: &mut Prng, f: &mut [fpr], logn: usize) {
     }
 }
 
-pub(crate) fn test_external_api() {
+pub fn test_external_api() {
     print!("Test external API: ");
     let mut rng: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
@@ -649,7 +649,7 @@ fn test_external_api_inner(logn: u32, mut rng: &mut InnerShake256Context) {
     }
 }
 
-pub(crate) fn test_keygen() {
+pub fn test_keygen() {
     print!("Test keygen: ");
     const TLEN: usize = 90112;
     let mut tmp: [u8; TLEN] = [0; TLEN];
@@ -725,7 +725,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
 }
 
 
-pub(crate) fn test_rng() {
+pub fn test_rng() {
     print!("Test RNG: ");
     let mut rng: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
@@ -758,7 +758,7 @@ pub(crate) fn test_rng() {
     println!(" done.");
 }
 
-pub(crate) fn test_vrfy() {
+pub fn test_vrfy() {
     print!("Test verify: ");
     const TLEN: usize = 15000;
     let mut tmp: [u8; TLEN] = [0; TLEN];
@@ -867,7 +867,7 @@ fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
     print!(" ");
 }
 
-pub(crate) fn test_codec() {
+pub fn test_codec() {
     print!("Test encode/decode: ");
 
     const TLEN: usize = 8192;
@@ -890,13 +890,9 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
     i_shake256_inject(&mut rng, &mut [logn as u8; 1]);
     i_shake256_flip(&mut rng);
     for _ in 0..10 {
-        let m1p: *mut u16 = tmp.as_mut_ptr().cast();
-        let mut m1: &mut [u16];
-        unsafe { m1 = from_raw_parts_mut(m1p, n); }
-        let m2p = m1p.wrapping_add(n);
-        let mut m2: &mut [u16];
-        unsafe { m2 = from_raw_parts_mut(m2p, n); }
-
+        let (m1, inter) = bytemuck::pod_align_to_mut::<u8, u16>(tmp).1.split_at_mut(n);
+        let (mut m2, ee) = inter.split_at_mut(n);
+        let ee = bytemuck::pod_align_to_mut::<u16, u8>(ee).1;
         let mut maxlen = tlen - 4 * n;
 
         for u in 0..n {
@@ -909,26 +905,23 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
                 | ((extract[3] as u32) << 24);
             m1[u] = (w % Q) as u16;
         }
-        let mut len1 = modq_encode(&mut [], 0, 0, &mut m1, logn);
+        let mut len1 = modq_encode(&mut [], 0, 0, &m1, logn);
         if len1 != (((n * 14) + 7) >> 3) {
             panic!("Error modq encode(0): {}", len1);
         }
-        len1 = modq_encode(tmp, 4 * n, maxlen, &mut m1, logn);
+        len1 = modq_encode(ee, 0, maxlen, &m1, logn);
         if len1 != (((n * 14) + 7) >> 3) {
             panic!("Error modq encode: {}", len1);
         }
-        let mut len2 = modq_decode(&mut m2, logn, tmp, 4 * n, len1);
+        let mut len2 = modq_decode(&mut m2, logn, ee, 0, len1);
         if len2 != len1 {
             panic!("Error modq decode: {}", len2);
         }
         assert_eq!(m1, m2, "modq encode/decode");
 
-        let s1p: *mut i16 = tmp.as_mut_ptr().cast();
-        let mut s1: &mut [i16];
-        unsafe { s1 = from_raw_parts_mut(s1p, n); }
-        let s2p = s1p.wrapping_add(n);
-        let s2: &mut [i16];
-        unsafe { s2 = from_raw_parts_mut(s2p, n); }
+        let (s1, inter) = bytemuck::pod_align_to_mut::<u8, i16>(tmp).1.split_at_mut(n);
+        let (s2, ee) = inter.split_at_mut(n);
+        let ee = bytemuck::pod_align_to_mut::<i16, u8>(ee).1;
         maxlen = tlen - 4 * n;
         for bits in 4..=12 {
             let mask1: u32 = 1 << (bits - 1);
@@ -942,37 +935,34 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
                 s1[u] = if (w & mask1) != 0 { (-(a as i32)) as i16 } else { a as i32 as i16 }
             }
 
-            len1 = trim_i16_encode(&mut [], 0, 0, &mut s1, logn, bits);
+            len1 = trim_i16_encode(&mut [], 0, 0, &s1, logn, bits);
             if len1 != (((n * bits as usize) + 7) >> 3) {
                 panic!("Error trim_i16 encode(0) {}", len1);
             }
-            len1 = trim_i16_encode(tmp, 4 * n, maxlen, &mut s1, logn, bits);
+            len1 = trim_i16_encode(ee, 0, maxlen, &s1, logn, bits);
             if len1 != (((n * bits as usize) + 7) >> 3) {
                 panic!("Error trim_i16 encode {}", len1);
             }
-            len2 = trim_i16_decode(s2, logn, bits, tmp, 4 * n, len1);
+            len2 = trim_i16_decode(s2, logn, bits, ee, 0, len1);
             if len2 != len1 {
                 panic!("Error trim_i16 decode {}", len2);
             }
             assert_eq!(s1, s2, "trim_i16 encode/decode");
             s2.fill(0);
-            len1 = comp_encode(tmp, 4 * n, maxlen, s1, logn as usize);
+            len1 = comp_encode(ee, 0, maxlen, s1, logn as usize);
             if len1 == 0 {
                 panic!("Error comp encode: {}", len1);
             }
-            len2 = comp_decode(s2, logn, tmp, 4 * n, len1);
+            len2 = comp_decode(s2, logn, ee, 0, len1);
             if len2 != len1 {
                 panic!("Error comp decode: {} != {}", len2, len1);
             }
             assert_eq!(s1, s2, "comp encode/decode");
         }
 
-        let b1p: *mut i8 = tmp.as_mut_ptr().cast();
-        let b1: &mut [i8];
-        unsafe { b1 = from_raw_parts_mut(b1p, n); }
-        let b2p = b1p.wrapping_add(n);
-        let b2: &mut [i8];
-        unsafe { b2 = from_raw_parts_mut(b2p, n); }
+        let (b1, inter) = bytemuck::pod_align_to_mut::<u8, i8>(tmp).1.split_at_mut(n);
+        let (b2, ee) = inter.split_at_mut(n);
+        let ee = bytemuck::pod_align_to_mut::<i8, u8>(ee).1;
         maxlen = tlen - 2 * n;
         for bits in 4..=8 {
             let mask1: u32 = 1 << (bits - 1);
@@ -989,12 +979,12 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
                 panic!("Error trim_i8 encode(0): {}", len1);
             }
 
-            len1 = trim_i8_encode(tmp, 2 * n, maxlen, b1, logn, bits);
+            len1 = trim_i8_encode(ee, 0, maxlen, b1, logn, bits);
             if len1 != (((n * bits as usize) + 7) >> 3) {
                 panic!("Error trim_i8 encode(0): {}", len1);
             }
 
-            len2 = trim_i8_decode(b2, logn, bits, tmp, 2 * n, len1);
+            len2 = trim_i8_decode(b2, logn, bits, ee, 0, len1);
             if len2 != len1 {
                 panic!("Error trim_i8 decode: {}", len2);
             }
@@ -1003,7 +993,7 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
     }
 }
 
-pub(crate) fn test_shake256() {
+pub fn test_shake256() {
     print!("Test SHAKE256: ");
     test_shake256_kat("", "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be");
     test_shake256_kat("dc5a100fa16df1583c79722a0d72833d3bf22c109b8889dbd35213c6bfce205813edae3242695cfd9f59b9a1c203c1b72ef1a5423147cb990b5316a85266675894e2644c3f9578cebe451a09e58c53788fe77a9e850943f8a275f830354b0593a762bac55e984db3e0661eca3cb83f67a6fb348e6177f7dee2df40c4322602f094953905681be3954fe44c4c902c8f6bba565a788b38f13411ba76ce0f9f6756a2a2687424c5435a51e62df7a8934b6e141f74c6ccf539e3782d22b5955d3baf1ab2cf7b5c3f74ec2f9447344e937957fd7f0bdfec56d5d25f61cde18c0986e244ecf780d6307e313117256948d4230ebb9ea62bb302cfe80d7dfebabc4a51d7687967ed5b416a139e974c005fff507a96", "2bac5716803a9cda8f9e84365ab0a681327b5ba34fdedfb1c12e6e807f45284b");

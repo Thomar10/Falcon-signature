@@ -1,10 +1,11 @@
-use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i8_decode, trim_i8_encode};
-use crate::common::hash_to_point_vartime;
+use falcon::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i8_decode, trim_i8_encode};
+use falcon::common::hash_to_point_vartime;
+use falcon::keygen::keygen;
+use falcon::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
+use falcon::sign::sign_dyn;
+use falcon::vrfy::{complete_private, to_ntt_monty, verify_raw};
+
 use crate::katrng::randombytes;
-use crate::keygen::keygen;
-use crate::shake::{i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
-use crate::sign::sign_dyn;
-use crate::vrfy::{complete_private, to_ntt_monty, verify_raw};
 
 const NONCE: usize = 40;
 

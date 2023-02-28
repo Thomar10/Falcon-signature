@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use crate::shake::{i_shake256_extract, InnerShake256Context};
 
 //TODO maybe we don't need a union and can avoid using unsafe?
@@ -5,16 +6,16 @@ use crate::shake::{i_shake256_extract, InnerShake256Context};
 //That is probably not needed in rust and should be removed
 
 pub union State {
-    pub(crate) d: [u8; 256],
+    pub d: [u8; 256],
     d32: [u32; 64],
     d64: [u64; 32],
 }
 
 pub struct Prng {
-    pub(crate) buf: [u8; 512],
-    pub(crate) ptr: usize,
-    pub(crate) state: State,
-    pub(crate) typ: i32
+    pub buf: [u8; 512],
+    pub ptr: usize,
+    pub state: State,
+    pub typ: i32
 }
 
 pub fn prng_init(p: &mut Prng, src: &mut InnerShake256Context) -> () {

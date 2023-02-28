@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+#![allow(non_snake_case)]
+
 use std::ffi::c_void;
 
 use crate::falcon_c::rng_c::Prng;

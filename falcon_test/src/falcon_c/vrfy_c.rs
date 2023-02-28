@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#[allow(non_snake_case)]
 #[link(name = "vrfy", kind = "static")]
 extern "C" {
     pub fn mq_add_func(x: u32, y: u32) -> u32;

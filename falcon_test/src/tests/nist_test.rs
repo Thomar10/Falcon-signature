@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::ptr::null;
+    use core::ptr::null;
 
     use crate::falcon_c::nist_c::{crypto_sign_keypair_func, randombytes_init_func};
     use crate::katrng::randombytes_init;
@@ -8,6 +8,7 @@ mod tests {
 
     #[test]
     fn test_crypto_sign_keypair() {
+
         let mut pk: [u8; 897] = [0; 897];
         let pk_c = [0u8; 897];
         let mut sk: [u8; 1281] = [0; 1281];
