@@ -1,5 +1,3 @@
-use std::ptr::null_mut;
-
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::hash_to_point_vartime;
 use crate::katrng::randombytes;
@@ -31,7 +29,7 @@ pub fn crypto_sign_keypair(mut pk: &mut [u8], mut sk: &mut [u8], logn: usize) ->
     i_shake256_inject(&mut rng, &mut seed);
     i_shake256_flip(&mut rng);
 
-    keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), null_mut(), h.as_mut_ptr(), logn as u32, tmp.as_mut_ptr());
+    keygen(&mut rng, &mut f, &mut g, &mut F, &mut [], &mut h, logn as u32, &mut tmp);
     sk[0] = (0x50 + logn) as u8;
     let mut u = 1;
     let mut v = trim_i8_encode(&mut sk, u, crypto_secretkeybytes - u,

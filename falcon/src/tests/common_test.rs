@@ -46,7 +46,7 @@ mod tests {
                 let s1_c = s1.clone();
                 let mut s2: [i16; 512] = core::array::from_fn(|_| rng.gen::<i16>());
                 let s2_c = s2.clone();
-                let res = is_short(s1.as_mut_ptr(), &mut s2, logn);
+                let res = is_short(&mut s1, &mut s2, logn);
                 let res_c = unsafe { is_short_func(s1_c.as_ptr(), s2_c.as_ptr(), logn) };
                 assert_eq!(res, res_c);
             }
