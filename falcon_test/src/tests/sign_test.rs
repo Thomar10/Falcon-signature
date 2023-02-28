@@ -354,6 +354,58 @@ mod tests {
 
     #[test]
     #[allow(non_snake_case)]
+    fn test_sign_dyn_same() {
+        for _ in 0..100 {
+
+            const LOGN: usize = 4;
+
+            const BUFFER_SIZE: usize = 2048 * 8;
+            let (mut rng_rust, _) = init_shake_with_random_context();
+
+            let mut sig: [i16; 1024] = [0; 1024];
+            let sig_c: [i16; 1024];
+            let mut h: [u16; 1024] = [0; 1024];
+            let h_c: [u16; 1024] = [0; 1024];
+            let mut f: [i8; 1024] = [0; 1024];
+            let f_c: [i8; 1024] = [0; 1024];
+            let mut g: [i8; 1024] = [0; 1024];
+            let g_c: [i8; 1024] = [0; 1024];
+            let mut F: [i8; 1024] = [0; 1024];
+            let F_c: [i8; 1024] = [0; 1024];
+            let mut G: [i8; 1024] = [0; 1024];
+            let G_c: [i8; 1024] = [0; 1024];
+
+            let mut tmp: Vec<u8> = vec![0; BUFFER_SIZE];
+            let tmp_c: Vec<u8> = vec![0; BUFFER_SIZE];
+
+            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
+
+            let (mut rng_rust, rng_c) = init_shake_with_random_context();
+
+            let (mut sc, _) = init_shake_with_random_context();
+            i_shake256_inject(&mut sc, &msg);
+            i_shake256_flip(&mut sc);
+            hash_to_point_vartime(&mut sc, bytemuck::cast_slice_mut(&mut sig), LOGN as u32);
+
+            keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), LOGN as u32, tmp.as_mut_ptr());
+
+            unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), LOGN as u32, tmp_c.as_ptr()); }
+
+            sig_c = sig.clone();
+
+            sign_dyn_same(&mut sig, &mut rng_rust, &f, &g, &F, &G, LOGN as u32, &mut tmp);
+
+            unsafe {
+                falcon_inner_sign_dyn(sig_c.as_ptr(), &rng_c as *const InnerShake256ContextC, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), sig_c.as_ptr() as *const u16, LOGN as u32, tmp_c.as_ptr())
+            }
+
+            assert_eq!(tmp, tmp_c);
+            assert_eq!(sig, sig_c);
+        }
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
     fn test_sign_tree() {
         for _ in 0..100 {
             const LOGN: usize = 4;
