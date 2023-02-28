@@ -118,7 +118,7 @@ pub fn hash_to_point_ct(sc: &mut InnerShake256Context, x: &mut [u16], logn: u32,
     }
 }
 
-pub fn is_short(s1: &mut [i16], s2: &mut [i16], logn: u32) -> i32 {
+pub fn is_short(s1: &[i16], s2: &[i16], logn: u32) -> i32 {
     let n = 1usize << logn;
     let mut s: u32 = 0;
     let mut ng: u32 = 0;
@@ -135,7 +135,7 @@ pub fn is_short(s1: &mut [i16], s2: &mut [i16], logn: u32) -> i32 {
     return (s <= L2BOUND[logn as usize]) as i32;
 }
 
-pub fn is_short_half(mut sqn: u32, s2: &mut [i16], logn: u32) -> i32 {
+pub fn is_short_half(mut sqn: u32, s2: &[i16], logn: u32) -> i32 {
     let n = 1usize << logn;
     let mut ng = (!(sqn >> 31)).wrapping_add(1);
     for u in 0..n {

@@ -144,7 +144,7 @@ pub fn mq_innt(a: &mut [u16], logn: u32) {
 
 pub fn compute_public(h: &mut [u16], f: &[i8], g: &[i8], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
-    let tt: &mut [u16] = unsafe { tmp.align_to_mut::<u16>().1 };
+    let tt: &mut [u16] = bytemuck::pod_align_to_mut::<u8, u16>(tmp).1;
 
     for u in 0..n {
         tt[u] = mq_conv_small(f[u] as i32) as u16;
@@ -167,21 +167,21 @@ pub fn to_ntt_monty(h: &mut [u16], logn: u32) {
     mq_poly_tomonty(h, logn);
 }
 
-pub fn mq_poly_montymul_ntt(f: &mut [u16], g: &mut [u16], logn: u32) {
+pub fn mq_poly_montymul_ntt(f: &mut [u16], g: &[u16], logn: u32) {
     let n = 1usize << logn;
     for u in 0..n {
         f[u] = mq_montymul(f[u] as u32, g[u] as u32) as u16;
     }
 }
 
-pub fn mq_poly_sub(f: &mut [u16], g: &mut [u16], logn: u32) {
+pub fn mq_poly_sub(f: &mut [u16], g: &[u16], logn: u32) {
     let n = 1usize << logn;
     for u in 0..n {
         f[u] = mq_sub(f[u] as u32, g[u] as u32) as u16;
     }
 }
 
-pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp: &mut [u8]) -> bool {
+pub fn verify_raw(c0: &[u16], s2: &[i16], h: &[u16], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
     let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
 
@@ -198,8 +198,7 @@ pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp:
     for u in 0..n {
         let mut w: i32 = tt[u] as i32;
         w -= (Q & (!(((Q >> 1).wrapping_sub(w as u32)) >> 31)).wrapping_add(1)) as i32;
-            tt[u] = w as u16;
-
+        tt[u] = w as u16;
     }
     let tt = bytemuck::cast_slice_mut::<u16, i16>(tt);
     is_short(tt, s2, logn) != 0
@@ -246,7 +245,7 @@ pub fn complete_private(G: &mut [i8], f: &[i8], g: &[i8], F: &[i8], logn: u32, t
     true
 }
 
-pub fn is_invertible(s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
+pub fn is_invertible(s2: &[i16], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
     let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
     for u in 0..n {
@@ -262,7 +261,7 @@ pub fn is_invertible(s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
     (1 - (r >> 31)) != 0
 }
 
-pub fn verify_recover(h: &mut [u16], c0: &mut [u16], s1: &mut [i16], s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
+pub fn verify_recover(h: &mut [u16], c0: &[u16], s1: &[i16], s2: &[i16], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
     let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
     for u in 0..n {
@@ -289,7 +288,7 @@ pub fn verify_recover(h: &mut [u16], c0: &mut [u16], s1: &mut [i16], s2: &mut [i
     (r >> 31) != 0
 }
 
-pub fn count_nttzero(sig: &mut [i16], logn: u32, tmp: &mut [u8]) -> i32 {
+pub fn count_nttzero(sig: &[i16], logn: u32, tmp: &mut [u8]) -> i32 {
     let n = 1usize << logn;
     let s2: &mut [u16] = bytemuck::cast_slice_mut(tmp);
     for u in 0..n {

@@ -5,7 +5,7 @@ pub(crate) mod tests {
     use crate::falcon_c::keygen_c::{falcon_inner_keygen, get_rng_u64_func, make_fg_func, make_fg_step_func, mkgauss_func, modp_add_func, modp_div_func, modp_iNTT2_ext_func, modp_mkgm2_func, modp_montymul_func, modp_ninv31_func, modp_norm_func, modp_NTT2_ext_func, modp_poly_rec_res_func, modp_R2_func, modp_R_func, modp_Rx_func, modp_set_func, modp_sub_func, poly_big_to_fp_func, poly_big_to_small_func, poly_small_mkgauss_func, poly_small_sqnorm_func, poly_small_to_fp_func, poly_sub_scaled_func, poly_sub_scaled_ntt_func, small_prime, solve_NTRU_binary_depth0_func, solve_NTRU_binary_depth1_func, solve_NTRU_deepest_func, solve_NTRU_func, solve_NTRU_intermediate_func, zint_add_mul_small_func, zint_add_scaled_mul_small_func, zint_bezout_func, zint_co_reduce_func, zint_co_reduce_mod_func, zint_finish_mod_func, zint_mod_small_signed_func, zint_mod_small_unsigned_func, zint_mul_small_func, zint_negate_func, zint_norm_zero_func, zint_one_to_plain_func, zint_rebuild_CRT_func, zint_sub_func, zint_sub_scaled_func};
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};
     use crate::falcon_tmpsize_keygen;
-    use crate::keygen::{get_rng_u64, keygen, make_fg, make_fg_step, mkgauss, modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, poly_big_to_fp, poly_big_to_small, poly_small_mkgauss, poly_small_sqnorm, poly_small_to_fp, poly_sub_scaled, poly_sub_scaled_ntt, PRIMES, solve_ntru, solve_ntru_binary_depth0, solve_ntru_binary_depth1, solve_ntru_deepest, solve_ntru_intermediate, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_sub, zint_sub_scaled};
+    use crate::keygen::{get_rng_u64, keygen, make_fg, make_fg_step, mkgauss, modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, poly_big_to_fp, poly_big_to_small, poly_small_mkgauss, poly_small_sqnorm, poly_small_to_fp, poly_sub_scaled, poly_sub_scaled_ntt, solve_ntru, solve_ntru_binary_depth0, solve_ntru_binary_depth1, solve_ntru_deepest, solve_ntru_intermediate, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_sub, zint_sub_scaled};
     use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
 
     #[test]
@@ -157,11 +157,11 @@ pub(crate) mod tests {
                     let mut rng = rand::thread_rng();
                     let mut a: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let a_c: [u32; 1024] = a.clone();
-                    let mut gm: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let gm: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let gm_c: [u32; 1024] = gm.clone();
                     let p: u32 = rand::random();
                     let p0i: u32 = rand::random();
-                    modp_NTT2_ext(&mut a, stride, &mut gm, logn, p, p0i);
+                    modp_NTT2_ext(&mut a, stride, &gm, logn, p, p0i);
                     unsafe { modp_NTT2_ext_func(a_c.as_ptr(), stride, gm_c.as_ptr(), logn, p, p0i) };
                     assert_eq!(a, a_c);
                 }
@@ -178,11 +178,11 @@ pub(crate) mod tests {
                     let mut rng = rand::thread_rng();
                     let mut a: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let a_c: [u32; 1024] = a.clone();
-                    let mut gm: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let gm: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let gm_c: [u32; 1024] = gm.clone();
                     let p: u32 = rand::random();
                     let p0i: u32 = rand::random();
-                    modp_iNTT2_ext(&mut a, stride, &mut gm, logn, p, p0i);
+                    modp_iNTT2_ext(&mut a, stride, &gm, logn, p, p0i);
                     unsafe { modp_iNTT2_ext_func(a_c.as_ptr(), stride, gm_c.as_ptr(), logn, p, p0i) };
                     assert_eq!(a, a_c);
                 }
@@ -213,11 +213,11 @@ pub(crate) mod tests {
             let mut rng = rand::thread_rng();
             let mut a: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let a_c: [u32; 1024] = a.clone();
-            let mut b: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+            let b: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let b_c: [u32; 1024] = b.clone();
             let len: usize = a.len();
             let ctl: bool = rand::random();
-            let res = zint_sub(&mut a, &mut b, len, ctl as u32);
+            let res = zint_sub(&mut a, &b, len, ctl as u32);
             let c_res = unsafe { zint_sub_func(a_c.as_ptr(), b_c.as_ptr(), len, ctl as u32) };
             assert_eq!(res, c_res);
         }
@@ -275,11 +275,11 @@ pub(crate) mod tests {
             let mut rng = rand::thread_rng();
             let mut x: [u32; 1025] = core::array::from_fn(|_| rng.gen::<u32>());
             let x_c: [u32; 1025] = x.clone();
-            let mut y: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let y_c: [u32; 1024] = y.clone();
             let len: usize = y.len();
             let s: u32 = rand::random();
-            let res = zint_add_mul_small(&mut x, &mut y, len, s);
+            let res = zint_add_mul_small(&mut x, &y, len, s);
             let c_res = unsafe { zint_add_mul_small_func(x_c.as_ptr(), y_c.as_ptr(), len, s) };
             assert_eq!(res, c_res);
         }
@@ -291,10 +291,10 @@ pub(crate) mod tests {
             let mut rng = rand::thread_rng();
             let mut x: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let x_c: [u32; 1024] = x.clone();
-            let mut p: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+            let p: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let p_c: [u32; 1024] = p.clone();
             let len: usize = x.len();
-            let res = zint_norm_zero(&mut x, &mut p, len);
+            let res = zint_norm_zero(&mut x, &p, len);
             let c_res = unsafe { zint_norm_zero_func(x_c.as_ptr(), p_c.as_ptr(), len) };
             assert_eq!(res, c_res);
         }
@@ -311,7 +311,7 @@ pub(crate) mod tests {
                 let len: usize = 100;
                 let mut tmp: [u32; 512] = core::array::from_fn(|_| rng.gen::<u32>());
                 let tmp_c: [u32; 512] = tmp.clone();
-                zint_rebuild_CRT(&mut xx, len, stride, num, &PRIMES, false, &mut tmp);
+                zint_rebuild_CRT(&mut xx, len, stride, num, false, &mut tmp);
                 unsafe { zint_rebuild_CRT_func(xx.as_ptr(), len, stride, num, PRIMES_C.as_ptr(), 0, tmp_c.as_ptr()) };
                 assert_eq!(tmp, tmp_c);
             }
@@ -324,7 +324,7 @@ pub(crate) mod tests {
                 let len: usize = 100;
                 let mut tmp: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                 let tmp_c: [u32; 1024] = tmp.clone();
-                zint_rebuild_CRT(&mut xx, len, stride, num, &PRIMES, true, &mut tmp);
+                zint_rebuild_CRT(&mut xx, len, stride, num, true, &mut tmp);
                 unsafe { zint_rebuild_CRT_func(xx.as_ptr(), len, stride, num, PRIMES_C.as_ptr(), 1, tmp_c.as_ptr()) };
                 assert_eq!(tmp, tmp_c);
             }
@@ -370,11 +370,11 @@ pub(crate) mod tests {
             let mut rng = rand::thread_rng();
             let mut a: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let a_c: [u32; 1024] = a.clone();
-            let mut m: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+            let m: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let m_c: [u32; 1024] = m.clone();
             let len: usize = a.len();
             let neg: u32 = rand::random();
-            zint_finish_mod(&mut a, len, &mut m, neg);
+            zint_finish_mod(&mut a, len, &m, neg);
             unsafe { zint_finish_mod_func(a_c.as_ptr(), len, m_c.as_ptr(), neg) };
             assert_eq!(a, a_c);
         }
@@ -388,7 +388,7 @@ pub(crate) mod tests {
             let a_c: [u32; 1024] = a.clone();
             let mut b: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let b_c: [u32; 1024] = b.clone();
-            let mut m: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+            let m: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let m_c: [u32; 1024] = m.clone();
             let len: usize = a.len();
             let m0i: u32 = rand::random();
@@ -397,7 +397,7 @@ pub(crate) mod tests {
             let ya: i64 = rand::random();
             let yb: i64 = rand::random();
 
-            zint_co_reduce_mod(&mut a, &mut b, &mut m, len, m0i, xa, xb, ya, yb);
+            zint_co_reduce_mod(&mut a, &mut b, &m, len, m0i, xa, xb, ya, yb);
             unsafe { zint_co_reduce_mod_func(a_c.as_ptr(), b_c.as_ptr(), m_c.as_ptr(), len, m0i, xa, xb, ya, yb) };
             assert_eq!(a, a_c);
             assert_eq!(b, b_c);
@@ -412,14 +412,14 @@ pub(crate) mod tests {
             let u_c: [u32; 300] = u.clone();
             let mut v: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
             let v_c: [u32; 300] = v.clone();
-            let mut x: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let x: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
             let x_c: [u32; 300] = x.clone();
-            let mut y: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
             let y_c: [u32; 300] = y.clone();
             let mut tmp: [u32; 300 * 4] = [0; 1200];
             let tmp_c: [u32; 300 * 4] = tmp.clone();
             let len: usize = u.len();
-            let res = zint_bezout(&mut u, &mut v, &mut x, &mut y, len, &mut tmp);
+            let res = zint_bezout(&mut u, &mut v, &x, &y, len, &mut tmp);
             let c_res = unsafe { zint_bezout_func(u_c.as_ptr(), v_c.as_ptr(), x_c.as_ptr(), y_c.as_ptr(), len, tmp_c.as_ptr()) };
             assert_eq!(x, x_c);
             assert_eq!(y, y_c);
@@ -437,13 +437,13 @@ pub(crate) mod tests {
             let mut x: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let x_c: [u32; 1024] = x.clone();
             let xlen: usize = x.len();
-            let mut y: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let y_c: [u32; 1024] = y.clone();
             let ylen: usize = y.len();
             let k: i32 = rand::random();
             let sch: u32 = rand::random();
             let scl: u32 = rand::random();
-            zint_add_scaled_mul_small(&mut x, xlen, &mut y, ylen, k, sch as usize, scl);
+            zint_add_scaled_mul_small(&mut x, xlen, &y, ylen, k, sch as usize, scl);
             unsafe { zint_add_scaled_mul_small_func(x_c.as_ptr(), xlen, y_c.as_ptr(), ylen, k, sch, scl) };
             assert_eq!(x, x_c);
             assert_eq!(y, y_c);
@@ -457,12 +457,12 @@ pub(crate) mod tests {
             let mut x: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let x_c: [u32; 1024] = x.clone();
             let xlen: usize = x.len();
-            let mut y: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
             let y_c: [u32; 1024] = y.clone();
             let ylen: usize = y.len();
             let sch: u32 = rand::random();
             let scl: u32 = rand::random();
-            zint_sub_scaled(&mut x, xlen, &mut y, ylen, sch as usize, scl);
+            zint_sub_scaled(&mut x, xlen, &y, ylen, sch as usize, scl);
             unsafe { zint_sub_scaled_func(x_c.as_ptr(), xlen, y_c.as_ptr(), ylen, sch, scl) };
             assert_eq!(x, x_c);
             assert_eq!(y, y_c);
@@ -490,9 +490,9 @@ pub(crate) mod tests {
                     let mut rng = rand::thread_rng();
                     let mut d: [u64; 1024] = [0; 1024];
                     let d_c: [u64; 1024] = d.clone();
-                    let mut f: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let f: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let f_c: [u32; 1024] = f.clone();
-                    poly_big_to_fp(&mut d, &mut f, 5, fstride, logn);
+                    poly_big_to_fp(&mut d, &f, 5, fstride, logn);
                     unsafe { poly_big_to_fp_func(d_c.as_ptr(), f_c.as_ptr(), 5, fstride, logn) };
                     println!("{:?}", d);
                     assert_eq!(d, d_c);
@@ -508,10 +508,10 @@ pub(crate) mod tests {
                 let mut rng = rand::thread_rng();
                 let mut d: [i8; 1024] = [0; 1024];
                 let d_c: [i8; 1024] = d.clone();
-                let mut s: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                let s: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                 let s_c: [u32; 1024] = s.clone();
                 let lim: i32 = rand::random();
-                let res = poly_big_to_small(&mut d, &mut s, lim, logn);
+                let res = poly_big_to_small(&mut d, &s, lim, logn);
                 let res_c = unsafe { poly_big_to_small_func(d_c.as_ptr(), s_c.as_ptr(), lim, logn) };
                 assert_eq!(res, res_c != 0);
                 assert_eq!(d, d_c);
@@ -528,15 +528,15 @@ pub(crate) mod tests {
                     let mut rng = rand::thread_rng();
                     let mut F: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let F_c: [u32; 1024] = F.clone();
-                    let mut f: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let f: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let f_c: [u32; 1024] = f.clone();
-                    let mut k: [i32; 1024] = core::array::from_fn(|_| rng.gen::<i32>());
+                    let k: [i32; 1024] = core::array::from_fn(|_| rng.gen::<i32>());
                     let k_c: [i32; 1024] = k.clone();
                     let sch: u32 = rand::random();
                     let scl: u32 = rand::random();
                     let lengthF = 205;
                     let lengthf = 205;
-                    poly_sub_scaled(&mut F, lengthF, stride, &mut f, lengthf, stride, &mut k, sch, scl, logn);
+                    poly_sub_scaled(&mut F, lengthF, stride, &f, lengthf, stride, &k, sch, scl, logn);
                     unsafe { poly_sub_scaled_func(F_c.as_ptr(), lengthF, stride, f_c.as_ptr(), lengthf, stride, k_c.as_ptr(), sch, scl, logn) };
                     assert_eq!(F, F_c);
                 }
@@ -553,9 +553,9 @@ pub(crate) mod tests {
                     let mut rng = rand::thread_rng();
                     let mut F: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let F_c: [u32; 1024] = F.clone();
-                    let mut f: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
+                    let f: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let f_c: [u32; 1024] = f.clone();
-                    let mut k: [i32; 1024] = core::array::from_fn(|_| rng.gen::<i32>());
+                    let k: [i32; 1024] = core::array::from_fn(|_| rng.gen::<i32>());
                     let k_c: [i32; 1024] = k.clone();
                     let mut tmp: [u32; 7 * 1024] = core::array::from_fn(|_| rng.gen::<u32>());
                     let tmp_c: [u32; 7 * 1024] = tmp.clone();
@@ -563,7 +563,7 @@ pub(crate) mod tests {
                     let scl: u32 = rand::random();
                     let lengthF = 205;
                     let lengthf = 205;
-                    poly_sub_scaled_ntt(&mut F, lengthF, stride, &mut f, lengthf, stride, &mut k, sch, scl, logn, &mut tmp);
+                    poly_sub_scaled_ntt(&mut F, lengthF, stride, &f, lengthf, stride, &k, sch, scl, logn, &mut tmp);
                     unsafe { poly_sub_scaled_ntt_func(F_c.as_ptr(), lengthF, stride, f_c.as_ptr(), lengthf, stride, k_c.as_ptr(), sch, scl, logn, tmp_c.as_ptr()) };
                     assert_eq!(F, F_c);
                 }
@@ -614,9 +614,9 @@ pub(crate) mod tests {
                 let mut rng = rand::thread_rng();
                 let mut x: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let x_c: [u64; 1024] = x.clone();
-                let mut f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+                let f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
                 let f_c: [i8; 1024] = f.clone();
-                poly_small_to_fp(&mut x, &mut f, logn);
+                poly_small_to_fp(&mut x, &f, logn);
                 unsafe { poly_small_to_fp_func(x_c.as_ptr(), f_c.as_ptr(), logn) };
                 assert_eq!(x, x_c);
             }
@@ -633,8 +633,8 @@ pub(crate) mod tests {
                     let data_c: [u32; 2048 * 4] = data.clone();
                     let in_ntt: bool = rand::random();
                     let in_out: bool = rand::random();
-                    unsafe { make_fg_step_func(data_c.as_ptr(), logn, depth, in_ntt, in_out) };
                     make_fg_step(&mut data, logn, depth, in_ntt, in_out);
+                    unsafe { make_fg_step_func(data_c.as_ptr(), logn, depth, in_ntt, in_out) };
                     assert_eq!(data, data_c);
                 }
             }
@@ -649,12 +649,12 @@ pub(crate) mod tests {
                     let mut rng = rand::thread_rng();
                     let mut data: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
                     let data_c: [u32; 2048 * 4] = data.clone();
-                    let mut f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                    let f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                     let f_c: [i8; 2048 * 4] = f.clone();
-                    let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                    let g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                     let g_c: [i8; 2048 * 4] = g.clone();
                     let in_out: bool = rand::random();
-                    make_fg(&mut data, &mut f, &mut g, logn, depth, in_out);
+                    make_fg(&mut data, &f, &g, logn, depth, in_out);
                     unsafe { make_fg_func(data_c.as_ptr(), f_c.as_ptr(), g_c.as_ptr(), logn, depth, in_out) };
                     assert_eq!(data, data_c);
                 }
@@ -668,12 +668,12 @@ pub(crate) mod tests {
             let mut rng = rand::thread_rng();
             let mut tmp: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
             let tmp_c: [u32; 2048 * 4] = tmp.clone();
-            let mut f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+            let f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
             let f_c: [i8; 2048 * 4] = f.clone();
-            let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+            let g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
             let g_c: [i8; 2048 * 4] = g.clone();
+            let res = solve_ntru_deepest(logn_top, &f, &g, &mut tmp);
             let res_c = unsafe { solve_NTRU_deepest_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), tmp_c.as_ptr()) };
-            let res = solve_ntru_deepest(logn_top, &mut f, &mut g, &mut tmp);
             assert_eq!(tmp, tmp_c);
             assert_eq!(res, res_c != 0);
         }
@@ -687,12 +687,12 @@ pub(crate) mod tests {
                     let mut rng = rand::thread_rng();
                     let mut tmp: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
                     let tmp_c: [u32; 2048 * 4] = tmp.clone();
-                    let mut f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                    let f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                     let f_c: [i8; 2048 * 4] = f.clone();
-                    let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                    let g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                     let g_c: [i8; 2048 * 4] = g.clone();
+                    let res = solve_ntru_intermediate(logn_top, &f, &g, depth, &mut tmp);
                     let res_c = unsafe { solve_NTRU_intermediate_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), depth, tmp_c.as_ptr()) };
-                    let res = solve_ntru_intermediate(logn_top, &mut f, &mut g, depth, &mut tmp);
                     assert_eq!(tmp, tmp_c);
                     assert_eq!(res, res_c != 0);
                 }
@@ -707,11 +707,11 @@ pub(crate) mod tests {
                 let mut rng = rand::thread_rng();
                 let mut tmp: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
                 let tmp_c: [u32; 2048 * 4] = tmp.clone();
-                let mut f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                let f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let f_c: [i8; 2048 * 4] = f.clone();
-                let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                let g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let g_c: [i8; 2048 * 4] = g.clone();
-                let res = solve_ntru_binary_depth1(logn_top, &mut f, &mut g, &mut tmp);
+                let res = solve_ntru_binary_depth1(logn_top, &f, &g, &mut tmp);
                 let res_c = unsafe { solve_NTRU_binary_depth1_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), tmp_c.as_ptr()) };
                 assert_eq!(tmp, tmp_c);
                 assert_eq!(res, res_c != 0);
@@ -726,14 +726,13 @@ pub(crate) mod tests {
                 let mut rng = rand::thread_rng();
                 let mut tmp: [u32; 2048 * 4] = core::array::from_fn(|_| rng.gen::<u32>());
                 let tmp_c: [u32; 2048 * 4] = tmp.clone();
-                let mut f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                let f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let f_c: [i8; 2048 * 4] = f.clone();
-                let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                let g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let g_c: [i8; 2048 * 4] = g.clone();
-                let res = solve_ntru_binary_depth0(logn_top, &mut f, &mut g, &mut tmp);
-                let res_c = unsafe { solve_NTRU_binary_depth0_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), tmp_c.as_ptr()) };
+                solve_ntru_binary_depth0(logn_top, &f, &g, &mut tmp);
+                unsafe { solve_NTRU_binary_depth0_func(logn_top, f_c.as_ptr(), g_c.as_ptr(), tmp_c.as_ptr()); }
                 assert_eq!(tmp, tmp_c);
-                assert_eq!(res, res_c != 0);
             }
         }
     }
@@ -750,12 +749,12 @@ pub(crate) mod tests {
                 let F_c: [i8; 2048 * 4] = F.clone();
                 let mut G: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let G_c: [i8; 2048 * 4] = G.clone();
-                let mut f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                let f: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let f_c: [i8; 2048 * 4] = f.clone();
-                let mut g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
+                let g: [i8; 2048 * 4] = core::array::from_fn(|_| rng.gen::<i8>());
                 let g_c: [i8; 2048 * 4] = g.clone();
                 let lim: i32 = i32::MAX;
-                let res = solve_ntru(logn_top, &mut F, &mut G, &mut f, &mut g, lim, &mut tmp);
+                let res = solve_ntru(logn_top, &mut F, &mut G, &f, &g, lim, &mut tmp);
                 let res_c = unsafe { solve_NTRU_func(logn_top, F_c.as_ptr(), G_c.as_ptr(), f_c.as_ptr(), g_c.as_ptr(), lim, tmp_c.as_ptr()) };
                 assert_eq!(tmp, tmp_c);
                 assert_eq!(res, res_c != 0);
@@ -800,8 +799,8 @@ pub(crate) mod tests {
                 let f_c: Vec<i8> = vec![0; buffer_size];
                 let mut g: Vec<i8> = vec![0; buffer_size];
                 let g_c: Vec<i8> = vec![0; buffer_size];
-                unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), logn, tmp_c.as_ptr()); }
                 keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, logn, &mut tmp);
+                unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), logn, tmp_c.as_ptr()); }
                 assert_eq!(f, f_c);
                 assert_eq!(g, g_c);
                 assert_eq!(G, G_c);

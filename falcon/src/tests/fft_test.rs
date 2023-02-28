@@ -57,8 +57,8 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let a_c = a.clone();
-                let mut b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                poly_sub(&mut a, &mut b, logn);
+                let b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                poly_sub(&mut a, &b, logn);
                 unsafe { falcon_inner_poly_sub(a_c.as_ptr(), b.as_ptr(), logn) };
                 assert_eq!(a, a_c);
             }
@@ -100,8 +100,8 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let a_c = a.clone();
-                let mut b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                poly_mul_fft(&mut a, &mut b, logn);
+                let b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                poly_mul_fft(&mut a, &b, logn);
                 unsafe { falcon_inner_poly_mul_fft(a_c.as_ptr(), b.as_ptr(), logn) };
                 assert_eq!(a, a_c);
             }
@@ -115,8 +115,8 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let a_c = a.clone();
-                let mut b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                poly_muladj_fft(&mut a, &mut b, logn);
+                let b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                poly_muladj_fft(&mut a, &b, logn);
                 unsafe { falcon_inner_poly_muladj_fft(a_c.as_ptr(), b.as_ptr(), logn) };
                 assert_eq!(a, a_c);
             }
@@ -159,8 +159,8 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let a_c = a.clone();
-                let mut b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                poly_div_fft(&mut a, &mut b, logn);
+                let b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                poly_div_fft(&mut a, &b, logn);
                 unsafe { falcon_inner_poly_div_fft(a_c.as_ptr(), b.as_ptr(), logn) };
                 assert_eq!(a, a_c);
             }
@@ -172,11 +172,11 @@ mod tests {
         for _ in 0..100 {
             for logn in 1..10 {
                 let mut rng = rand::thread_rng();
-                let mut a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                let mut b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let mut d: [u64; 1024] = [0; 1024];
                 let d_c = d.clone();
-                poly_invnorm2_fft(&mut d, &mut a, &mut b, logn);
+                poly_invnorm2_fft(&mut d, &a, &b, logn);
                 unsafe { falcon_inner_poly_invnorm2_fft(d_c.as_ptr(), a.as_ptr(), b.as_ptr(), logn) };
                 assert_eq!(d, d_c);
             }
@@ -188,13 +188,13 @@ mod tests {
         for _ in 0..100 {
             for logn in 1..10 {
                 let mut rng = rand::thread_rng();
-                let mut f: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                let mut g: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                let mut F: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                let mut G: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let f: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let g: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let F: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let G: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let mut d: [u64; 1024] = [0; 1024];
                 let d_c = d.clone();
-                poly_add_muladj_fft(&mut d, &mut F, &mut G, &mut f, &mut g, logn);
+                poly_add_muladj_fft(&mut d, &F, &G, &f, &g, logn);
                 unsafe { falcon_inner_poly_add_muladj_fft(d_c.as_ptr(), F.as_ptr(), G.as_ptr(), f.as_ptr(), g.as_ptr(), logn) };
                 assert_eq!(d, d_c);
             }
@@ -208,8 +208,8 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let a_c: [u64; 1024] = a.clone();
-                let mut b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                poly_mul_autoadj_fft(&mut a, &mut b, logn);
+                let b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                poly_mul_autoadj_fft(&mut a, &b, logn);
                 unsafe { falcon_inner_poly_mul_autoadj_fft(a_c.as_ptr(), b.as_ptr(), logn) };
                 assert_eq!(a, a_c);
             }
@@ -223,8 +223,8 @@ mod tests {
                 let mut rng = rand::thread_rng();
                 let mut a: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let a_c: [u64; 1024] = a.clone();
-                let mut b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
-                poly_div_autoadj_fft(&mut a, &mut b, logn);
+                let b: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                poly_div_autoadj_fft(&mut a, &b, logn);
                 unsafe { falcon_inner_poly_div_autoadj_fft(a_c.as_ptr(), b.as_ptr(), logn) };
                 assert_eq!(a, a_c);
             }
@@ -236,13 +236,13 @@ mod tests {
         for _ in 0..100 {
             for logn in 1..10 {
                 let mut rng = rand::thread_rng();
-                let mut g00: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let g00: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let g00_c: [u64; 1024] = g00.clone();
                 let mut g01: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let g01_c: [u64; 1024] = g01.clone();
                 let mut g11: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let g11_c: [u64; 1024] = g11.clone();
-                poly_LDL_fft(&mut g00, &mut g01, &mut g11, logn);
+                poly_LDL_fft(&g00, &mut g01, &mut g11, logn);
                 unsafe { falcon_inner_poly_LDL_fft(g00_c.as_ptr(), g01_c.as_ptr(), g11_c.as_ptr(), logn) };
                 assert_eq!(g00, g00_c);
                 assert_eq!(g01, g01_c);
@@ -260,13 +260,13 @@ mod tests {
                 let l01_c: [u64; 1024] = l01.clone();
                 let mut d11: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let d11_c: [u64; 1024] = d11.clone();
-                let mut g00: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let g00: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let g00_c: [u64; 1024] = g00.clone();
-                let mut g01: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let g01: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let g01_c: [u64; 1024] = g01.clone();
-                let mut g11: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let g11: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let g11_c: [u64; 1024] = g11.clone();
-                poly_LDLmv_fft(&mut d11, &mut l01, &mut g00, &mut g01, &mut g11, logn);
+                poly_LDLmv_fft(&mut d11, &mut l01, &g00, &g01, &g11, logn);
                 unsafe { falcon_inner_poly_LDLmv_fft(d11_c.as_ptr(), l01_c.as_ptr(), g00_c.as_ptr(), g01_c.as_ptr(), g11_c.as_ptr(), logn) };
                 assert_eq!(d11, d11_c);
                 assert_eq!(l01, l01_c);
@@ -286,9 +286,9 @@ mod tests {
                 let f0_c: [u64; 1024] = f0.clone();
                 let mut f1: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let f1_c: [u64; 1024] = f1.clone();
-                let mut f: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
+                let f: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let f_c: [u64; 1024] = f.clone();
-                poly_split_fft(&mut f0, &mut f1, &mut f, logn);
+                poly_split_fft(&mut f0, &mut f1, &f, logn);
                 unsafe { falcon_inner_poly_split_fft(f0_c.as_ptr(), f1_c.as_ptr(), f_c.as_ptr(), logn) };
                 assert_eq!(f0, f0_c);
                 assert_eq!(f1, f1_c);
@@ -308,9 +308,9 @@ mod tests {
                 let f1_c: [u64; 1024] = f1.clone();
                 let mut f: [u64; 1024] = core::array::from_fn(|_| rng.gen::<u64>());
                 let f_c: [u64; 1024] = f.clone();
-                poly_split_fft(&mut f0, &mut f1, &mut f, logn);
+                poly_split_fft(&mut f0, &mut f1, &f, logn);
                 unsafe { falcon_inner_poly_split_fft(f0_c.as_ptr(), f1_c.as_ptr(), f_c.as_ptr(), logn) };
-                poly_merge_fft(&mut f, &mut f0, &mut f1, logn);
+                poly_merge_fft(&mut f, &f0, &f1, logn);
                 unsafe { falcon_inner_poly_merge_fft(f_c.as_ptr(), f0_c.as_ptr(), f1_c.as_ptr(), logn) };
                 assert_eq!(f0, f0_c);
                 assert_eq!(f1, f1_c);

@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+extern crate core;
+
 mod fft;
 mod fpr;
 mod shake;
