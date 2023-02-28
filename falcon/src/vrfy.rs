@@ -1,5 +1,3 @@
-use std::slice::from_raw_parts_mut;
-
 use crate::common::is_short;
 
 pub const Q: u32 = 12289;
@@ -82,7 +80,7 @@ pub fn mq_poly_tomonty(f: &mut [u16], logn: u32) {
 }
 
 
-pub fn mq_ntt(a: *mut u16, logn: u32) {
+pub fn mq_ntt(a: &mut [u16], logn: u32) {
     let n = 1usize << logn;
     let mut t = n;
     let mut m = 1;
@@ -95,10 +93,10 @@ pub fn mq_ntt(a: *mut u16, logn: u32) {
             for j in j1..j2 {
                 let (u, v): (u32, u32);
 
-                unsafe { u = *a.wrapping_add(j) as u32; }
-                unsafe { v = mq_montymul(*a.wrapping_add(j + ht) as u32, s as u32); }
-                unsafe { *a.wrapping_add(j) = mq_add(u, v) as u16; }
-                unsafe { *a.wrapping_add(j + ht) = mq_sub(u, v) as u16; }
+                u = a[j] as u32;
+                v = mq_montymul(a[j + ht] as u32, s as u32);
+                a[j] = mq_add(u, v) as u16;
+                a[j + ht] = mq_sub(u, v) as u16;
             }
             j1 += t;
         }
@@ -107,7 +105,7 @@ pub fn mq_ntt(a: *mut u16, logn: u32) {
     }
 }
 
-pub fn mq_innt(a: *mut u16, logn: u32) {
+pub fn mq_innt(a: &mut [u16], logn: u32) {
     let n = 1usize << logn;
     let mut t = 1;
     let mut m = n;
@@ -121,11 +119,11 @@ pub fn mq_innt(a: *mut u16, logn: u32) {
             for j in j1..j2 {
                 let (u, v, w): (u32, u32, u32);
 
-                unsafe { u = *a.wrapping_add(j) as u32; }
-                unsafe { v = *a.wrapping_add(j + t) as u32; }
-                unsafe { *a.wrapping_add(j) = mq_add(u, v) as u16; }
+                u = a[j] as u32;
+                v = a[j + t] as u32;
+                a[j] = mq_add(u, v) as u16;
                 w = mq_sub(u, v);
-                unsafe { *a.wrapping_add(j + t) = mq_montymul(w, s as u32) as u16 }
+                a[j + t] = mq_montymul(w, s as u32) as u16;
             }
             j1 += dt;
         }
@@ -140,116 +138,104 @@ pub fn mq_innt(a: *mut u16, logn: u32) {
         m >>= 1;
     }
     for m in 0..n {
-        unsafe { *a.wrapping_add(m) = mq_montymul(*a.wrapping_add(m) as u32, ni) as u16; }
+        a[m] = mq_montymul(a[m] as u32, ni) as u16;
     }
 }
 
-pub fn compute_public(h: *mut u16, f: *const i8, g: *const i8, logn: u32, tmp: *mut u8) -> bool {
+pub fn compute_public(h: &mut [u16], f: &[i8], g: &[i8], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
-    let tt: *mut u16 = tmp.cast();
+    let tt: &mut [u16] = unsafe { tmp.align_to_mut::<u16>().1 };
 
     for u in 0..n {
-        unsafe { *tt.wrapping_add(u) = mq_conv_small(*f.wrapping_add(u) as i32) as u16; }
-        unsafe { *h.wrapping_add(u) = mq_conv_small(*g.wrapping_add(u) as i32) as u16; }
+        tt[u] = mq_conv_small(f[u] as i32) as u16;
+        h[u] = mq_conv_small(g[u] as i32) as u16;
     }
     mq_ntt(h, logn);
     mq_ntt(tt, logn);
     for u in 0..n {
-        unsafe {
-            if *tt.wrapping_add(u) == 0 {
-                return false;
-            }
-            *h.wrapping_add(u) = mq_div_12289(*h.wrapping_add(u) as u32, *tt.wrapping_add(u) as u32) as u16;
+        if tt[u] == 0 {
+            return false;
         }
+        h[u] = mq_div_12289(h[u] as u32, tt[u] as u32) as u16;
     }
     mq_innt(h, logn);
     true
 }
 
 pub fn to_ntt_monty(h: &mut [u16], logn: u32) {
-    mq_ntt(h.as_mut_ptr(), logn);
+    mq_ntt(h, logn);
     mq_poly_tomonty(h, logn);
 }
 
-pub fn mq_poly_montymul_ntt(mut f: *mut u16, g: &mut [u16], logn: u32) {
+pub fn mq_poly_montymul_ntt(f: &mut [u16], g: &mut [u16], logn: u32) {
     let n = 1usize << logn;
     for u in 0..n {
-        unsafe { *f = mq_montymul(*f as u32, g[u] as u32) as u16; }
-        f = f.wrapping_add(1);
+        f[u] = mq_montymul(f[u] as u32, g[u] as u32) as u16;
     }
 }
 
-pub fn mq_poly_sub(mut f: *mut u16, g: &mut [u16], logn: u32) {
+pub fn mq_poly_sub(f: &mut [u16], g: &mut [u16], logn: u32) {
     let n = 1usize << logn;
     for u in 0..n {
-        unsafe { *f = mq_sub(*f as u32, g[u] as u32) as u16; }
-        f = f.wrapping_add(1);
+        f[u] = mq_sub(f[u] as u32, g[u] as u32) as u16;
     }
 }
 
 pub fn verify_raw(c0: &mut [u16], s2: &mut [i16], h: &mut [u16], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
-    let tt: *mut u16 = tmp.as_mut_ptr().cast();
+    let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
 
     for u in 0..n {
         let mut w: u32 = s2[u] as u32;
         w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
-        unsafe { *tt.wrapping_add(u) = w as u16; }
+        tt[u] = w as u16;
     }
 
     mq_ntt(tt, logn);
     mq_poly_montymul_ntt(tt, h, logn);
     mq_innt(tt, logn);
     mq_poly_sub(tt, c0, logn);
-
     for u in 0..n {
-        let mut w: i32;
-        unsafe { w = *tt.wrapping_add(u) as i32 }
+        let mut w: i32 = tt[u] as i32;
         w -= (Q & (!(((Q >> 1).wrapping_sub(w as u32)) >> 31)).wrapping_add(1)) as i32;
-        unsafe {
-            let x: *mut i16 = tt.wrapping_add(u).cast();
-            *x = w as i16;
-        }
+            tt[u] = w as u16;
+
     }
-    let tt_int: *mut i16 = tt.cast();
-    is_short(tt_int, s2, logn) != 0
+    let tt = bytemuck::cast_slice_mut::<u16, i16>(tt);
+    is_short(tt, s2, logn) != 0
 }
 
 #[allow(non_snake_case)]
 pub fn complete_private(G: &mut [i8], f: &[i8], g: &[i8], F: &[i8], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
 
-    let t1: *mut u16 = tmp.as_mut_ptr().cast();
-    let t2: *mut u16 = t1.wrapping_add(n);
-    let t1s: &mut [u16] = unsafe { from_raw_parts_mut(t1, n) };
-    let t2s: &mut [u16] = unsafe { from_raw_parts_mut(t2, n) };
+    let inter = bytemuck::cast_slice_mut::<u8, u16>(tmp);
+    let (t1, t2) = inter.split_at_mut(n);
 
     for u in 0..n {
-        unsafe { *t1.wrapping_add(u) = mq_conv_small(g[u] as i32) as u16; }
-        unsafe { *t2.wrapping_add(u) = mq_conv_small(F[u] as i32) as u16; }
+        t1[u] = mq_conv_small(g[u] as i32) as u16;
+        t2[u] = mq_conv_small(F[u] as i32) as u16;
     }
     mq_ntt(t1, logn);
     mq_ntt(t2, logn);
-    mq_poly_tomonty(t1s, logn);
-    mq_poly_montymul_ntt(t1, t2s, logn);
+    mq_poly_tomonty(t1, logn);
+    mq_poly_montymul_ntt(t1, t2, logn);
     for u in 0..n {
-        unsafe { *t2.wrapping_add(u) = mq_conv_small(f[u] as i32) as u16; }
+        t2[u] = mq_conv_small(f[u] as i32) as u16;
     }
     mq_ntt(t2, logn);
     for u in 0..n {
-        unsafe {
-            if *t2.wrapping_add(u) == 0 {
-                return false;
-            }
-            *t1.wrapping_add(u) = mq_div_12289(*t1.wrapping_add(u) as u32, *t2.wrapping_add(u) as u32) as u16;
+        if t2[u] == 0 {
+            return false;
         }
+        t1[u] = mq_div_12289(t1[u] as u32, t2[u] as u32) as u16;
     }
     mq_innt(t1, logn);
     for u in 0..n {
         let mut w: u32;
         let gi: i32;
 
-        unsafe { w = *t1.wrapping_add(u) as u32 }
+        w = t1[u] as u32;
         w = w.wrapping_sub(Q & !(!((w.wrapping_sub(Q >> 1)) >> 31)).wrapping_add(1));
         gi = w as i32;
         if gi < -127 || gi > 127 {
@@ -262,31 +248,27 @@ pub fn complete_private(G: &mut [i8], f: &[i8], g: &[i8], F: &[i8], logn: u32, t
 
 pub fn is_invertible(s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
-    let tt: *mut u16 = tmp.as_mut_ptr().cast();
+    let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
     for u in 0..n {
         let mut w: u32 = s2[u] as u32;
         w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
-        unsafe { (*tt.wrapping_add(u)) = w as u16; }
+        tt[u] = w as u16;
     }
     mq_ntt(tt, logn);
     let mut r: u32 = 0;
     for u in 0..n {
-        r |= unsafe { (*tt.wrapping_add(u) as u32).wrapping_sub(1) }
+        r |= (tt[u] as u32).wrapping_sub(1)
     }
     (1 - (r >> 31)) != 0
 }
 
 pub fn verify_recover(h: &mut [u16], c0: &mut [u16], s1: &mut [i16], s2: &mut [i16], logn: u32, tmp: &mut [u8]) -> bool {
     let n = 1usize << logn;
-    let tt: *mut u16 = tmp.as_mut_ptr().cast();
-    let tts: &mut [u16];
-    unsafe {
-        tts = from_raw_parts_mut(tt, tmp.len() / 2);
-    }
+    let tt: &mut [u16] = bytemuck::cast_slice_mut(tmp);
     for u in 0..n {
         let mut w: u32 = s2[u] as u32;
         w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
-        tts[u] = w as u16;
+        tt[u] = w as u16;
 
         w = s1[u] as u32;
         w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
@@ -295,31 +277,31 @@ pub fn verify_recover(h: &mut [u16], c0: &mut [u16], s1: &mut [i16], s2: &mut [i
     }
 
     mq_ntt(tt, logn);
-    mq_ntt(h.as_mut_ptr(), logn);
+    mq_ntt(h, logn);
     let mut r = 0;
     for u in 0..n {
-        r |= (tts[u] as u32).wrapping_sub(1);
-        h[u] = mq_div_12289(h[u] as u32, tts[u] as u32) as u16;
+        r |= (tt[u] as u32).wrapping_sub(1);
+        h[u] = mq_div_12289(h[u] as u32, tt[u] as u32) as u16;
     }
-    mq_innt(h.as_mut_ptr(), logn);
+    mq_innt(h, logn);
 
-    r = !r & (-is_short(s1.as_mut_ptr(), s2, logn)) as u32;
+    r = !r & (-is_short(s1, s2, logn)) as u32;
     (r >> 31) != 0
 }
 
 pub fn count_nttzero(sig: &mut [i16], logn: u32, tmp: &mut [u8]) -> i32 {
     let n = 1usize << logn;
-    let s2: *mut u16 = tmp.as_mut_ptr().cast();
+    let s2: &mut [u16] = bytemuck::cast_slice_mut(tmp);
     for u in 0..n {
         let mut w: u32 = sig[u] as u32;
         w = w.wrapping_add(Q & (!(w >> 31)).wrapping_add(1));
-        unsafe { *s2.wrapping_add(u) = w as u16; }
+        s2[u] = w as u16;
     }
     mq_ntt(s2, logn);
     let mut r = 0;
     for u in 0..n {
         let w: u32;
-        unsafe { w = ((*s2.wrapping_add(u)) as u32).wrapping_sub(1); }
+        w = (s2[u] as u32).wrapping_sub(1);
         r += w >> 31;
     }
 
