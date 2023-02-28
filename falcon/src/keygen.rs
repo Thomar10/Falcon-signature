@@ -87,7 +87,7 @@ pub fn modp_Rx(mut x: u32, p: u32, p0i: u32, R2: u32) -> u32 {
     let mut r = R2;
     let mut z = modp_R(p);
     let mut i: u32 = 0;
-    while (1u32.wrapping_shl(i)) <= x {
+    while (1u32 << i) <= x {
         if (x & (1u32.wrapping_shl(i))) != 0 {
             z = modp_montymul(z, r, p, p0i);
         }
