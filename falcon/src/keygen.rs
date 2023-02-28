@@ -1,6 +1,7 @@
 use crate::codec::{max_fg_bits, max_FG_bits};
 use crate::fft::{fft_pointer, ifft_pointer, poly_add_muladj_fft_pointer, poly_add_pointer, poly_adj_fft_pointer, poly_div_autoadj_fft_pointer, poly_invnorm2_fft_pointer, poly_mul_autoadj_fft_pointer, poly_mul_fft_pointer, poly_mulconst_pointer, poly_sub_pointer};
 use crate::fpr::{fpr_add, FPR_BNORM_MAX, fpr_lt, FPR_MTWO31M1, FPR_MTWO63M1, fpr_mul, fpr_of, FPR_ONE, FPR_ONEHALF, FPR_PTWO31, FPR_PTWO31M1, FPR_PTWO63M1, FPR_Q, fpr_rint, fpr_sqr, FPR_TWO, FPR_ZERO};
+use crate::MKN;
 use crate::shake::{i_shake256_extract, InnerShake256Context};
 use crate::vrfy::compute_public;
 
@@ -13,12 +14,6 @@ pub struct SmallPrimes {
 pub struct BitLength {
     pub(crate) avg: i32,
     pub(crate) std: i32,
-}
-
-macro_rules! mkn {
-    ($arg:expr) => {
-        (1usize << ($arg))
-    }
 }
 
 #[inline(always)]
@@ -118,7 +113,7 @@ pub fn modp_div(a: u32, b: u32, p: u32, p0i: u32, r: u32) -> u32 {
 }
 
 pub fn modp_mkgm2(gm: &mut [u32], igm: &mut [u32], logn: u32, mut g: u32, p: u32, p0i: u32) {
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let (mut x1, mut x2): (u32, u32);
 
     let r2 = modp_R2(p, p0i);
@@ -143,7 +138,7 @@ pub fn modp_mkgm2(gm: &mut [u32], igm: &mut [u32], logn: u32, mut g: u32, p: u32
 }
 
 pub fn modp_mkgm2_index(tmp: &mut [u32], gm_index: usize, igm_index: usize, logn: u32, mut g: u32, p: u32, p0i: u32) {
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let (mut x1, mut x2): (u32, u32);
 
     let r2 = modp_R2(p, p0i);
@@ -168,7 +163,7 @@ pub fn modp_mkgm2_index(tmp: &mut [u32], gm_index: usize, igm_index: usize, logn
 }
 
 pub fn modp_mkgm2_pointer(gm: *mut u32, igm: *mut u32, logn: u32, mut g: u32, p: u32, p0i: u32) {
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let (mut x1, mut x2): (u32, u32);
 
     let r2 = modp_R2(p, p0i);
@@ -200,7 +195,7 @@ pub fn modp_NTT2_ext(a: &mut [u32], stride: usize, gm: &mut [u32], logn: u32, p:
     if logn == 0 {
         return;
     }
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let mut t = n;
     let mut m = 1;
     while m < n {
@@ -235,7 +230,7 @@ pub fn modp_NTT2_ext_pointer(a: *mut u32, stride: usize, gm: *mut u32, logn: u32
     if logn == 0 {
         return;
     }
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let mut t = n;
     let mut m = 1;
     while m < n {
@@ -272,7 +267,7 @@ pub fn modp_NTT2_ext_index(a: &mut [u32], stride: usize, a_index: usize, gm_inde
     if logn == 0 {
         return;
     }
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let mut t = n;
     let mut m = 1;
     while m < n {
@@ -307,7 +302,7 @@ pub fn modp_iNTT2_ext(a: &mut [u32], stride: usize, igm: &mut [u32], logn: u32, 
     if logn == 0 {
         return;
     }
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let mut t = 1;
     let mut m = n;
     while m > 1 {
@@ -349,7 +344,7 @@ pub fn modp_iNTT2_ext_pointer(a: *mut u32, stride: usize, igm: *mut u32, logn: u
     if logn == 0 {
         return;
     }
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let mut t = 1;
     let mut m = n;
     while m > 1 {
@@ -393,7 +388,7 @@ pub fn modp_iNTT2_ext_index(a: &mut [u32], stride: usize, a_index: usize, igm_in
     if logn == 0 {
         return;
     }
-    let n: usize = 1 << logn;
+    let n: usize = MKN!(logn);
     let mut t = 1;
     let mut m = n;
     while m > 1 {
@@ -1864,7 +1859,7 @@ pub fn zint_one_to_plain_index(x: &mut [u32], index: usize) -> i32 {
 
 
 pub fn poly_big_to_fp(d: &mut [u64], f: &mut [u32], flen: usize, fstride: usize, logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     if flen == 0 {
         for u in 0..n {
             d[u] = FPR_ZERO;
@@ -1895,7 +1890,7 @@ pub fn poly_big_to_fp(d: &mut [u64], f: &mut [u32], flen: usize, fstride: usize,
 
 #[allow(dead_code)]
 pub fn poly_big_to_fp_index(d: &mut [u64], d_index: usize, f: &mut [u32], ff_index: usize, flen: usize, fstride: usize, logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     if flen == 0 {
         for u in 0..n {
             d[u + d_index] = FPR_ZERO;
@@ -1925,7 +1920,7 @@ pub fn poly_big_to_fp_index(d: &mut [u64], d_index: usize, f: &mut [u32], ff_ind
 }
 
 pub fn poly_big_to_fp_pointer(d: *mut u64, f: *mut u32, flen: usize, fstride: usize, logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     if flen == 0 {
         for u in 0..n {
             unsafe { *d.wrapping_add(u) = FPR_ZERO; }
@@ -1957,7 +1952,7 @@ pub fn poly_big_to_fp_pointer(d: *mut u64, f: *mut u32, flen: usize, fstride: us
 }
 
 pub fn poly_big_to_small(d: &mut [i8], s: &mut [u32], lim: i32, logn: u32) -> i32 {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     for u in 0..n {
         let z = zint_one_to_plain_index(s, u);
         if z < -lim || z > lim {
@@ -1969,7 +1964,7 @@ pub fn poly_big_to_small(d: &mut [i8], s: &mut [u32], lim: i32, logn: u32) -> i3
 }
 
 pub fn poly_big_to_small_pointer(d: *mut i8, s: *mut u32, lim: i32, logn: u32) -> bool {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     for u in 0..n {
         let z: i32;
         unsafe { z = zint_one_to_plain_pointer(s.wrapping_add(u)); }
@@ -1983,7 +1978,7 @@ pub fn poly_big_to_small_pointer(d: *mut i8, s: *mut u32, lim: i32, logn: u32) -
 
 #[allow(non_snake_case)]
 pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32], flen: usize, fstride: usize, k: &mut [i32], sch: u32, scl: u32, logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     for u in 0..n {
         let mut kf: i32;
         let mut x_index: usize;
@@ -2008,7 +2003,7 @@ pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32]
 
 #[allow(non_snake_case)]
 pub fn poly_sub_scaled_pointer(F: *mut u32, Flen: usize, Fstride: usize, f: *mut u32, flen: usize, fstride: usize, k: *mut i32, sch: u32, scl: u32, logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     for u in 0..n {
         let mut kf: i32;
 
@@ -2033,7 +2028,7 @@ pub fn poly_sub_scaled_pointer(F: *mut u32, Flen: usize, Fstride: usize, f: *mut
 pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32], flen: usize, fstride: usize, k: &mut [i32], sch: u32, scl: u32, logn: u32, tmp: &mut [u32]) {
     let (gm_index, igm_index, fk_index, t1_index, mut x_index, mut y_index): (usize, usize, usize, usize, usize, usize);
     let tlen: usize;
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     tlen = flen + 1;
     gm_index = 0;
     igm_index = n;
@@ -2081,7 +2076,7 @@ pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [
 #[allow(non_snake_case)]
 pub fn poly_sub_scaled_ntt_pointer(F: *mut u32, Flen: usize, Fstride: usize, f: *mut u32, flen: usize, fstride: usize, k: *mut i32, sch: u32, scl: u32, logn: u32, tmp: *mut u32) {
     let tlen: usize;
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     tlen = flen + 1;
     let gm = tmp;
     let igm = gm.wrapping_add(n);
@@ -2174,7 +2169,7 @@ pub fn mkgauss(rng: &mut InnerShake256Context, logn: u32) -> i32 {
 }
 
 pub fn poly_small_sqnorm(f: &mut [i8], logn: u32) -> u32 {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let mut s = 0;
     let mut ng = 0;
     for u in 0..n {
@@ -2186,7 +2181,7 @@ pub fn poly_small_sqnorm(f: &mut [i8], logn: u32) -> u32 {
 }
 
 pub fn poly_small_sqnorm_pointer(f: *mut i8, logn: u32) -> u32 {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let mut s = 0;
     let mut ng = 0;
     for u in 0..n {
@@ -2199,14 +2194,14 @@ pub fn poly_small_sqnorm_pointer(f: *mut i8, logn: u32) -> u32 {
 }
 
 pub fn poly_small_to_fp(x: &mut [u64], f: &mut [i8], logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     for u in 0..n {
         x[u] = fpr_of(f[u] as i64);
     }
 }
 
 pub fn poly_small_to_fp_pointer(x: *mut u64, f: *mut i8, logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     for u in 0..n {
         unsafe { *x.wrapping_add(u) = fpr_of(*f.wrapping_add(u) as i64); }
     }
@@ -2609,7 +2604,7 @@ pub fn make_fg_step_pointer(data: *mut u32, logn: u32, depth: usize, in_ntt: boo
 }
 
 pub fn make_fg(data: &mut [u32], f: &mut [i8], g: &mut [i8], logn: u32, depth: u32, out_ntt: bool) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let p0 = PRIMES[0].p;
     let (ft, gt) = data.split_at_mut(n);
     for u in 0..n {
@@ -2634,7 +2629,7 @@ pub fn make_fg(data: &mut [u32], f: &mut [i8], g: &mut [i8], logn: u32, depth: u
 }
 
 pub fn make_fg_pointer(data: *mut u32, f: *mut i8, g: *mut i8, logn: u32, depth: u32, out_ntt: bool) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let p0 = PRIMES[0].p;
     let mut ft = data;
     let mut gt = ft.wrapping_add(n);
@@ -2664,7 +2659,7 @@ pub fn make_fg_pointer(data: *mut u32, f: *mut i8, g: *mut i8, logn: u32, depth:
 }
 
 pub fn make_fg_index(data: &mut [u32], data_index: usize, f: &mut [i8], g: &mut [i8], logn: u32, depth: u32, out_ntt: bool) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let p0 = PRIMES[0].p;
     let ft_index = data_index;
     let gt_index = ft_index + n;
@@ -2720,7 +2715,7 @@ pub fn solve_ntru_deepest(logn_top: u32, f: *mut i8, g: *mut i8, tmp: *mut u32) 
 #[allow(non_snake_case)]
 pub fn solve_ntru_intermediate_point(logn_top: u32, f: *mut i8, g: *mut i8, depth: u32, tmp: *mut u32) -> bool {
     let logn = logn_top - depth;
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let hn = n >> 1;
 
     let slen = MAX_BL_SMALL[depth as usize];
@@ -3351,7 +3346,7 @@ pub fn solve_ntru_binary_depth0(logn: u32, f: *mut i8, g: *mut i8, tmp: *mut u32
 
 #[allow(non_snake_case)]
 pub fn solve_ntru(logn: u32, F: *mut i8, mut G: *mut i8, f: *mut i8, g: *mut i8, lim: i32, tmp: *mut u32) -> bool {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let mut depth: u32;
     let r: u32;
 
@@ -3431,7 +3426,7 @@ pub fn solve_ntru(logn: u32, F: *mut i8, mut G: *mut i8, f: *mut i8, g: *mut i8,
 
 
 pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: *mut i8, logn: u32) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let mut mod2: u32 = 0;
     let mut u = 0;
     while u < n {
@@ -3458,7 +3453,7 @@ pub fn poly_small_mkgauss(mut rng: &mut InnerShake256Context, f: *mut i8, logn: 
 
 #[allow(non_snake_case)]
 pub fn keygen(mut rng: &mut InnerShake256Context, f: *mut i8, g: *mut i8, F: *mut i8, G: *mut i8, h: *mut u16, logn: u32, tmp: *mut u8) {
-    let n = mkn!(logn);
+    let n = MKN!(logn);
     let mut tmp2: *mut u16;
     let mut h2: *mut u16;
     loop {
@@ -4195,7 +4190,7 @@ pub(crate) static PRIMES: [SmallPrimes; 522] = [
 // #[allow(non_snake_case)]
 // pub fn solve_ntru_intermediate(logn: u32, f: &mut [i8], g: &mut [i8], depth: u32, tmp: &mut [u32]) -> i32 {
 //     let logn = logn_top - depth;
-//     let n = mkn!(logn);
+//     let n = MKN!(logn);
 //     let hn = n >> 1;
 //
 //     let slen = MAX_BL_SMALL[depth as usize];
