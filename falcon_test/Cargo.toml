@@ -10,7 +10,18 @@ aes = "0.8.2"
 rand = "0.8.4"
 hex = "0.4.3"
 bytemuck = "1.13.0"
+criterion = "0.4.0"
 falcon = { path = "../falcon" }
+falcon_c = { path = "../falcon_c" }
 
-[build-dependencies]
-cmake="0.1.31"
+[[bench]]
+name = "keygen_bench"
+harness = false
+
+[[bench]]
+name = "sign_bench"
+harness = false
+
+[[bench]]
+name = "vrfy_bench"
+harness = false

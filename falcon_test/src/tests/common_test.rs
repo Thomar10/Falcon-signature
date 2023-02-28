@@ -3,8 +3,8 @@ mod tests {
     use rand::Rng;
 
     use falcon::common::{hash_to_point_ct, hash_to_point_vartime, is_short, is_short_half};
+    use falcon_c::common_c::{hash_to_point_ct_func, hash_to_point_vartime_func, is_short_func, is_short_half_func};
 
-    use crate::falcon_c::common_c::{hash_to_point_ct_func, hash_to_point_vartime_func, is_short_func, is_short_half_func};
     use crate::tests::keygen_test::tests::init_shake_with_random_context;
 
     #[test]

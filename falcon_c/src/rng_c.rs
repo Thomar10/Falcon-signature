@@ -2,7 +2,7 @@
 
 use std::ffi::c_void;
 
-use crate::falcon_c::shake_c::InnerShake256Context;
+use crate::shake_c::InnerShake256Context;
 
 #[link(name = "rng", kind = "static")]
 extern "C" {

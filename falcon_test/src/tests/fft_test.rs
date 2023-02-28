@@ -3,8 +3,7 @@ mod tests {
     use rand::Rng;
 
     use falcon::fft::{{fft, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub}};
-
-    use crate::falcon_c::fft_c::{falcon_inner_FFT, falcon_inner_iFFT, falcon_inner_poly_add, falcon_inner_poly_add_muladj_fft, falcon_inner_poly_adj_fft, falcon_inner_poly_div_autoadj_fft, falcon_inner_poly_div_fft, falcon_inner_poly_invnorm2_fft, falcon_inner_poly_LDL_fft, falcon_inner_poly_LDLmv_fft, falcon_inner_poly_merge_fft, falcon_inner_poly_mul_autoadj_fft, falcon_inner_poly_mul_fft, falcon_inner_poly_muladj_fft, falcon_inner_poly_mulconst, falcon_inner_poly_mulselfadj_fft, falcon_inner_poly_neg, falcon_inner_poly_split_fft, falcon_inner_poly_sub};
+    use falcon_c::fft_c::{falcon_inner_FFT, falcon_inner_iFFT, falcon_inner_poly_add, falcon_inner_poly_add_muladj_fft, falcon_inner_poly_adj_fft, falcon_inner_poly_div_autoadj_fft, falcon_inner_poly_div_fft, falcon_inner_poly_invnorm2_fft, falcon_inner_poly_LDL_fft, falcon_inner_poly_LDLmv_fft, falcon_inner_poly_merge_fft, falcon_inner_poly_mul_autoadj_fft, falcon_inner_poly_mul_fft, falcon_inner_poly_muladj_fft, falcon_inner_poly_mulconst, falcon_inner_poly_mulselfadj_fft, falcon_inner_poly_neg, falcon_inner_poly_split_fft, falcon_inner_poly_sub};
 
     #[test]
     fn test_fft() {

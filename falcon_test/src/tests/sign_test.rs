@@ -9,10 +9,10 @@ mod tests {
     use falcon::keygen::keygen;
     use falcon::shake::{i_shake256_extract, i_shake256_flip, i_shake256_inject};
     use falcon::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_tree, smallints_to_fpr};
+    use falcon_c::keygen_c::falcon_inner_keygen;
+    use falcon_c::shake_c::InnerShake256Context as InnerShake256ContextC;
+    use falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, smallints_to_fpr_func as smallints_to_fpr_c};
 
-    use crate::falcon_c::keygen_c::falcon_inner_keygen;
-    use crate::falcon_c::shake_c::InnerShake256Context as InnerShake256ContextC;
-    use crate::falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, smallints_to_fpr_func as smallints_to_fpr_c};
     use crate::tests::keygen_test::tests::init_shake_with_random_context;
     use crate::tests::rng_test::tests::{create_random_prngs, init_prngs};
 

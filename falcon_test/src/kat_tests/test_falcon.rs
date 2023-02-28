@@ -1,5 +1,6 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
+#![allow(dead_code)]
 
 use std::ffi::CString;
 
@@ -14,8 +15,7 @@ use falcon::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use falcon::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
 use falcon::sign::{expand_privkey, sign_dyn, sign_tree};
 use falcon::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
-
-use crate::falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int, Sha1Context};
+use falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int, Sha1Context};
 
 pub fn run_falcon_tests() {
     test_shake256();

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use falcon::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i8_decode, trim_i8_encode};
 use falcon::common::hash_to_point_vartime;
 use falcon::keygen::keygen;
