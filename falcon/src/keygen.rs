@@ -1,4 +1,5 @@
 use crate::codec::{max_fg_bits, max_FG_bits};
+use crate::falcon::fpr;
 use crate::fft::{fft, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_invnorm2_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_mulconst, poly_sub};
 use crate::fpr::{fpr_add, FPR_BNORM_MAX, fpr_lt, FPR_MTWO31M1, FPR_MTWO63M1, fpr_mul, fpr_of, FPR_ONE, FPR_ONEHALF, FPR_PTWO31, FPR_PTWO31M1, FPR_PTWO63M1, FPR_Q, fpr_rint, fpr_sqr, FPR_TWO, FPR_ZERO};
 use crate::MKN;
