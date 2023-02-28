@@ -995,7 +995,7 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 		memcpy(tmp, s1tmp, n * sizeof *s1tmp);
 		return 1;
 	}
-	return 01;
+	return 0;
 }
 
 int

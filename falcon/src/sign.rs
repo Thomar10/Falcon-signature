@@ -1,3 +1,4 @@
+use std::slice::from_raw_parts_mut;
 use bytemuck;
 
 use crate::common::is_short_half;
@@ -628,9 +629,9 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     let (g01, inter) = inter.split_at_mut(n);
     let (g11, inter) = inter.split_at_mut(n);
     let (b11, inter) = inter.split_at_mut(n);
-    let (b01, inter) = inter.split_at_mut(n);
-    let (t0, inter) = inter.split_at_mut(n);
-    let (t1, inter) = inter.split_at_mut(n);
+    let (b01, interrest) = inter.split_at_mut(n);
+    let (t0, inter) = interrest.split_at_mut(n);
+    let (t1, _) = inter.split_at_mut(n);
 
     for u in 0..n {
         t0[u] = fpr_of((s2[u] as u16) as i64);
@@ -650,7 +651,7 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     let t0 = b11;
     let t1 = b01;
 
-    ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, inter);
+    ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, interrest);
 
     let (b00, inter) = tmp.split_at_mut(n);
     let (b01, inter) = inter.split_at_mut(n);
@@ -691,12 +692,12 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
 
     let s1tmp: &mut [i16] = bytemuck::cast_slice_mut(tx);
 
-    let mut sqn = 0;
-    let mut ng = 0;
+    let mut sqn: u32 = 0;
+    let mut ng: u32 = 0;
 
     for u in 0..n {
         let z: i32 = (s2[u] as u16) as i32 - fpr_rint(t0[u]) as i32;
-        sqn += (z * z) as u32;
+        sqn = sqn.wrapping_add(z.wrapping_mul(z) as u32);
         ng |= sqn;
         s1tmp[u] = z as i16;
     }
@@ -709,7 +710,7 @@ pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut 
     }
 
     if is_short_half(sqn, s2tmp, logn) > 0 {
-        s2.copy_from_slice(&s2tmp[..n]);
+        s2[..n].copy_from_slice(&s2tmp[..n]);
         let tmpi: &mut [i16] = bytemuck::cast_slice_mut(b00);
         tmpi[..n].copy_from_slice(&s1tmp[..n]);
         return true;
@@ -847,12 +848,16 @@ pub fn sign_dyn_same(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], 
 
     let mut ftmp: &mut [fpr] = bytemuck::cast_slice_mut(tmp);
 
+    //Don't worry about it ;)
+    let sig_ptr: *mut u16 = sig.as_mut_ptr() as *mut u16;
+    let hm: &[u16] = unsafe {from_raw_parts_mut(sig_ptr, sig.len())};
+
     loop {
         let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};
         prng_init(&mut spc.p, rng);
         let samp: SamplerZ = sampler;
 
-        if do_sign_dyn_same(samp, &mut spc, sig, f, g, F, G, logn, &mut ftmp) {
+        if do_sign_dyn(samp, &mut spc, sig, f, g, F, G, hm, logn, &mut ftmp) {
             break;
         }
     }
