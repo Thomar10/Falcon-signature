@@ -2,11 +2,12 @@
 pub(crate) mod tests {
     use rand::Rng;
 
+    use falcon::falcon_tmpsize_keygen;
+    use falcon::keygen::{get_rng_u64, keygen, make_fg, make_fg_step, mkgauss, modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, poly_big_to_fp, poly_big_to_small, poly_small_mkgauss, poly_small_sqnorm, poly_small_to_fp, poly_sub_scaled, poly_sub_scaled_ntt, solve_ntru, solve_ntru_binary_depth0, solve_ntru_binary_depth1, solve_ntru_deepest, solve_ntru_intermediate, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_sub, zint_sub_scaled};
+    use falcon::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
+
     use crate::falcon_c::keygen_c::{falcon_inner_keygen, get_rng_u64_func, make_fg_func, make_fg_step_func, mkgauss_func, modp_add_func, modp_div_func, modp_iNTT2_ext_func, modp_mkgm2_func, modp_montymul_func, modp_ninv31_func, modp_norm_func, modp_NTT2_ext_func, modp_poly_rec_res_func, modp_R2_func, modp_R_func, modp_Rx_func, modp_set_func, modp_sub_func, poly_big_to_fp_func, poly_big_to_small_func, poly_small_mkgauss_func, poly_small_sqnorm_func, poly_small_to_fp_func, poly_sub_scaled_func, poly_sub_scaled_ntt_func, small_prime, solve_NTRU_binary_depth0_func, solve_NTRU_binary_depth1_func, solve_NTRU_deepest_func, solve_NTRU_func, solve_NTRU_intermediate_func, zint_add_mul_small_func, zint_add_scaled_mul_small_func, zint_bezout_func, zint_co_reduce_func, zint_co_reduce_mod_func, zint_finish_mod_func, zint_mod_small_signed_func, zint_mod_small_unsigned_func, zint_mul_small_func, zint_negate_func, zint_norm_zero_func, zint_one_to_plain_func, zint_rebuild_CRT_func, zint_sub_func, zint_sub_scaled_func};
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, falcon_inner_i_shake256_inject, InnerShake256Context as InnerShake256ContextC, St as StC};
-    use crate::falcon_tmpsize_keygen;
-    use crate::keygen::{get_rng_u64, keygen, make_fg, make_fg_step, mkgauss, modp_add, modp_div, modp_iNTT2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_NTT2_ext, modp_poly_rec_res, modp_R, modp_R2, modp_Rx, modp_set, modp_sub, poly_big_to_fp, poly_big_to_small, poly_small_mkgauss, poly_small_sqnorm, poly_small_to_fp, poly_sub_scaled, poly_sub_scaled_ntt, solve_ntru, solve_ntru_binary_depth0, solve_ntru_binary_depth1, solve_ntru_deepest, solve_ntru_intermediate, zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce, zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned, zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_CRT, zint_sub, zint_sub_scaled};
-    use crate::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
 
     #[test]
     fn test_modp_set() {

@@ -4,16 +4,15 @@ mod tests {
 
     use rand::Rng;
 
-    use crate::common::hash_to_point_vartime;
+    use falcon::common::hash_to_point_vartime;
+    use falcon::fpr::{fpr_div, fpr_of, FPR_SIGMA_MIN};
+    use falcon::keygen::keygen;
+    use falcon::shake::{i_shake256_extract, i_shake256_flip, i_shake256_inject};
+    use falcon::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_tree, smallints_to_fpr};
+
     use crate::falcon_c::keygen_c::falcon_inner_keygen;
-    use crate::falcon_c::rng_c::Prng as PrngC;
     use crate::falcon_c::shake_c::InnerShake256Context as InnerShake256ContextC;
     use crate::falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, smallints_to_fpr_func as smallints_to_fpr_c};
-    use crate::fpr::{fpr_div, fpr_of, FPR_SIGMA_MIN};
-    use crate::keygen::keygen;
-    use crate::rng::Prng;
-    use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_inject};
-    use crate::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_tree, smallints_to_fpr};
     use crate::tests::keygen_test::tests::init_shake_with_random_context;
     use crate::tests::rng_test::tests::{create_random_prngs, init_prngs};
 
@@ -173,11 +172,11 @@ mod tests {
     #[test]
     fn test_gaussion0_sampler() {
         for _ in 0..100 {
-            let (mut prng, prng_c): (Prng, PrngC) = create_random_prngs();
+            let (mut prng, prng_c) = create_random_prngs();
             init_prngs(&mut prng, &prng_c);
 
             for _ in 0..20 {
-                let output_rust:i32 = gaussian0_sampler(&mut prng);
+                let output_rust: i32 = gaussian0_sampler(&mut prng);
                 let output_c: i32;
 
                 unsafe {
@@ -193,14 +192,14 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_BerExp() {
         for _ in 0..100 {
-            let (mut prng, prng_c): (Prng, PrngC) = create_random_prngs();
+            let (mut prng, prng_c) = create_random_prngs();
             init_prngs(&mut prng, &prng_c);
 
             let x: fpr = rand::random();
             let ccs: fpr = rand::random();
 
             for _ in 0..20 {
-                let output_rust:i32 = BerExp(&mut prng, x, ccs);
+                let output_rust: i32 = BerExp(&mut prng, x, ccs);
                 let output_c: i32;
 
                 unsafe {
@@ -216,7 +215,7 @@ mod tests {
     fn test_sampler() {
         let mut rng = rand::thread_rng();
         for _ in 0..1000 {
-            let (mut prng, prng_c): (Prng, PrngC) = create_random_prngs();
+            let (mut prng, prng_c) = create_random_prngs();
             init_prngs(&mut prng, &prng_c);
 
             let logn = rng.gen_range(1..8);
@@ -224,8 +223,8 @@ mod tests {
             let isigma = fpr_from_fraction(rng.gen_range(50..100), 100); //Should be between 0.5 and 1
             let mu: fpr = fpr_of(rng.gen_range(1..10));
 
-            let mut samp_ctx: SamplerContext = SamplerContext{p: prng, sigma_min};
-            let samp_ctx_c: SamplerContextC = SamplerContextC{p: prng_c, sigma_min};
+            let mut samp_ctx: SamplerContext = SamplerContext { p: prng, sigma_min };
+            let samp_ctx_c: SamplerContextC = SamplerContextC { p: prng_c, sigma_min };
 
             let res_rust: i32 = sampler(&mut samp_ctx, mu, isigma);
             let res_c: i32;
@@ -244,7 +243,7 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_ffSampling_fft_dyntree() {
         for _ in 0..2 {
-            let (mut prng, prng_c): (Prng, PrngC) = create_random_prngs();
+            let (mut prng, prng_c) = create_random_prngs();
             init_prngs(&mut prng, &prng_c);
 
             const LOGN: usize = 8;
@@ -252,8 +251,8 @@ mod tests {
 
             let sigma_min: fpr = FPR_SIGMA_MIN[LOGN];
 
-            let mut samp_ctx: SamplerContext = SamplerContext{p: prng, sigma_min};
-            let mut samp_ctx_c: SamplerContextC = SamplerContextC{p: prng_c, sigma_min};
+            let mut samp_ctx: SamplerContext = SamplerContext { p: prng, sigma_min };
+            let mut samp_ctx_c: SamplerContextC = SamplerContextC { p: prng_c, sigma_min };
 
 
             let mut t0: [fpr; N] = gen_small_fpr_array(N).try_into().unwrap(); //[0; N]; // = core::array::from_fn(|_| rng.gen::<u64>());
@@ -273,7 +272,6 @@ mod tests {
             small_int_arr = core::array::from_fn(|_| rng.gen::<i8>());
             smallints_to_fpr(&mut g11, &small_int_arr, LOGN as u32);
             small_int_arr = core::array::from_fn(|_| rng.gen::<i8>());*/
-
 
 
             let orig_logn: usize = LOGN;
@@ -305,7 +303,6 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_sign_dyn() {
         for _ in 0..100 {
-
             const LOGN: usize = 10;
 
             const BUFFER_SIZE: usize = 8192 * 4 * 8;

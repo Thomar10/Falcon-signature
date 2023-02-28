@@ -4,6 +4,9 @@ pub(crate) mod tests {
 
     use rand::Rng;
 
+    use falcon::rng::{Prng, prng_get_bytes, prng_get_u64, prng_get_u8, prng_init, prng_refill, State};
+    use falcon::shake::{i_shake256_init, InnerShake256Context};
+
     use crate::falcon_c::rng_c::{Buf as BufC,
                                  Prng as PrngC,
                                  prng_get_bytes as prng_get_bytes_c,
@@ -13,8 +16,6 @@ pub(crate) mod tests {
                                  prng_refill as prng_refill_c,
                                  State as StateC};
     use crate::falcon_c::shake_c::{falcon_inner_i_shake256_init, InnerShake256Context as InnerShake256ContextC, St as StC};
-    use crate::rng::{Prng, prng_get_bytes, prng_get_u64, prng_get_u8, prng_init, prng_refill, State};
-    use crate::shake::{i_shake256_init, InnerShake256Context};
 
     #[test]
     fn test_prng_refill() {

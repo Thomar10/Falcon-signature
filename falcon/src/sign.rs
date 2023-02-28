@@ -145,8 +145,8 @@ pub fn expand_privkey(expanded_key: &mut [fpr], f: &[i8], g: &[i8], F: &[i8],
 }
 
 pub struct SamplerContext {
-    pub(crate) p: Prng,
-    pub(crate) sigma_min: fpr
+    pub p: Prng,
+    pub sigma_min: fpr
 }
 
 type SamplerZ = fn(&mut SamplerContext, fpr, fpr) -> i32;

@@ -1,0 +1,16 @@
+[package]
+name = "falcon_test"
+version = "1.0.0"
+edition = "2021"
+
+
+[dependencies]
+libc = "0.2"
+aes = "0.8.2"
+rand = "0.8.4"
+hex = "0.4.3"
+bytemuck = "1.13.0"
+falcon = { path = "../falcon" }
+
+[build-dependencies]
+cmake="0.1.31"

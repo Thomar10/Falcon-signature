@@ -1,19 +1,5 @@
-#![allow(dead_code)]
-
-extern crate core;
-
-mod fft;
-mod fpr;
-mod shake;
-mod keygen;
-mod falcon;
-mod codec;
-mod vrfy;
 mod katrng;
 mod nist;
-mod rng;
-mod sign;
-mod common;
 mod tests;
 mod kat_tests;
 
@@ -31,8 +17,6 @@ mod falcon_c {
     pub mod test_falcon_c;
 }
 
-
-
 fn main() {
-    println!("HEJ :)");
+
 }
