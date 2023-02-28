@@ -1,20 +1,12 @@
 use bytemuck;
 
 use crate::common::is_short_half;
+use crate::falcon::fpr;
 use crate::fft::{fft, ifft, poly_add, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
 use crate::fpr::{fpr_add, fpr_expm_p63, fpr_floor, fpr_half, FPR_INV_2SQRSIGMA0, FPR_INV_LOG2, FPR_INV_SIGMA, FPR_INVERSE_OF_Q, FPR_INVSQRT2, FPR_INVSQRT8, FPR_LOG2, fpr_mul, fpr_neg, fpr_of, fpr_rint, FPR_SIGMA_MIN, fpr_sqr, fpr_sqrt, fpr_sub, fpr_trunc};
+use crate::MKN;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
 use crate::shake::InnerShake256Context;
-
-#[allow(non_snake_case)]
-macro_rules! MKN {
-    ($logn: expr) => {
-        (1 << $logn) as usize
-    }
-}
-
-#[allow(non_camel_case_types)]
-type fpr = u64;
 
 #[allow(non_snake_case)]
 #[inline(always)]
