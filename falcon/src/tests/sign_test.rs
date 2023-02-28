@@ -362,11 +362,11 @@ mod tests {
 
             const LOGN: usize = 4;
 
-            const BUFFER_SIZE: usize = 8192 * 8;
+            const BUFFER_SIZE: usize = 2048 * 8;
             let (mut rng_rust, _) = init_shake_with_random_context();
 
             let mut sig: [i16; 1024] = [0; 1024];
-            let sig_c: [i16; 1024] = [0; 1024];
+            let sig_c: [i16; 1024];
             let mut h: [u16; 1024] = [0; 1024];
             let h_c: [u16; 1024] = [0; 1024];
             let mut f: [i8; 1024] = [0; 1024];
@@ -393,6 +393,8 @@ mod tests {
             keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), LOGN as u32, tmp.as_mut_ptr());
 
             unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), LOGN as u32, tmp_c.as_ptr()); }
+
+            sig_c = sig.clone();
 
             sign_dyn_same(&mut sig, &mut rng_rust, &f, &g, &F, &G, LOGN as u32, &mut tmp);
 
