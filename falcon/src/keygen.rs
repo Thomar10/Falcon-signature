@@ -139,7 +139,7 @@ pub fn modp_mkgm2(gm: &mut [u32], igm: &mut [u32], logn: u32, mut g: u32, p: u32
 }
 
 #[allow(non_snake_case)]
-pub fn modp_NTT2_ext(a: &mut [u32], stride: usize, gm: &mut [u32], logn: u32, p: u32, p0i: u32) {
+pub fn modp_NTT2_ext(a: &mut [u32], stride: usize, gm: &[u32], logn: u32, p: u32, p0i: u32) {
     if logn == 0 {
         return;
     }
@@ -174,7 +174,7 @@ pub fn modp_NTT2_ext(a: &mut [u32], stride: usize, gm: &mut [u32], logn: u32, p:
 }
 
 #[allow(non_snake_case)]
-pub fn modp_iNTT2_ext(a: &mut [u32], stride: usize, igm: &mut [u32], logn: u32, p: u32, p0i: u32) {
+pub fn modp_iNTT2_ext(a: &mut [u32], stride: usize, igm: &[u32], logn: u32, p: u32, p0i: u32) {
     if logn == 0 {
         return;
     }
@@ -216,12 +216,12 @@ pub fn modp_iNTT2_ext(a: &mut [u32], stride: usize, igm: &mut [u32], logn: u32, 
 }
 
 #[allow(non_snake_case)]
-pub fn modp_NTT2(a: &mut [u32], gm: &mut [u32], logn: u32, p: u32, p0i: u32) {
+pub fn modp_NTT2(a: &mut [u32], gm: &[u32], logn: u32, p: u32, p0i: u32) {
     modp_NTT2_ext(a, 1, gm, logn, p, p0i);
 }
 
 #[allow(non_snake_case)]
-pub fn modp_iNTT2(a: &mut [u32], igm: &mut [u32], logn: u32, p: u32, p0i: u32) {
+pub fn modp_iNTT2(a: &mut [u32], igm: &[u32], logn: u32, p: u32, p0i: u32) {
     modp_iNTT2_ext(a, 1, igm, logn, p, p0i);
 }
 
@@ -235,7 +235,7 @@ pub fn modp_poly_rec_res(f: &mut [u32], logn: u32, p: u32, p0i: u32, r2: u32) {
     }
 }
 
-pub fn zint_sub(a: &mut [u32], b: &mut [u32], len: usize, ctl: u32) -> u32 {
+pub fn zint_sub(a: &mut [u32], b: &[u32], len: usize, ctl: u32) -> u32 {
     let mut cc: u32 = 0;
     let m = (!ctl).wrapping_add(1);
     for u in 0..len {
@@ -260,7 +260,7 @@ pub fn zint_mul_small(m: &mut [u32], mlen: usize, x: u32) -> u32 {
 }
 
 
-pub fn zint_mod_small_unsigned(d: &mut [u32], dlen: usize, p: u32, p0i: u32, r2: u32) -> u32 {
+pub fn zint_mod_small_unsigned(d: &[u32], dlen: usize, p: u32, p0i: u32, r2: u32) -> u32 {
     let mut x = 0;
     let mut u = dlen;
     while u > 0 {
@@ -275,7 +275,7 @@ pub fn zint_mod_small_unsigned(d: &mut [u32], dlen: usize, p: u32, p0i: u32, r2:
 }
 
 
-pub fn zint_mod_small_signed(d: &mut [u32], dlen: usize, p: u32, p0i: u32, r2: u32, rx: u32) -> u32 {
+pub fn zint_mod_small_signed(d: &[u32], dlen: usize, p: u32, p0i: u32, r2: u32, rx: u32) -> u32 {
     if dlen == 0 {
         return 0;
     }
@@ -290,7 +290,7 @@ pub fn zint_mod_small_signed(d: &mut [u32], dlen: usize, p: u32, p0i: u32, r2: u
  * has length 'len+1' words. 's' must fit on 31 bits. x[] and y[] must
  * not overlap.
  */
-pub fn zint_add_mul_small(x: &mut [u32], y: &mut [u32], len: usize, s: u32) {
+pub fn zint_add_mul_small(x: &mut [u32], y: &[u32], len: usize, s: u32) {
     let mut cc = 0;
     for u in 0..len {
         let xw = x[u];
@@ -302,7 +302,7 @@ pub fn zint_add_mul_small(x: &mut [u32], y: &mut [u32], len: usize, s: u32) {
     x[len] = cc;
 }
 
-pub fn zint_norm_zero(x: &mut [u32], p: &mut [u32], len: usize) {
+pub fn zint_norm_zero(x: &mut [u32], p: &[u32], len: usize) {
     let mut u = len;
     let mut r: u32 = 0;
     let mut bb = 0;
@@ -331,13 +331,13 @@ pub fn zint_norm_zero(x: &mut [u32], p: &mut [u32], len: usize) {
  * by adding 'xstride' repeatedly.
  */
 #[allow(non_snake_case)]
-pub fn zint_rebuild_CRT(xx: &mut [u32], xlen: usize, xstride: usize, num: u64, primes: &[SmallPrimes; 522], normalized_signed: bool, tmp: &mut [u32]) {
-    tmp[0] = primes[0].p;
+pub fn zint_rebuild_CRT(xx: &mut [u32], xlen: usize, xstride: usize, num: u64, normalized_signed: bool, tmp: &mut [u32]) {
+    tmp[0] = PRIMES[0].p;
     for u in 1..xlen {
         let (p, p0i, s, r2): (u32, u32, u32, u32);
 
-        p = primes[u].p;
-        s = primes[u].s;
+        p = PRIMES[u].p;
+        s = PRIMES[u].s;
 
         p0i = modp_ninv31(p);
         r2 = modp_R2(p, p0i);
@@ -406,7 +406,7 @@ pub fn zint_co_reduce(a: &mut [u32], b: &mut [u32], len: usize, xa: i64, xb: i64
     nega | (negb << 1)
 }
 
-pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &mut [u32], neg: u32) {
+pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &[u32], neg: u32) {
     let mut cc = 0;
     for u in 0..len {
         cc = (a[u].wrapping_sub(m[u]).wrapping_sub(cc)) >> 31;
@@ -427,7 +427,7 @@ pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &mut [u32], neg: u32) {
     }
 }
 
-pub fn zint_co_reduce_mod(a: &mut [u32], b: &mut [u32], m: &mut [u32], len: usize, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64) {
+pub fn zint_co_reduce_mod(a: &mut [u32], b: &mut [u32], m: &[u32], len: usize, m0i: u32, xa: i64, xb: i64, ya: i64, yb: i64) {
     let mut cca: i64 = 0;
     let mut ccb: i64 = 0;
     let fa = (a[0].wrapping_mul(xa as u32).wrapping_add(b[0].wrapping_mul(xb as u32)).wrapping_mul(m0i)) & 0x7FFFFFFF;
@@ -459,7 +459,7 @@ pub fn zint_co_reduce_mod(a: &mut [u32], b: &mut [u32], m: &mut [u32], len: usiz
     zint_finish_mod(b, len, m, ((ccb as u64) >> 63) as u32);
 }
 
-pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], len: usize, tmp: &mut [u32]) -> i32 {
+pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usize, tmp: &mut [u32]) -> i32 {
     let (u1_index, v1_index, a_index, b_index): (usize, usize, usize, usize);
     let (x0i, y0i): (u32, u32);
     let (mut num, mut rc): (u32, u32);
@@ -592,7 +592,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &mut [u32], y: &mut [u32], l
     ((1 - ((rc | (!rc).wrapping_add(1)) >> 31)) & x[0] & y[0]) as i32
 }
 
-pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &mut [u32], ylen: usize, k: i32, sch: usize, scl: u32) {
+pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &[u32], ylen: usize, k: i32, sch: usize, scl: u32) {
     let mut cc: i32;
     let mut tw: u32;
     if ylen == 0 {
@@ -615,7 +615,7 @@ pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &mut [u32], ylen
     }
 }
 
-pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &mut [u32], ylen: usize, sch: usize, scl: u32) {
+pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &[u32], ylen: usize, sch: usize, scl: u32) {
     if ylen == 0 {
         return;
     }
@@ -648,7 +648,7 @@ pub fn zint_one_to_plain(x: u32) -> i32 {
     w as i32
 }
 
-pub fn poly_big_to_fp(d: &mut [u64], f: &mut [u32], flen: usize, fstride: usize, logn: u32) {
+pub fn poly_big_to_fp(d: &mut [u64], f: &[u32], flen: usize, fstride: usize, logn: u32) {
     let n = MKN!(logn);
     if flen == 0 {
         for u in 0..n {
@@ -678,7 +678,7 @@ pub fn poly_big_to_fp(d: &mut [u64], f: &mut [u32], flen: usize, fstride: usize,
     }
 }
 
-pub fn poly_big_to_small(d: &mut [i8], s: &mut [u32], lim: i32, logn: u32) -> bool {
+pub fn poly_big_to_small(d: &mut [i8], s: &[u32], lim: i32, logn: u32) -> bool {
     let n = MKN!(logn);
     for u in 0..n {
         let z = zint_one_to_plain(s[u]);
@@ -691,7 +691,7 @@ pub fn poly_big_to_small(d: &mut [i8], s: &mut [u32], lim: i32, logn: u32) -> bo
 }
 
 #[allow(non_snake_case)]
-pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32], flen: usize, fstride: usize, k: &mut [i32], sch: u32, scl: u32, logn: u32) {
+pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &[u32], flen: usize, fstride: usize, k: &[i32], sch: u32, scl: u32, logn: u32) {
     let n = MKN!(logn);
     for u in 0..n {
         let mut kf: i32;
@@ -701,7 +701,7 @@ pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32]
         let mut y_stride = 0;
         for v in 0..n {
             let x = F.split_at_mut(x_stride).1;
-            let y = f.split_at_mut(y_stride).1;
+            let y = f.split_at(y_stride).1;
             zint_add_scaled_mul_small(
                 x, Flen, y, flen, kf, sch as usize, scl);
             if u + v == n - 1 {
@@ -716,7 +716,7 @@ pub fn poly_sub_scaled(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32]
 }
 
 #[allow(non_snake_case)]
-pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [u32], flen: usize, fstride: usize, k: &mut [i32], sch: u32, scl: u32, logn: u32, tmp: &mut [u32]) {
+pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &[u32], flen: usize, fstride: usize, k: &[i32], sch: u32, scl: u32, logn: u32, tmp: &mut [u32]) {
     let tlen: usize;
     let n = MKN!(logn);
     tlen = flen + 1;
@@ -737,12 +737,12 @@ pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [
             t1[v] = modp_set(k[v], p);
         }
         modp_NTT2(t1, gm, logn, p, p0i);
-        let mut y = &mut *f;
+        let mut y = &*f;
         let mut x_move = 0;
         for _ in 0..n {
             let (_, x) = fk.split_at_mut(x_move + u);
             x[0] = zint_mod_small_signed(y, flen, p, p0i, r2, rx);
-            let (_, yy) = y.split_at_mut(fstride);
+            let (_, yy) = y.split_at(fstride);
             y = yy;
             x_move += tlen;
         }
@@ -758,7 +758,7 @@ pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &mut [
         let (_, x) = fk.split_at_mut(u);
         modp_iNTT2_ext(x, tlen, igm, logn, p, p0i);
     }
-    zint_rebuild_CRT(fk, tlen, tlen, n as u64, &PRIMES, true, t1);
+    zint_rebuild_CRT(fk, tlen, tlen, n as u64, true, t1);
     let mut x = F;
     let mut y = fk;
     for _ in 0..n {
@@ -812,7 +812,7 @@ pub fn mkgauss(rng: &mut InnerShake256Context, logn: u32) -> i32 {
     val
 }
 
-pub fn poly_small_sqnorm(f: &mut [i8], logn: u32) -> u32 {
+pub fn poly_small_sqnorm(f: &[i8], logn: u32) -> u32 {
     let n = MKN!(logn);
     let mut s = 0;
     let mut ng = 0;
@@ -824,7 +824,7 @@ pub fn poly_small_sqnorm(f: &mut [i8], logn: u32) -> u32 {
     s | (!(ng >> 31)).wrapping_add(1)
 }
 
-pub fn poly_small_to_fp(x: &mut [u64], f: &mut [i8], logn: u32) {
+pub fn poly_small_to_fp(x: &mut [u64], f: &[i8], logn: u32) {
     let n = MKN!(logn);
     for u in 0..n {
         x[u] = fpr_of(f[u] as i64);
@@ -908,13 +908,13 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
     // We reborrow everything as they overflow here again. Borrowing such that fs allows for overflow
     let (_, fs) = data.split_at_mut(2 * hn * tlen);
     let (fs, gm) = fs.split_at_mut(2 * n * slen);
-    zint_rebuild_CRT(fs, slen, slen, n as u64, &PRIMES, true, gm);
+    zint_rebuild_CRT(fs, slen, slen, n as u64, true, gm);
     // Now the more tricky, gs overflows into gm! take a copy of gm and give that, recopy the result as gm_copy is mutated.
     let (_, gs) = data.split_at_mut((hn * tlen * 2) + n * slen);
-    let copy_size = 2*slen;
+    let copy_size = 2 * slen;
     let mut gm_copy = vec![0; copy_size];
     gm_copy.copy_from_slice(&gs[n * slen..n * slen + copy_size]);
-    zint_rebuild_CRT(gs, slen, slen, n as u64, &PRIMES, true, &mut gm_copy);
+    zint_rebuild_CRT(gs, slen, slen, n as u64, true, &mut gm_copy);
     gs[n * slen..n * slen + copy_size].clone_from_slice(&gm_copy);
 
     // Split arrays back to 'normal'
@@ -974,7 +974,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
     }
 }
 
-pub fn make_fg(data: &mut [u32], f: &mut [i8], g: &mut [i8], logn: u32, depth: u32, out_ntt: bool) {
+pub fn make_fg(data: &mut [u32], f: &[i8], g: &[i8], logn: u32, depth: u32, out_ntt: bool) {
     let n = MKN!(logn);
     let p0 = PRIMES[0].p;
     let (ft, gt) = data.split_at_mut(n);
@@ -1000,13 +1000,13 @@ pub fn make_fg(data: &mut [u32], f: &mut [i8], g: &mut [i8], logn: u32, depth: u
 
 
 #[allow(non_snake_case)]
-pub fn solve_ntru_deepest(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [u32]) -> bool
+pub fn solve_ntru_deepest(logn_top: u32, f: &[i8], g: &[i8], tmp: &mut [u32]) -> bool
 {
     let len = MAX_BL_SMALL[logn_top as usize];
     let (_, fp) = tmp.split_at_mut(2 * len);
     make_fg(fp, f, g, logn_top, logn_top, false);
     let (fp, t1) = fp.split_at_mut(2 * len);
-    zint_rebuild_CRT(fp, len, len, 2, &PRIMES, false, t1);
+    zint_rebuild_CRT(fp, len, len, 2, false, t1);
 
     let (Fp, inter) = tmp.split_at_mut(len);
     let (Gp, inter) = inter.split_at_mut(len);
@@ -1029,7 +1029,7 @@ pub fn solve_ntru_deepest(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [
 }
 
 #[allow(non_snake_case)]
-pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth: u32, tmp: &mut [u32]) -> bool {
+pub fn solve_ntru_intermediate(logn_top: u32, f: &[i8], g: &[i8], depth: u32, tmp: &mut [u32]) -> bool {
     let logn = logn_top - depth;
     let n = MKN!(logn);
     let hn = n >> 1;
@@ -1075,10 +1075,10 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
             // The classic overflow so we reborrow
             let (_, inter) = tmp.split_at_mut(2 * n * llen);
             let (ft, t1) = inter.split_at_mut(2 * n * slen);
-            zint_rebuild_CRT(ft, slen, slen, n as u64, &PRIMES, true, t1);
+            zint_rebuild_CRT(ft, slen, slen, n as u64, true, t1);
             let (_, inter) = tmp.split_at_mut(2 * n * llen + n * slen);
             let (gt, t1) = inter.split_at_mut(2 * n * slen);
-            zint_rebuild_CRT(gt, slen, slen, n as u64, &PRIMES, true, t1);
+            zint_rebuild_CRT(gt, slen, slen, n as u64, true, t1);
         }
         let (Ft, inter) = tmp.split_at_mut(n * llen);
         let (Gt, inter) = inter.split_at_mut(n * llen);
@@ -1148,11 +1148,11 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
 
     let (Ft, inter) = tmp.split_at_mut(2 * llen * n);
     let (_, t1) = inter.split_at_mut(2 * slen * n);
-    zint_rebuild_CRT(Ft, llen, llen, n as u64, &PRIMES, true, t1);
+    zint_rebuild_CRT(Ft, llen, llen, n as u64, true, t1);
     let mut gm_copy = vec![0; llen];
     gm_copy.clone_from_slice(&tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen]);
     let (_, Gt) = tmp.split_at_mut(llen * n);
-    zint_rebuild_CRT(Gt, llen, llen, n as u64, &PRIMES, true, gm_copy.as_mut_slice());
+    zint_rebuild_CRT(Gt, llen, llen, n as u64, true, gm_copy.as_mut_slice());
     tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen].clone_from_slice(&gm_copy);
 
     let (Ft, inter) = tmp.split_at_mut(llen * n);
@@ -1166,7 +1166,7 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
     let (rt5, inter_rt1) = inter.split_at_mut(n >> 1);
 
     let rlen = if slen > 10 { 10 } else { slen };
-    poly_big_to_fp(rt3, &mut ft.split_at_mut(slen - rlen).1, rlen, slen, logn);
+    poly_big_to_fp(rt3, ft.split_at_mut(slen - rlen).1, rlen, slen, logn);
     poly_big_to_fp(rt4, gt.split_at_mut(slen - rlen).1, rlen, slen, logn);
 
     let scale_fg = 31 * (slen - rlen) as i32;
@@ -1287,7 +1287,7 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &mut [i8], g: &mut [i8], depth:
 
 
 #[allow(non_snake_case)]
-pub fn solve_ntru_binary_depth1(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [u32]) -> bool {
+pub fn solve_ntru_binary_depth1(logn_top: u32, f: &[i8], g: &[i8], tmp: &mut [u32]) -> bool {
     let depth: usize = 1;
     let n_top = 1usize << logn_top;
     let logn = logn_top - depth as u32;
@@ -1414,8 +1414,8 @@ pub fn solve_ntru_binary_depth1(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: 
     // We have to reborrow because they overflow into Gt from Ft
     let (Ft, inter) = tmp.split_at_mut(2 * llen * n);
     let (ft, t1) = inter.split_at_mut(2 * slen * n);
-    zint_rebuild_CRT(Ft, llen, llen, (n << 1) as u64, &PRIMES, true, t1);
-    zint_rebuild_CRT(ft, slen, slen, (n << 1) as u64, &PRIMES, true, t1);
+    zint_rebuild_CRT(Ft, llen, llen, (n << 1) as u64, true, t1);
+    zint_rebuild_CRT(ft, slen, slen, (n << 1) as u64, true, t1);
 
     let rt1 = bytemuck::pod_align_to_mut::<u32, fpr>(t1).1;
     let (rt1, rt2) = rt1.split_at_mut(n);
@@ -1484,7 +1484,7 @@ pub fn solve_ntru_binary_depth1(logn_top: u32, f: &mut [i8], g: &mut [i8], tmp: 
 }
 
 #[allow(non_snake_case)]
-pub fn solve_ntru_binary_depth0(logn: u32, f: &mut [i8], g: &mut [i8], tmp: &mut [u32]) -> bool {
+pub fn solve_ntru_binary_depth0(logn: u32, f: &[i8], g: &[i8], tmp: &mut [u32]) {
     let n = 1usize << logn;
     let hn = n >> 1;
     let p = PRIMES[0].p;
@@ -1640,12 +1640,10 @@ pub fn solve_ntru_binary_depth0(logn: u32, f: &mut [i8], g: &mut [i8], tmp: &mut
         Fp[u] = modp_norm(Fp[u], p) as u32;
         Gp[u] = modp_norm(Gp[u], p) as u32;
     }
-
-    true
 }
 
 #[allow(non_snake_case)]
-pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [i8], lim: i32, tmp: &mut [u32]) -> bool {
+pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &[i8], g: &[i8], lim: i32, tmp: &mut [u32]) -> bool {
     let n = MKN!(logn);
     let mut depth: u32;
     let r: u32;
@@ -1674,9 +1672,7 @@ pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [
         if !solve_ntru_binary_depth1(logn, f, g, tmp) {
             return false;
         }
-        if !solve_ntru_binary_depth0(logn, f, g, tmp) {
-            return false;
-        }
+        solve_ntru_binary_depth0(logn, f, g, tmp);
     }
     let (Gt, inter) = tmp.split_at_mut(n);
     let (ft, inter) = inter.split_at_mut(n);
@@ -1684,7 +1680,7 @@ pub fn solve_ntru(logn: u32, F: &mut [i8], G: &mut [i8], f: &mut [i8], g: &mut [
     let (Ft, gm) = inter.split_at_mut(n);
     let GG: &mut [i8];
     if G.len() <= 0 {
-        GG = bytemuck::pod_align_to_mut:: < u32, i8 > (gt).1;
+        GG = bytemuck::pod_align_to_mut::<u32, i8>(gt).1;
     } else {
         GG = G;
     }
@@ -1828,7 +1824,6 @@ pub fn keygen(mut rng: &mut InnerShake256Context, f: &mut [i8], g: &mut [i8], F:
         if !solve_ntru(logn, F, G, f, g, lim, bytemuck::pod_align_to_mut(tmp).1) {
             continue;
         }
-
 
         break;
     }

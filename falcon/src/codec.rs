@@ -78,7 +78,7 @@ pub fn modq_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &[u16], 
     out_len
 }
 
-pub fn modq_decode(x: &mut [u16], logn: u32, inn: &mut [u8], start_in: usize, max_in: usize) -> usize {
+pub fn modq_decode(x: &mut [u16], logn: u32, inn: &[u8], start_in: usize, max_in: usize) -> usize {
     let n = 1usize << logn;
     let in_len: usize = ((n * 14) + 7) >> 3;
     if in_len > max_in {
@@ -109,7 +109,7 @@ pub fn modq_decode(x: &mut [u16], logn: u32, inn: &mut [u8], start_in: usize, ma
     in_len
 }
 
-pub fn comp_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i16], logn: usize) -> usize {
+pub fn comp_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &[i16], logn: usize) -> usize {
     let n = 1usize << logn;
 
     for u in 0..n {
@@ -163,7 +163,7 @@ pub fn comp_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i1
     v
 }
 
-pub fn comp_decode(x: &mut [i16], logn: u32, inn: &mut [u8], inn_index: usize, max_in: usize) -> usize {
+pub fn comp_decode(x: &mut [i16], logn: u32, inn: &[u8], inn_index: usize, max_in: usize) -> usize {
     let n = 1usize << logn;
     let mut acc: u32 = 0;
     let mut acc_len: i32 = 0;
@@ -212,7 +212,7 @@ pub fn comp_decode(x: &mut [i16], logn: u32, inn: &mut [u8], inn_index: usize, m
     v
 }
 
-pub fn trim_i8_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i8], logn: u32, bits: u32) -> usize {
+pub fn trim_i8_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &[i8], logn: u32, bits: u32) -> usize {
     let n = 1usize << logn;
     let maxv: i8 = ((1 << (bits - 1)) as i32).wrapping_sub(1) as i8;
     let minv: i8 = -maxv;
@@ -247,7 +247,7 @@ pub fn trim_i8_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut 
     out_len
 }
 
-pub fn trim_i8_decode(x: &mut [i8], logn: u32, bits: u32, inn: &mut [u8], mut inn_index: usize, max_in: usize) -> usize {
+pub fn trim_i8_decode(x: &mut [i8], logn: u32, bits: u32, inn: &[u8], mut inn_index: usize, max_in: usize) -> usize {
     let n = 1usize << logn;
     let in_len: usize = ((n * bits as usize) + 7) >> 3;
     if in_len > max_in {
@@ -280,7 +280,7 @@ pub fn trim_i8_decode(x: &mut [i8], logn: u32, bits: u32, inn: &mut [u8], mut in
     in_len
 }
 
-pub fn trim_i16_decode(x: &mut [i16], logn: u32, bits: u32, inn: &mut [u8], mut inn_index: usize, max_in: usize) -> usize {
+pub fn trim_i16_decode(x: &mut [i16], logn: u32, bits: u32, inn: &[u8], mut inn_index: usize, max_in: usize) -> usize {
     let n = 1usize << logn;
     let in_len: usize = ((n * bits as usize) + 7) >> 3;
     if in_len > max_in {
@@ -314,7 +314,7 @@ pub fn trim_i16_decode(x: &mut [i16], logn: u32, bits: u32, inn: &mut [u8], mut 
     in_len
 }
 
-pub fn trim_i16_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &mut [i16], logn: u32, bits: u32) -> usize {
+pub fn trim_i16_encode(out: &mut [u8], out_index: usize, max_out: usize, x: &[i16], logn: u32, bits: u32) -> usize {
     let n = 1usize << logn;
     let maxv: i32 = ((1 << (bits - 1)) as i32).wrapping_sub(1);
     let minv: i32 = -maxv;
