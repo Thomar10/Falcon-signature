@@ -107,7 +107,11 @@ pub(crate) mod tests {
         for _ in 0..2000 {
             let p: u32 = rand::random();
             let p0i: u32 = rand::random();
-            let x: u16 = rand::random();
+            let mut x: u16 = rand::random();
+            x = x >> 5;
+            if x == 0 {
+                x = 1;
+            }
             let R2: u32 = rand::random();
             let res = modp_Rx(x as u32, p, p0i, R2);
             let res_c = unsafe { modp_Rx_func(x as u32, p, p0i, R2) };
