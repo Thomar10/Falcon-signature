@@ -15,84 +15,92 @@ pub const FALCON_SIG_COMPRESS: i32 = 1;
 pub const FALCON_SIG_PADDED: i32 = 2;
 pub const FALCON_SIG_CT: i32 = 3;
 
+#[allow(non_camel_case_types)]
+#[macro_export]
+macro_rules! MKN {
+    ($logn: expr) => {
+        (1 << $logn) as usize
+    }
+}
+
 #[macro_export]
 macro_rules! falcon_tmpsize_keygen {
-    ($arg:expr) => {
-        if $arg <= 3 {272 + ((3 << $arg) + 7)}
-        else {(28 << $arg) + ((3 << $arg )+ 7)}
+    ($logn:expr) => {
+        if $logn <= 3 {272 + ((3 << $logn) + 7)}
+        else {(28 << $logn) + ((3 << $logn )+ 7)}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_privatekey_size {
-    ($arg:expr) => {
-        if $arg <= 3 {(3 << $arg)  + 1}
-        else {((10 - (($arg) >> 1)) << (($arg) - 2)) + (1 << ($arg)) + 1}
+    ($logn:expr) => {
+        if $logn <= 3 {(3 << $logn)  + 1}
+        else {((10 - (($logn) >> 1)) << (($logn) - 2)) + (1 << ($logn)) + 1}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_publickey_size {
-    ($arg:expr) => {
-        if $arg <= 1 {5}
-        else {(7 << ($arg - 2))  + 1}
+    ($logn:expr) => {
+        if $logn <= 1 {5}
+        else {(7 << ($logn - 2))  + 1}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_makepub {
-    ($arg:expr) => {(6 << $arg) + 1}
+    ($logn:expr) => {(6 << $logn) + 1}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_signdyn {
-    ($arg:expr) => {(78 << $arg) + 7}
+    ($logn:expr) => {(78 << $logn) + 7}
 }
 
 
 #[macro_export]
 macro_rules! falcon_tmpsize_signtree {
-    ($arg:expr) => {(50 << $arg) + 7}
+    ($logn:expr) => {(50 << $logn) + 7}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expandprivate {
-    ($arg:expr) => {(52 << $arg) + 7}
+    ($logn:expr) => {(52 << $logn) + 7}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expanded_key_size {
-    ($arg:expr) => {((8 * $arg + 40) << $arg) + 8}
+    ($logn:expr) => {((8 * $logn + 40) << $logn) + 8}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_verify {
-    ($arg:expr) => {(8 << $arg) + 1}
+    ($logn:expr) => {(8 << $logn) + 1}
 }
 
 #[macro_export]
 macro_rules! falcon_sig_compressed_maxsize {
-    ($arg:expr) => {
-        (((11 << $arg) + (101 >> (10 - $arg)) + 7) >> 3) + 41
+    ($logn:expr) => {
+        (((11 << $logn) + (101 >> (10 - $logn)) + 7) >> 3) + 41
     }
 }
 
 #[macro_export]
 macro_rules! falcon_sig_padded_size {
-    ($arg:expr) => {
-        (44 + 3 * (256 >> (10 - $arg))) + 2 * ( 128 >> (10 - $arg))
-        + 3 * (64 >> (10 - $arg)) + 2 * (16 >> (10 - $arg))
-        - 2 * (2 >> (10 - $arg)) - 8 * (1 >> (10 - $arg))
+    ($logn:expr) => {
+        (44 + 3 * (256 >> (10 - $logn))) + 2 * ( 128 >> (10 - $logn))
+        + 3 * (64 >> (10 - $logn)) + 2 * (16 >> (10 - $logn))
+        - 2 * (2 >> (10 - $logn)) - 8 * (1 >> (10 - $logn))
     }
 }
 
 #[macro_export]
 macro_rules! falcon_sig_ct_size {
-    ($arg:expr) => {
-        if $arg == 3 {
-            (3 << ($arg - 1)) + 40
+    ($logn:expr) => {
+        if $logn == 3 {
+            (3 << ($logn - 1)) + 40
         } else {
-            (3 << ($arg - 1)) + 41
+            (3 << ($logn - 1)) + 41
         }
     }
 }
