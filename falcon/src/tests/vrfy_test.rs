@@ -5,7 +5,7 @@ mod tests {
     use crate::falcon_c::vrfy_c::{falcon_inner_complete_private_func, falcon_inner_compute_public_func, falcon_inner_count_nttzero_func, falcon_inner_is_invertible_func, falcon_inner_to_ntt_monty_func, falcon_inner_verify_raw_func, falcon_inner_verify_recover_func, mq_add_func, mq_div_12289_func, mq_iNTT_func, mq_montymul_func, mq_montysqr_func, mq_NTT_func, mq_poly_montymul_ntt_func, mq_poly_sub_func, mq_poly_tomonty_func, mq_rshift1_func, mq_sub_func};
     use crate::falcon_tmpsize_keygen;
     use crate::keygen::keygen;
-    use crate::shake::{InnerShake256Context, St};
+    use crate::shake::{InnerShake256Context};
     use crate::vrfy::{complete_private, compute_public, count_nttzero, is_invertible, mq_add, mq_div_12289, mq_innt, mq_montymul, mq_montysqr, mq_ntt, mq_poly_montymul_ntt, mq_poly_sub, mq_poly_tomonty, mq_rshift1, mq_sub, to_ntt_monty, verify_raw, verify_recover};
 
     #[test]
@@ -188,7 +188,7 @@ mod tests {
             for logn in 1..11 {
                 let buffer_size = falcon_tmpsize_keygen!(logn);
                 let mut rng_rust = InnerShake256Context {
-                    st: St { a: [0; 25] },
+                    st: [0; 25],
                     dptr: 10,
                 };
                 let mut h: Vec<u16> = vec![0u16; buffer_size];
@@ -213,7 +213,7 @@ mod tests {
             for logn in 1..11 {
                 let buffer_size = falcon_tmpsize_keygen!(logn);
                 let mut rng_rust = InnerShake256Context {
-                    st: St { a: [0; 25] },
+                    st: [0; 25],
                     dptr: 10,
                 };
                 let mut h: Vec<u16> = vec![0u16; buffer_size];

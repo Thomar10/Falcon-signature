@@ -1,24 +1,26 @@
-pub static FPR_LOG2: u64 = 4604418534313441775;
-pub static FPR_INV_LOG2: u64 = 4609176140021203710;
-pub static FPR_BNORM_MAX: u64 = 4670353323383631276;
-pub static FPR_ZERO: u64 = 0;
-pub static FPR_ONE: u64 = 4607182418800017408;
-pub static FPR_TWO: u64 = 4611686018427387904;
-pub static FPR_ONEHALF: u64 = 4602678819172646912;
-pub static FPR_INVSQRT2: u64 = 4604544271217802189;
-pub static FPR_INVSQRT8: u64 = 4600040671590431693;
-pub static FPR_PTWO31: u64 = 4746794007248502784;
-pub static FPR_PTWO31M1: u64 = 4746794007244308480;
-pub static FPR_MTWO31M1: u64 = 13970166044099084288;
-pub static FPR_PTWO63M1: u64 = 4890909195324358656;
-pub static FPR_MTWO63M1: u64 = 14114281232179134464;
-static FPR_PTWO63: u64 = 4890909195324358656;
+use crate::falcon::fpr;
 
-pub static FPR_Q: u64 = 4667981563525332992;
-pub static FPR_INVERSE_OF_Q: u64 = 4545632735260551042;
-pub static FPR_INV_2SQRSIGMA0: u64 = 4594603506513722306;
+pub static FPR_LOG2: fpr = 4604418534313441775;
+pub static FPR_INV_LOG2: fpr = 4609176140021203710;
+pub static FPR_BNORM_MAX: fpr = 4670353323383631276;
+pub static FPR_ZERO: fpr = 0;
+pub static FPR_ONE: fpr = 4607182418800017408;
+pub static FPR_TWO: fpr = 4611686018427387904;
+pub static FPR_ONEHALF: fpr = 4602678819172646912;
+pub static FPR_INVSQRT2: fpr = 4604544271217802189;
+pub static FPR_INVSQRT8: fpr = 4600040671590431693;
+pub static FPR_PTWO31: fpr = 4746794007248502784;
+pub static FPR_PTWO31M1: fpr = 4746794007244308480;
+pub static FPR_MTWO31M1: fpr = 13970166044099084288;
+pub static FPR_PTWO63M1: fpr = 4890909195324358656;
+pub static FPR_MTWO63M1: fpr = 14114281232179134464;
+static FPR_PTWO63: fpr = 4890909195324358656;
 
-pub static FPR_INV_SIGMA: [u64; 11] = [
+pub static FPR_Q: fpr = 4667981563525332992;
+pub static FPR_INVERSE_OF_Q: fpr = 4545632735260551042;
+pub static FPR_INV_2SQRSIGMA0: fpr = 4594603506513722306;
+
+pub static FPR_INV_SIGMA: [fpr; 11] = [
 0,  /* unused */
 4574611497772390042,
 4574501679055810265,
@@ -33,7 +35,7 @@ pub static FPR_INV_SIGMA: [u64; 11] = [
 ];
 
 #[allow(dead_code)]
-pub static FPR_SIGMA_MIN: [u64; 11] = [
+pub static FPR_SIGMA_MIN: [fpr; 11] = [
 0,  /* unused */
 4607707126469777035,
 4607777455861499430,
@@ -63,7 +65,7 @@ static C: [u64; 13] = [
     0x8000000000000000
 ];
 
-fn fpr_norm64(mut m: u64, mut e: i32) -> (u64, i32) {
+fn fpr_norm64(mut m: u64, mut e: i32) -> (fpr, i32) {
     let mut nt: u32;
     e -= 63;
 
@@ -99,7 +101,7 @@ fn fpr_norm64(mut m: u64, mut e: i32) -> (u64, i32) {
     (m, e)
 }
 
-pub fn fpr_add(mut x: u64, mut y: u64) -> u64 {
+pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
     let (mut m, mut xu, mut yu, za): (u64, u64, u64, u64);
     let cs: u32;
     let (mut ex, mut ey, sx, sy, mut cc): (i32, i32, i32, i32, i32);
@@ -142,7 +144,7 @@ pub fn fpr_add(mut x: u64, mut y: u64) -> u64 {
     fpr(sx, ex, xu)
 }
 
-pub fn fpr_scaled(mut i: i64, sc: i32) -> u64 {
+pub fn fpr_scaled(mut i: i64, sc: i32) -> fpr {
     let (s, mut e): (i32, i32);
     let t: u32;
     let mut m: u64;
@@ -170,7 +172,7 @@ pub fn fpr_scaled(mut i: i64, sc: i32) -> u64 {
  * Compute exp(x) for x such that |x| <= ln 2. We want a precision of 50
  * bits or so.
  */
-pub fn fpr_expm_p63(x: u64, ccs: u64) -> u64 {
+pub fn fpr_expm_p63(x: fpr, ccs: fpr) -> u64 {
     let (mut z, mut y): (u64, u64);
     let (mut z0, mut z1, mut y0, mut y1): (u32, u32, u32, u32);
     let (mut a, mut b): (u64, u64);
@@ -210,7 +212,7 @@ pub fn fpr_expm_p63(x: u64, ccs: u64) -> u64 {
     return y;
 }
 
-pub fn fpr_mul(x: u64, y: u64) -> u64 {
+pub fn fpr_mul(x: fpr, y: fpr) -> fpr {
     let (xu, yu, mut w, mut zu, zv): (u64, u64, u64, u64, u64);
     let (x0, x1, y0, y1, z0, mut z1, mut z2): (u32, u32, u32, u32, u32, u32, u32);
     let (ex, ey, d, e, s): (i32, i32, i32, i32, i32);
@@ -259,7 +261,7 @@ pub fn fpr_mul(x: u64, y: u64) -> u64 {
     fpr(s, e, zu)
 }
 
-pub fn fpr_sqrt(x: u64) -> u64 {
+pub fn fpr_sqrt(x: fpr) -> fpr {
     let (mut xu, mut q, mut s, mut r): (u64, u64, u64, u64);
     let (ex, mut e): (i32, i32);
 
@@ -303,7 +305,7 @@ pub fn fpr_sqrt(x: u64) -> u64 {
 }
 
 #[inline(always)]
-pub fn fpr_trunc(x: u64) -> i64 {
+pub fn fpr_trunc(x: fpr) -> i64 {
     let (t, mut xu): (u64, u64);
     let (e, cc): (i32, i32);
 
@@ -320,7 +322,7 @@ pub fn fpr_trunc(x: u64) -> i64 {
 }
 
 
-pub fn fpr_div(x: u64, y: u64) -> u64 {
+pub fn fpr_div(x: fpr, y: fpr) -> fpr {
     let (mut xu, yu, mut q, q2, w): (u64, u64, u64, u64, u64);
     let (ex, ey, mut e, d, mut s): (i32, i32, i32, i32, i32);
 
@@ -406,12 +408,12 @@ pub fn fpr_irsh(mut x: i64, n: i32) -> i64 {
 }
 
 #[inline(always)]
-pub fn fpr_of(i: i64) -> u64 {
+pub fn fpr_of(i: i64) -> fpr {
     fpr_scaled(i, 0)
 }
 
 #[inline(always)]
-pub fn fpr_rint(x: u64) -> i64 {
+pub fn fpr_rint(x: fpr) -> i64 {
     let (mut m, d): (u64, u64);
     let mut e: i32;
     let (s, dd, f): (u32, u32, u32);
@@ -436,7 +438,7 @@ pub fn fpr_rint(x: u64) -> i64 {
 }
 
 #[inline(always)]
-pub fn fpr_floor(x: u64) -> i64 {
+pub fn fpr_floor(x: fpr) -> i64 {
     let t: u64;
     let mut xi: i64;
     let (e, cc): (i32, i32);
@@ -455,19 +457,19 @@ pub fn fpr_floor(x: u64) -> i64 {
 }
 
 #[inline(always)]
-pub fn fpr_sub(x: u64, mut y: u64) -> u64 {
+pub fn fpr_sub(x: fpr, mut y: fpr) -> fpr {
     y ^= (1 as u64) << 63;
     fpr_add(x, y)
 }
 
 #[inline(always)]
-pub fn fpr_neg(mut x: u64) -> u64 {
+pub fn fpr_neg(mut x: fpr) -> fpr {
     x ^= (1 as u64) << 63;
     x
 }
 
 #[inline(always)]
-pub fn fpr_half(mut x: u64) -> u64 {
+pub fn fpr_half(mut x: fpr) -> fpr {
     let t: u32;
 
     x = x.wrapping_sub((1 as u64) << 52);
@@ -477,12 +479,12 @@ pub fn fpr_half(mut x: u64) -> u64 {
 }
 
 #[inline(always)]
-pub fn fpr_double(x: u64) -> u64 {
+pub fn fpr_double(x: fpr) -> fpr {
     x.wrapping_add(((((((x >> 52) as u32) & 0x7FF) + 0x7FF) >> 11) as u64) << 52)
 }
 
 #[inline(always)]
-pub fn fpr_inv(x: u64) -> u64 {
+pub fn fpr_inv(x: fpr) -> fpr {
     fpr_div(4607182418800017408, x)
 }
 
@@ -498,7 +500,7 @@ pub fn fpr_inv(x: u64) -> u64 {
  * because it would not handle the edge case x = y properly.
  */
 #[inline(always)]
-pub fn fpr_lt(x: u64, y: u64) -> i32 {
+pub fn fpr_lt(x: fpr, y: fpr) -> i32 {
     let (cc0, cc1): (i32, i32);
 
     cc0 = ((x as i64) < (y as i64)) as i32;
@@ -507,7 +509,7 @@ pub fn fpr_lt(x: u64, y: u64) -> i32 {
 }
 
 #[inline(always)]
-pub fn fpr_sqr(x: u64) -> u64 {
+pub fn fpr_sqr(x: fpr) -> fpr {
     fpr_mul(x, x)
 }
 
@@ -527,7 +529,7 @@ pub fn fpr_sqr(x: u64) -> u64 {
  * (2^54 to 2^55-1).
  */
 #[inline(always)]
-fn fpr(s: i32, mut e: i32, mut m: u64) -> u64 {
+fn fpr(s: i32, mut e: i32, mut m: u64) -> fpr {
     let mut x: u64;
     let mut t: u32;
     let f: u32;
@@ -545,7 +547,7 @@ fn fpr(s: i32, mut e: i32, mut m: u64) -> u64 {
     x
 }
 
-pub static FPR_GM_TAB: [u64; 2048] = [
+pub static FPR_GM_TAB: [fpr; 2048] = [
     0, 0,
     9223372036854775808, 4607182418800017408,
     4604544271217802189, 4604544271217802189,
@@ -1572,7 +1574,7 @@ pub static FPR_GM_TAB: [u64; 2048] = [
     13830554413265198338, 4569220649180767418
 ];
 
-pub static FPR_P2_TAB: [u64; 11] = [
+pub static FPR_P2_TAB: [fpr; 11] = [
     4611686018427387904,
     4607182418800017408,
     4602678819172646912,

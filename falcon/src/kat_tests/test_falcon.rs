@@ -1,166 +1,422 @@
 #![allow(non_upper_case_globals)]
-#![allow(warnings, unused)]
-#![allow(warnings, unused_unsafe)]
+#![allow(non_snake_case)]
 
+use std::ffi::CString;
 use std::slice::from_raw_parts_mut;
 
 use crate::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_makepub, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
-use crate::common::hash_to_point_vartime;
-use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, shake_init_prng_from_seed};
+use crate::common::{hash_to_point_ct, hash_to_point_vartime};
+use crate::falcon::{falcon_expand_privatekey, falcon_get_logn, falcon_keygen_make, falcon_make_public, FALCON_SIG_COMPRESS, FALCON_SIG_CT, FALCON_SIG_PADDED, falcon_sign_dyn, falcon_sign_tree, falcon_verify, fpr, shake_init_prng_from_seed};
+use crate::falcon_c::test_falcon_c::{nist_randombytes, nist_randombytes_init, restore_drbg_state, save_drbg_state, sha1_init, sha1_out, sha1_print_line, sha1_print_line_with_hex, sha1_print_line_with_int, Sha1Context};
+use crate::fft::{fft, ifft, poly_merge_fft, poly_mul_fft, poly_split_fft};
+use crate::fpr::{fpr_add, fpr_mul, fpr_neg, fpr_of, fpr_rint};
 use crate::keygen::keygen;
 use crate::rng::{Prng, prng_get_u64, prng_get_u8, prng_init, State};
-use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
-use crate::sign::sign_dyn;
+use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, i_shake256_inject_length, InnerShake256Context};
+use crate::sign::{expand_privkey, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, is_invertible, Q, to_ntt_monty, verify_raw, verify_recover};
 
-// TODO REFACTOR INTO BEING ABLE TO RUN ITSELF
 pub fn run_falcon_tests() {
-    // test_shake256();
-    // test_codec();
-    // test_vrfy();
-    // test_rng();
-    // test_FP_block();
-    // test_poly();
-    // test_gaussian0_sampler();
-    // test_sampler();
-    // test_sign();
-    // test_keygen();
+    test_shake256();
+    test_codec();
+    test_vrfy();
+    test_rng();
+    test_poly();
+    test_sign();
+    test_keygen();
     test_external_api();
-    // test_nist_kat(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
-    // test_nist_KAT(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
+    test_nist_kat(9, "a57400cbaee7109358859a56c735a3cf048a9da2");
+    test_nist_kat(10, "affdeb3aa83bf9a2039fa9c17d65fd3e3b9828e2");
 }
 
-//
-// pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
-//     print!("Test NIST KAT {}: ", logn);
-//
-//     let mut entropy_input = [0u8; 48];
-//     hash_bytes = hex::decode(srefhash);
-//     let sk_len = if logn == 9 { 1281 } else { 2305 };
-//     let pk_len = if logn == 9 { 897 } else { 1793 };
-//     let over_len = if logn == 9 { 690 } else { 1330 };
-//     let mut msg: Vec<u8> = vec![0; 3300];
-//     let mut sk: Vec<u8> = vec![0; sk_len];
-//     let mut pk: Vec<u8> = vec![0; pk_len];
-//     let mut sm: Vec<u8> = vec![0; 3300 + over_len];
-//     let mut tmp: Vec<u8> = vec![0; 84 << logn];
-//     let mut esk: Vec<u8> = vec![0; ((8 * logn + 40) << logn) as usize];
-//     for i in 0..48 {
-//         entropy_input[i] = i as u8;
-//     }
-//     let mut rng: InnerShake256Context = InnerShake256Context {
-//         st: St { a: [0; 25] },
-//         dptr: 0,
-//     };
-//     // nist_randombytes_init(&mut entropy_input);
-//     for i in 0..100 {
-//         let mut seed = [0u8; 48];
-//         let mut seed2 = [0u8; 48];
-//         let mut nonce = [0u8; 40];
-//         let mut drbg_sav = [0u8; 48];
-//         let fp: *mut i8 = tmp.as_mut_ptr().wrapping_add(72 << logn).cast();
-//         let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
-//         let gp: *mut i8 = fp.wrapping_add(n);
-//         let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
-//         let Fp: *mut i8 = fp.wrapping_add(n);
-//         let F: &mut [i8] = unsafe { from_raw_parts_mut(Fp, n) };
-//         let Gp: *mut i8 = fp.wrapping_add(n);
-//         let G: &mut [i8] = unsafe { from_raw_parts_mut(Gp, n) };
-//         let hp: *mut u16 = Gp.wrapping_add(n).cast();
-//         let h: &mut [u16] = unsafe { from_raw_parts_mut(hp, n) };
-//         let hm: *mut u16 = hp.wrapping_add(n);
-//         let hm: &mut [u16] = unsafe { from_raw_parts_mut(hm, n) };
-//         let sigp: *mut i16 = hm.wrapping_add(n).cast();
-//         let sig: &mut [i16] = unsafe { from_raw_parts_mut(sigp, n) };
-//         let sig2p: *mut i16 = sigp.wrapping_add(n).cast();
-//         let sig2: &mut [i16] = unsafe { from_raw_parts_mut(sig2p, n) };
-//
-//         // nist_randombytes(&mut seed, 48);
-//         let mlen = 33 * (i + 1);
-//         // nist_randombytes(&mut msg, mlen);
-//         // Do like in katrng for random bytes
-//         nist_randombytes_init(&mut seed);
-//
-//         nist_randombytes(&mut seed2, 48);
-//         i_shake256_init(&mut rng);
-//         i_shake256_inject(&mut rng, &mut seed2);
-//         i_shake256_flip(&mut rng);
-//         keygen(&mut rng, fp, gp, Fp, Gp, hp, logn, tmp.as_mut_ptr());
-//         sk[0] = (0x50 + logn) as u8;
-//         let mut u = 1;
-//         let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
-//                                    f, logn, max_fg_bits[logn as usize] as u32);
-//         if v == 0 {
-//             panic!("Error encoding sk(f)");
-//         }
-//         u += v;
-//         let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
-//                                    g, logn, max_fg_bits[logn as usize] as u32);
-//         if v == 0 {
-//             panic!("Error encoding sk(g)");
-//         }
-//         u += v;
-//         let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
-//                                    F, logn, max_FG_bits[logn as usize] as u32);
-//         if v == 0 {
-//             panic!("Error encoding sk(F)");
-//         }
-//         u += v;
-//         if u != sk_len {
-//             panic!("Wrong private key length {}", u);
-//         }
-//         pk[0] = (0x00 + logn) as u8;
-//         v = modq_encode(pk.as_mut_slice(), 1, pk_len - 1, h, logn);
-//         if 1 + v != pk_len {
-//             panic!("Wrong public key length {}", u);
-//         }
-//         nist_randombytes(&mut nonce, 40);
-//         i_shake256_init(&mut rng);
-//         i_shake256_inject(&mut rng, &mut nonce);
-//         i_shake256_inject(&mut rng, &mut msg);
-//         i_shake256_flip(&mut rng);
-//         hash_to_point_vartime(&mut rng, hm, logn);
-//
-//         nist_randombytes(&mut seed2, 48);
-//         i_shake256_init(&mut rng);
-//         i_shake256_inject(&mut rng, &mut seed2);
-//         i_shake256_flip(&mut rng);
-//
-//         // sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tmp.as_mut_slice());
-//         // expand_privatekey(esk.as_mut_slice(), f,g, F, G, logn, tmp.as_mut_slice());
-//         i_shake256_init(&mut rng);
-//         i_shake256_inject(&mut rng, &mut seed2);
-//         i_shake256_flip(&mut rng);
-//         // sign_tree(sig2, &mut rng, esk.as_mut_slice(), hm, logn, tmp.as_mut_slice());
-//         assert_eq!(sig, sig2, "Sign dyn/tree mismatch!");
-//
-//         to_ntt_monty(h, logn);
-//         if !verify_raw(hm, sig, h, logn, tmp.as_mut_slice()) {
-//             panic!("Invalid signature");
-//         }
-//         sm[2..42].copy_from_slice(&mut nonce);
-//         sm[42..42 + mlen].copy_from_slice(&mut msg[0..mlen]);
-//         sm[42 + mlen] = (0x20 + logn) as u8;
-//         u = comp_encode(sm.as_mut_slice(), 43 + mlen, over_len - 43, sig, logn as usize);
-//         if u == 0 {
-//             panic!("Could not encode signature");
-//         }
-//         u += 1;
-//         smlen = 42 + mlen + u;
-//         sm[0] = (u >> 8) as u8;
-//         sm[1] = u as u8;
-//
-//         //Restore DRBG
-//
-//         print!(".");
-//     }
-// }
+pub(crate) fn test_sign() {
+    print!("Test sign : ");
+    const TLEN: usize = 178176;
+    let mut tmp: [u8; TLEN] = [0; TLEN];
+    test_sign_self(&ntru_f_16, &ntru_g_16, &ntru_F_16, &ntru_G_16, &ntru_h_16, 4, &mut tmp);
+    test_sign_self(&ntru_f_512, &ntru_g_512, &ntru_F_512, &ntru_G_512, &ntru_h_512, 9, &mut tmp);
+    test_sign_self(&ntru_f_1024, &ntru_g_1024, &ntru_F_1024, &ntru_G_1024, &ntru_h_1024, 10, &mut tmp);
+    println!(" done");
+}
+
+fn test_sign_self(f: &[i8], g: &[i8],
+                  F: &[i8], G: &[i8], h_src: &[u16], logn: usize,
+                  tmp: &mut [u8]) {
+    let n = 1 << logn;
+    let inter = bytemuck::cast_slice_mut::<u8, u16>(tmp);
+    let (h, inter) = inter.split_at_mut(n);
+    let (hm, inter) = inter.split_at_mut(n);
+    let (sig, inter) = inter.split_at_mut(n);
+    let mut sig = bytemuck::cast_slice_mut::<u16, i16>(sig);
+    let mut tt = bytemuck::cast_slice_mut::<u16, u8>(inter);
+    let mut rng: InnerShake256Context = InnerShake256Context {
+        st: [0; 25],
+        dptr: 0,
+    };
+
+    h.copy_from_slice(h_src);
+    to_ntt_monty(h, logn as u32);
+
+    let mut buf: [u8; 20] = [0; 20];
+    buf[..6].copy_from_slice(&mut [115, 105, 103, 110, 32, 48]);
+    buf[5] = (48 + logn) as u8;
+    i_shake256_init(&mut rng);
+    i_shake256_inject(&mut rng, &mut buf);
+    i_shake256_flip(&mut rng);
+    for i in 0..100 {
+        let mut sc: InnerShake256Context = InnerShake256Context {
+            st: [0; 25],
+            dptr: 0,
+        };
+
+        let mut msg = i_shake256_extract(&mut rng, 50);
+        i_shake256_init(&mut sc);
+        i_shake256_inject(&mut sc, msg.as_mut_slice());
+        i_shake256_flip(&mut sc);
+        let mut sc2: InnerShake256Context =
+            InnerShake256Context {
+                st: sc.st,
+                dptr: sc.dptr,
+            };
+
+        let mut hm2: Vec<u16> = vec![0; n];
+        hash_to_point_vartime(&mut sc, hm, logn as u32);
+        hash_to_point_ct(&mut sc2, hm2.as_mut_slice(), logn as u32, &mut tt);
+        for u in 0..n {
+            if hm2[u] != hm[u] {
+                panic!("hash_to_point mismatch");
+            }
+        }
+        sign_dyn(&mut sig, &mut rng, f, g, F, G, hm, logn as u32, tt);
+        if !verify_raw(hm, &mut sig, h, logn as u32, tt) {
+            panic!("self signature (dyn) not verified");
+        }
+        if i % 10 == 0 {
+            print!(".");
+        }
+    }
+
+    let (expanded_key, tt) = tt.split_at_mut((8 * logn + 40) * n);
+    let expanded_key = bytemuck::cast_slice_mut::<u8, fpr>(expanded_key);
+    let mut tt = bytemuck::cast_slice_mut::<u8, fpr>(tt);
+    expand_privkey(expanded_key, f, g, F, G, logn as u32, &mut tt);
+    for i in 0..100 {
+        let mut sc: InnerShake256Context = InnerShake256Context {
+            st: [0; 25],
+            dptr: 0,
+        };
+
+        let mut msg = i_shake256_extract(&mut rng, 50);
+        i_shake256_init(&mut sc);
+        i_shake256_inject(&mut sc, msg.as_mut_slice());
+        i_shake256_flip(&mut sc);
+        hash_to_point_vartime(&mut sc, hm, logn as u32);
+        let mut tt = bytemuck::cast_slice_mut::<fpr, u8>(tt);
+        sign_tree(&mut sig, &mut rng, expanded_key, hm, logn as u32, &mut tt);
+        if !verify_raw(hm, sig, h, logn as u32, tt) {
+            panic!("self signature (tree) not verified");
+        }
+        if i % 10 == 0 {
+            print!(".");
+        }
+    }
+    print!(" ");
+}
+
+
+pub(crate) fn test_nist_kat(logn: u32, srefhash: &str) {
+    print!("Test NIST KAT {}: ", logn);
+
+    let mut entropy_input = [0u8; 48];
+    let hash_bytes = hex::decode(srefhash).unwrap();
+    let hhv: [u8; 20] = [0; 20];
+    let mut hhc: Sha1Context = Sha1Context {
+        buf: [0; 64],
+        val: [0; 5],
+        count: 0,
+    };
+    unsafe { sha1_init(&mut hhc) };
+    let sk_len = if logn == 9 { 1281 } else { 2305 };
+    let pk_len = if logn == 9 { 897 } else { 1793 };
+    let over_len = if logn == 9 { 690 } else { 1330 };
+    let mut msg: Vec<u8> = vec![0; 3300];
+    let mut sk: Vec<u8> = vec![0; sk_len];
+    let mut pk: Vec<u8> = vec![0; pk_len];
+    let mut sm: Vec<u8> = vec![0; 3300 + over_len];
+    let mut tmp: Vec<u8> = vec![0; (84 << logn) + 80000];
+    let mut esk: Vec<u8> = vec![0; ((8 * logn + 40) << logn) as usize];
+    let n = 1 << logn;
+
+    unsafe {
+        let falcon_string = CString::new("# Falcon-").unwrap();
+        sha1_print_line_with_int(&mut hhc, falcon_string.as_ptr(), n as u32);
+        let string = CString::new("").expect("CString::new failed");
+        sha1_print_line(&mut hhc, string.as_ptr())
+    };
+
+    for i in 0..48 {
+        entropy_input[i] = i as u8;
+    }
+    let mut rng: InnerShake256Context = InnerShake256Context {
+        st: [0; 25],
+        dptr: 0,
+    };
+    unsafe { nist_randombytes_init(entropy_input.as_ptr()) };
+    for i in 0..100 {
+        let smlen;
+        let seed = [0u8; 48];
+        let mut seed2 = [0u8; 48];
+        let mut nonce = [0u8; 40];
+        let drbg_sav = [0u8; 48];
+
+        let tmp = bytemuck::cast_slice_mut::<u8, i8>(&mut tmp);
+        let (f, inter) = tmp.split_at_mut(72 << logn);
+        let (g, inter) = inter.split_at_mut(n);
+        let (F, inter) = inter.split_at_mut(n);
+        let (G, inter) = inter.split_at_mut(n);
+        let inter = bytemuck::cast_slice_mut::<i8, u16>(inter);
+        let (h, inter) = inter.split_at_mut(n);
+        let (hm, inter) = inter.split_at_mut(n);
+        let (sig, inter) = inter.split_at_mut(n);
+        let sig = bytemuck::cast_slice_mut::<u16, i16>(sig);
+        let (sig2, inter) = inter.split_at_mut(n);
+        let sig2 = bytemuck::cast_slice_mut::<u16, i16>(sig2);
+        let inter = bytemuck::cast_slice_mut::<u16, u8>(inter);
+
+        unsafe { nist_randombytes(seed.as_ptr(), 48) };
+        let mlen = 33 * (i + 1);
+        unsafe { nist_randombytes(msg.as_ptr(), mlen) };
+
+        unsafe { save_drbg_state(drbg_sav.as_ptr()) };
+
+        unsafe { nist_randombytes_init(seed.as_ptr()) };
+        unsafe { nist_randombytes(seed2.as_ptr(), 48) };
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut seed2);
+        i_shake256_flip(&mut rng);
+        keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(),
+               G.as_mut_ptr(), h.as_mut_ptr(), logn, inter.as_mut_ptr());
+        sk[0] = (0x50 + logn) as u8;
+        let mut u = 1;
+        let v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+                               f, logn, max_fg_bits[logn as usize] as u32);
+        if v == 0 {
+            panic!("Error encoding sk(f)");
+        }
+        u += v;
+        let v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+                               g, logn, max_fg_bits[logn as usize] as u32);
+        if v == 0 {
+            panic!("Error encoding sk(g)");
+        }
+        u += v;
+        let mut v = trim_i8_encode(sk.as_mut_slice(), u, sk_len - u,
+                                   F, logn, max_FG_bits[logn as usize] as u32);
+        if v == 0 {
+            panic!("Error encoding sk(F)");
+        }
+        u += v;
+        if u != sk_len {
+            panic!("Wrong private key length {}", u);
+        }
+        pk[0] = (0x00 + logn) as u8;
+        v = modq_encode(pk.as_mut_slice(), 1, pk_len - 1, h, logn);
+        u = 1 + v;
+        if u != pk_len {
+            panic!("Wrong public key length {}", u);
+        }
+        unsafe { nist_randombytes(nonce.as_ptr(), 40) };
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut nonce);
+        i_shake256_inject_length(&mut rng, &mut msg, 0, mlen);
+        i_shake256_flip(&mut rng);
+        hash_to_point_vartime(&mut rng, hm, logn);
+
+        unsafe { nist_randombytes(seed2.as_ptr(), 48) };
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut seed2);
+        i_shake256_flip(&mut rng);
+
+        sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, inter);
+        let esk = bytemuck::cast_slice_mut::<u8, fpr>(esk.as_mut_slice());
+        let tmpesk = bytemuck::cast_slice_mut::<u8, fpr>(inter);
+        expand_privkey(esk, f, g, F, G, logn, tmpesk);
+        i_shake256_init(&mut rng);
+        i_shake256_inject(&mut rng, &mut seed2);
+        i_shake256_flip(&mut rng);
+        sign_tree(sig2, &mut rng, esk, hm, logn, inter);
+        assert_eq!(sig, sig2, "Sign dyn/tree mismatch!");
+
+        to_ntt_monty(h, logn);
+        if !verify_raw(hm, sig, h, logn, inter) {
+            panic!("Invalid signature");
+        }
+        sm[2..42].copy_from_slice(&mut nonce);
+        sm[42..42 + mlen].copy_from_slice(&mut msg[0..mlen]);
+        sm[42 + mlen] = (0x20 + logn) as u8;
+        u = comp_encode(sm.as_mut_slice(), 43 + mlen, over_len - 43, sig, logn as usize);
+        if u == 0 {
+            panic!("Could not encode signature");
+        }
+        u += 1;
+        smlen = 42 + mlen + u;
+        sm[0] = (u >> 8) as u8;
+        sm[1] = u as u8;
+
+
+        unsafe { restore_drbg_state(drbg_sav.as_ptr()) };
+
+        unsafe {
+            let count = CString::new("count = ").unwrap();
+            sha1_print_line_with_int(&mut hhc, count.as_ptr(), i as u32);
+            let seed_c = CString::new("seed = ").unwrap();
+            sha1_print_line_with_hex(&mut hhc, seed_c.as_ptr(), seed.as_ptr().cast(), 48);
+            let mlen_c = CString::new("mlen = ").unwrap();
+            sha1_print_line_with_int(&mut hhc, mlen_c.as_ptr(), mlen as u32);
+            let msg_c = CString::new("msg = ").unwrap();
+            sha1_print_line_with_hex(&mut hhc, msg_c.as_ptr(), msg.as_ptr().cast(), mlen);
+            let pk_c = CString::new("pk = ").unwrap();
+            sha1_print_line_with_hex(&mut hhc, pk_c.as_ptr(), pk.as_ptr().cast(), pk_len);
+            let sk_c = CString::new("sk = ").unwrap();
+            sha1_print_line_with_hex(&mut hhc, sk_c.as_ptr(), sk.as_ptr().cast(), sk_len);
+            let smlen_c = CString::new("smlen = ").unwrap();
+            sha1_print_line_with_int(&mut hhc, smlen_c.as_ptr(), smlen as u32);
+            let sm_c = CString::new("sm = ").unwrap();
+            sha1_print_line_with_hex(&mut hhc, sm_c.as_ptr(), sm.as_ptr().cast(), smlen);
+            let string = CString::new("").expect("CString::new failed");
+            sha1_print_line(&hhc, string.as_ptr());
+        };
+
+        print!(".");
+    }
+    unsafe { sha1_out(&mut hhc, hhv.as_ptr()) };
+    assert_eq!(hhv, hash_bytes.as_slice(), "hashes does not match!");
+    println!(" done.");
+}
+
+pub(crate) fn test_poly() {
+    print!("Test polynomials: ");
+    const TLEN: usize = 40960;
+    let mut tmp: [u8; TLEN] = [0; TLEN];
+    for logn in 1..=10 {
+        test_poly_inner(logn, bytemuck::cast_slice_mut::<u8, fpr>(&mut tmp), TLEN);
+        if logn % 2 == 0 && logn != 10 {
+            println!();
+        }
+    }
+    println!(" done.");
+}
+
+fn test_poly_inner(logn: usize, tmp: &mut [fpr], tlen: usize) {
+    print!("[{}]", logn);
+    let mut rng: InnerShake256Context = InnerShake256Context {
+        st: [0; 25],
+        dptr: 0,
+    };
+    let mut prng: Prng = Prng {
+        buf: [0; 512],
+        ptr: 0,
+        state: State {
+            d: [0; 256]
+        },
+        typ: 0,
+    };
+    let n: usize = 1 << logn;
+    if tlen < 5 * n * 8 {
+        panic!("Insufficient buffer size");
+    }
+
+    i_shake256_init(&mut rng);
+    i_shake256_inject(&mut rng, &mut [logn as u8; 1]);
+    i_shake256_flip(&mut rng);
+    prng_init(&mut prng, &mut rng);
+    let num = 131072u64 >> logn;
+    for ctr in 0..num {
+        let (f, inter) = tmp.split_at_mut(n);
+        let (g, inter) = inter.split_at_mut(n);
+        let (h, inter) = inter.split_at_mut(n);
+        let (f0, inter) = inter.split_at_mut(n >> 1);
+        let (f1, inter) = inter.split_at_mut(n >> 1);
+        let (g0, g1) = inter.split_at_mut(n >> 1);
+        make_rand_poly(&mut prng, f, logn);
+        g.copy_from_slice(f);
+        fft(g, logn as u32);
+        ifft(g, logn as u32);
+        for u in 0..n {
+            if fpr_rint(f[u]) != fpr_rint(g[u]) {
+                panic!("FFT/IFFT error");
+            }
+        }
+
+        make_rand_poly(&mut prng, g, logn);
+        for u in 0..n {
+            h[u] = fpr_of(0);
+        }
+        for u in 0..n {
+            for v in 0..n {
+                let mut s = fpr_mul(f[u], g[v]);
+                let mut k = u + v;
+                if k >= n {
+                    k -= n;
+                    s = fpr_neg(s);
+                }
+                h[k] = fpr_add(h[k], s);
+            }
+        }
+        fft(f, logn as u32);
+        fft(g, logn as u32);
+        poly_mul_fft(f, g, logn as u32);
+        ifft(f, logn as u32);
+        for u in 0..n {
+            if fpr_rint(f[u]) != fpr_rint(h[u]) {
+                panic!("FFT mul error");
+            }
+        }
+
+        make_rand_poly(&mut prng, f, logn);
+        h.copy_from_slice(f);
+        fft(f, logn as u32);
+        poly_split_fft(f0, f1, f, logn as u32);
+
+        g0.clone_from_slice(&f0[..(n >> 1)]);
+        g1[..(n >> 1)].clone_from_slice(f1);
+        ifft(g0, (logn - 1) as u32);
+        ifft(g1, (logn - 1) as u32);
+        for u in 0..(n >> 1) {
+            if fpr_rint(g0[u]) != fpr_rint(h[u << 1])
+                || fpr_rint(g1[u]) != fpr_rint(h[(u << 1) + 1]) {
+                panic!("split error");
+            }
+        }
+
+        poly_merge_fft(g, f0, f1, logn as u32);
+        ifft(g, logn as u32);
+        for u in 0..n {
+            if fpr_rint(g[u]) != fpr_rint(h[u]) {
+                panic!("split/merge error");
+            }
+        }
+        if ((ctr + 1) & 0xFF) == 0 {
+            print!(".");
+        }
+    }
+}
+
+fn make_rand_poly(mut p: &mut Prng, f: &mut [fpr], logn: usize) {
+    let n = 1 << logn;
+    for u in 0..n {
+        let mut x: i32 = prng_get_u8(&mut p) as i32;
+        x = (x << 8) + prng_get_u8(&mut p) as i32;
+        x &= 0x3FF;
+        f[u] = fpr_of((x - 512) as i64);
+    }
+}
 
 pub(crate) fn test_external_api() {
     print!("Test external API: ");
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
 
@@ -402,14 +658,15 @@ pub(crate) fn test_keygen() {
     println!(" done. ");
 }
 
+#[allow(non_snake_case)]
 fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     print!("[{}]", logn);
     let mut string = String::from("keygen 0");
-    let mut buf: &mut [u8] = unsafe {
+    let buf: &mut [u8] = unsafe {
         string.as_bytes_mut()
     };
     buf[7] = "0".as_bytes()[0] + logn as u8;
@@ -418,62 +675,39 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
     i_shake256_inject(&mut rng, buf);
     i_shake256_flip(&mut rng);
     let n: usize = 1 << logn;
-    let fp: *mut i8 = tmp.as_mut_ptr().cast();
-    let f: &mut [i8] = unsafe { from_raw_parts_mut(fp, n) };
-    let gp = fp.wrapping_add(n);
-    let g: &mut [i8] = unsafe { from_raw_parts_mut(gp, n) };
-    let Fp = gp.wrapping_add(n);
-    let F: &mut [i8] = unsafe { from_raw_parts_mut(Fp, n) };
-    let Gp = Fp.wrapping_add(n);
-    let G: &mut [i8] = unsafe { from_raw_parts_mut(Gp, n) };
-    let hp: *mut u16 = Gp.wrapping_add(n).cast();
-    let h: &mut [u16] = unsafe { from_raw_parts_mut(hp, n) };
-    let h2p = hp.wrapping_add(n);
-    let h2: &mut [u16] = unsafe { from_raw_parts_mut(h2p, n) };
-    let hmp = h2p.wrapping_add(n);
-    let hm: &mut [u16] = unsafe { from_raw_parts_mut(hmp, n) };
-    let sigp: *mut i16 = hmp.wrapping_add(n).cast();
-    let sig: &mut [i16] = unsafe { from_raw_parts_mut(sigp, n) };
-    let s1p = sigp.wrapping_add(n);
-    let s1: &mut [i16] = unsafe { from_raw_parts_mut(s1p, n) };
-    let mut ttp: *mut u8 = s1p.wrapping_add(n).cast();
-    let mut s1ttp: *mut i16 = s1p.wrapping_add(n).cast();
-    let tt: &mut [u8];
-    let s1tt: &mut [i16];
-    // TODO FIX HERNEDE!
-    if logn == 1 {
-        ttp = ttp.wrapping_add(4);
-        s1ttp = s1ttp.wrapping_add(2);
-        // tt = unsafe { from_raw_parts_mut(ttp, n + 4) };
-        tt = unsafe { from_raw_parts_mut(ttp, 50000) };
-        // s1tt = unsafe { from_raw_parts_mut(s1ttp, n + 2) };
-        s1tt = unsafe { from_raw_parts_mut(s1ttp, 25000) };
-    } else {
-        tt = unsafe { from_raw_parts_mut(ttp, 50000) };
-        // tt = unsafe { from_raw_parts_mut(ttp, n * 2) };
-        // s1tt = unsafe { from_raw_parts_mut(s1ttp, n) };
-        s1tt = unsafe { from_raw_parts_mut(s1ttp, 25000) };
-    }
+    let (f, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
+    let (g, inter) = inter.split_at_mut(n);
+    let (F, inter) = inter.split_at_mut(n);
+    let (G, inter) = inter.split_at_mut(n);
+    let (_, inter, _) = bytemuck::pod_align_to_mut::<i8, u16>(inter);
+    let (h, inter) = inter.split_at_mut(n);
+    let (h2, inter) = inter.split_at_mut(n);
+    let (hm, inter) = inter.split_at_mut(n);
+    let (_, inter, _) = bytemuck::pod_align_to_mut::<u16, i16>(inter);
+    let (sig, inter) = inter.split_at_mut(n);
+    let nn = if logn == 1 { n + 2 } else { n };
+    let (s1, tt) = inter.split_at_mut(nn);
+
+    let (_, tt, _) = bytemuck::pod_align_to_mut::<i16, u8>(tt);
+
     for _ in 0..12 {
         let mut sc: InnerShake256Context = InnerShake256Context {
-            st: St { a: [0; 25] },
+            st: [0; 25],
             dptr: 0,
         };
-        keygen(&mut rng, fp, gp, Fp, Gp, hp, logn, ttp);
+        keygen(&mut rng, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), logn, tt.as_mut_ptr());
         let msg = i_shake256_extract(&mut rng, 50);
 
         i_shake256_init(&mut sc);
         i_shake256_inject(&mut sc, msg.as_slice());
         i_shake256_flip(&mut sc);
-        unsafe { hash_to_point_vartime(&mut sc, hm, logn); };
-
+        hash_to_point_vartime(&mut sc, hm, logn);
 
         sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tt);
-        let hmm: &[u8] = &tt[0..n * 2];
-        s1[..n].copy_from_slice(&s1tt[0..n]);
+        s1[..n].copy_from_slice(&bytemuck::cast_slice_mut(tt)[..n]);
         while !is_invertible(sig, logn, tt) {
             sign_dyn(sig, &mut rng, f, g, F, G, hm, logn, tt);
-            s1.copy_from_slice(&s1tt[..n]);
+            s1.copy_from_slice(&bytemuck::cast_slice_mut(tt)[..n]);
         }
         to_ntt_monty(h, logn);
         if !verify_raw(hm, sig, h, logn, tt) {
@@ -493,7 +727,7 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
 pub(crate) fn test_rng() {
     print!("Test RNG: ");
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut prng: Prng = Prng {
@@ -525,45 +759,43 @@ pub(crate) fn test_rng() {
 
 pub(crate) fn test_vrfy() {
     print!("Test verify: ");
-
-    const TLEN: usize = 8192;
+    const TLEN: usize = 15000;
     let mut tmp: [u8; TLEN] = [0; TLEN];
-    test_vrfy_inner(4, &mut ntru_f_16, &mut ntru_g_16, &mut ntru_F_16, &mut ntru_G_16,
-                    &mut ntru_h_16, ntru_pkey_16, &KAT_SIG_16, &mut tmp, TLEN);
-    test_vrfy_inner(9, &mut ntru_f_512, &mut ntru_g_512, &mut ntru_F_512, &mut ntru_G_512,
-                    &mut ntru_h_512, ntru_pkey_512, &KAT_SIG_512, &mut tmp, TLEN);
-    test_vrfy_inner(10, &mut ntru_f_1024, &mut ntru_g_1024, &mut ntru_F_1024, &mut ntru_G_1024,
-                    &mut ntru_h_1024, ntru_pkey_1024, &KAT_SIG_1024, &mut tmp, TLEN);
-
+    test_vrfy_inner(4, &ntru_f_16, &ntru_g_16, &ntru_F_16, &ntru_G_16,
+                    &ntru_h_16, ntru_pkey_16, &KAT_SIG_16, &mut tmp, TLEN);
+    test_vrfy_inner(9, &ntru_f_512, &ntru_g_512, &ntru_F_512, &ntru_G_512,
+                    &ntru_h_512, ntru_pkey_512, &KAT_SIG_512, &mut tmp, TLEN);
+    test_vrfy_inner(10, &ntru_f_1024, &ntru_g_1024, &ntru_F_1024, &ntru_G_1024,
+                    &ntru_h_1024, ntru_pkey_1024, &KAT_SIG_1024, &mut tmp, TLEN);
     println!(" done.");
 }
 
-// TODO Refactor to actually only use the tmp instead of the f, g, G, F, h values (removes warnings)
-#[allow(non_snake_case)]
-fn test_vrfy_inner(logn: u32, mut f: &mut [i8], mut g: &mut [i8],
-                   mut F: &mut [i8], G: &mut [i8], mut h: &mut [u16],
+
+fn test_vrfy_inner(logn: u32, f: &[i8], g: &[i8],
+                   F: &[i8], G: &[i8], h: &[u16],
                    hexpubkey: &str, kat: &[&str], tmp: &mut [u8], tlen: usize) {
     let n: usize = 1 << logn;
-    let h2p: *mut u16 = tmp.as_mut_ptr().cast();
-    let h2: &mut [u16];
-    unsafe { h2 = from_raw_parts_mut(h2p, n); }
+    let h2 = bytemuck::cast_slice_mut::<u8, u16>(tmp);
+    let (h2, inter) = h2.split_at_mut(n);
+    let (h2tmp, _) = inter.split_at_mut(n);
+    let h2tmp = bytemuck::cast_slice_mut::<u16, u8>(h2tmp);
+    let ff = f.clone();
+    let gg = g.clone();
     if tlen < 4 * n {
         panic!("Insufficient buffer size");
     }
-    if !compute_public(h2p, f.as_mut_ptr(), g.as_mut_ptr(), logn, h2p.wrapping_add(n).cast()) {
+    if !compute_public(h2.as_mut_ptr(), ff.as_ptr(), gg.as_ptr(), logn, h2tmp.as_mut_ptr()) {
         panic!("Compute public failed!");
     }
     assert_eq!(h, h2, "compute_public");
 
-    let G2p: *mut i8 = tmp.as_mut_ptr().cast();
-    let G2: &mut [i8];
-    unsafe { G2 = from_raw_parts_mut(G2p, n); }
+    let (G2, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
     if tlen < 5 * n {
         panic!("Insufficient buffer size");
     }
-    let g2_tmp: &mut [u8];
-    unsafe { g2_tmp = from_raw_parts_mut(G2p.wrapping_add(n).cast(), tmp.len() - n); };
-    if !complete_private(G2, &mut f, &mut g, &mut F, logn, g2_tmp) {
+    let (g2_tmp, _) = inter.split_at_mut(n);
+    let g2_tmp = bytemuck::cast_slice_mut(g2_tmp);
+    if !complete_private(G2, ff, &g, &F, logn, g2_tmp) {
         panic!("Compute public failed!");
     }
     assert_eq!(G, G2, "complete_private");
@@ -580,7 +812,7 @@ fn test_vrfy_inner(logn: u32, mut f: &mut [i8], mut g: &mut [i8],
         panic!("Insufficient buffer size");
     }
     tmp[0] = logn as u8;
-    let len2 = modq_encode(tmp, 1, tlen - pubkey_bytes.len() - 1, &mut h, logn);
+    let len2 = modq_encode(tmp, 1, tlen - pubkey_bytes.len() - 1, &h, logn);
     if len2 != (pubkey_bytes.len() - 1) {
         panic!("Wrong encoded public key length {}", len2);
     }
@@ -592,7 +824,7 @@ fn test_vrfy_inner(logn: u32, mut f: &mut [i8], mut g: &mut [i8],
     }
     for u in (0..kat.len()).step_by(3) {
         let mut rng: InnerShake256Context = InnerShake256Context {
-            st: St { a: [0; 25] },
+            st: [0; 25],
             dptr: 0,
         };
         let nonce = hex::decode(kat[u]).unwrap();
@@ -619,7 +851,7 @@ fn test_vrfy_inner(logn: u32, mut f: &mut [i8], mut g: &mut [i8],
         unsafe { tmp.as_mut_ptr().copy_from(sig2.as_mut_ptr().cast(), 2 * n); }
         let s2p: *mut i16 = tmp.as_mut_ptr().cast();
         let h2p: *mut u16 = s2p.wrapping_add(n).cast();
-        unsafe { h2p.copy_from(h.as_mut_ptr().cast(), n); }
+        unsafe { h2p.copy_from(h.as_ptr().cast(), n); }
         let mut h2: &mut [u16];
         unsafe { h2 = from_raw_parts_mut(h2p.cast(), n); }
         to_ntt_monty(&mut h2, logn);
@@ -654,7 +886,7 @@ pub(crate) fn test_codec() {
 fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
     let n: usize = 1 << logn;
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     i_shake256_init(&mut rng);
@@ -786,7 +1018,7 @@ pub(crate) fn test_shake256() {
 
 fn test_shake256_kat(hexsrc: &str, hexout: &str) {
     let mut rng: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut inn = hex::decode(hexsrc).unwrap();

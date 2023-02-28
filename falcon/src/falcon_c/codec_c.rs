@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #[link(name = "codec", kind = "static")]
 extern "C" {
     pub fn falcon_inner_modq_encode(out: *const (), max_out_len: usize, x: *const u16, logn: u32) -> usize;

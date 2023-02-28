@@ -1,99 +1,106 @@
-use std::mem::align_of;
 use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 
 use crate::codec::{comp_decode, comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, modq_decode, modq_encode, trim_i16_decode, trim_i16_encode, trim_i8_decode, trim_i8_encode};
 use crate::common::{hash_to_point_ct, hash_to_point_vartime};
 use crate::keygen::keygen;
-use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context, St};
+use crate::shake::{i_shake256_extract, i_shake256_flip, i_shake256_init, i_shake256_inject, InnerShake256Context};
 use crate::sign::{expand_privkey, sign_dyn, sign_tree};
 use crate::vrfy::{complete_private, compute_public, to_ntt_monty, verify_raw};
 
 #[allow(non_camel_case_types)]
-type fpr = u64;
+pub type fpr = u64;
 
 pub const FALCON_SIG_COMPRESS: i32 = 1;
 pub const FALCON_SIG_PADDED: i32 = 2;
 pub const FALCON_SIG_CT: i32 = 3;
 
+#[allow(non_camel_case_types)]
+#[macro_export]
+macro_rules! MKN {
+    ($logn: expr) => {
+        (1 << $logn) as usize
+    }
+}
+
 #[macro_export]
 macro_rules! falcon_tmpsize_keygen {
-    ($arg:expr) => {
-        if $arg <= 3 {272 + ((3 << $arg) + 7)}
-        else {(28 << $arg) + ((3 << $arg )+ 7)}
+    ($logn:expr) => {
+        if $logn <= 3 {272 + ((3 << $logn) + 7)}
+        else {(28 << $logn) + ((3 << $logn )+ 7)}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_privatekey_size {
-    ($arg:expr) => {
-        if $arg <= 3 {(3 << $arg)  + 1}
-        else {((10 - (($arg) >> 1)) << (($arg) - 2)) + (1 << ($arg)) + 1}
+    ($logn:expr) => {
+        if $logn <= 3 {(3 << $logn)  + 1}
+        else {((10 - (($logn) >> 1)) << (($logn) - 2)) + (1 << ($logn)) + 1}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_publickey_size {
-    ($arg:expr) => {
-        if $arg <= 1 {5}
-        else {(7 << ($arg - 2))  + 1}
+    ($logn:expr) => {
+        if $logn <= 1 {5}
+        else {(7 << ($logn - 2))  + 1}
     }
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_makepub {
-    ($arg:expr) => {(6 << $arg) + 1}
+    ($logn:expr) => {(6 << $logn) + 1}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_signdyn {
-    ($arg:expr) => {(78 << $arg) + 7}
+    ($logn:expr) => {(78 << $logn) + 7}
 }
 
 
 #[macro_export]
 macro_rules! falcon_tmpsize_signtree {
-    ($arg:expr) => {(50 << $arg) + 7}
+    ($logn:expr) => {(50 << $logn) + 7}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expandprivate {
-    ($arg:expr) => {(52 << $arg) + 7}
+    ($logn:expr) => {(52 << $logn) + 7}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expanded_key_size {
-    ($arg:expr) => {((8 * $arg + 40) << $arg) + 8}
+    ($logn:expr) => {((8 * $logn + 40) << $logn) + 8}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_verify {
-    ($arg:expr) => {(8 << $arg) + 1}
+    ($logn:expr) => {(8 << $logn) + 1}
 }
 
 #[macro_export]
 macro_rules! falcon_sig_compressed_maxsize {
-    ($arg:expr) => {
-        (((11 << $arg) + (101 >> (10 - $arg)) + 7) >> 3) + 41
+    ($logn:expr) => {
+        (((11 << $logn) + (101 >> (10 - $logn)) + 7) >> 3) + 41
     }
 }
 
 #[macro_export]
 macro_rules! falcon_sig_padded_size {
-    ($arg:expr) => {
-        (44 + 3 * (256 >> (10 - $arg))) + 2 * ( 128 >> (10 - $arg))
-        + 3 * (64 >> (10 - $arg)) + 2 * (16 >> (10 - $arg))
-        - 2 * (2 >> (10 - $arg)) - 8 * (1 >> (10 - $arg))
+    ($logn:expr) => {
+        (44 + 3 * (256 >> (10 - $logn))) + 2 * ( 128 >> (10 - $logn))
+        + 3 * (64 >> (10 - $logn)) + 2 * (16 >> (10 - $logn))
+        - 2 * (2 >> (10 - $logn)) - 8 * (1 >> (10 - $logn))
     }
 }
 
 #[macro_export]
 macro_rules! falcon_sig_ct_size {
-    ($arg:expr) => {
-        if $arg == 3 {
-            (3 << ($arg - 1)) + 40
+    ($logn:expr) => {
+        if $logn == 3 {
+            (3 << ($logn - 1)) + 40
         } else {
-            (3 << ($arg - 1)) + 41
+            (3 << ($logn - 1)) + 41
         }
     }
 }
@@ -123,6 +130,7 @@ pub fn shake_init_prng_from_seed(rng: &mut InnerShake256Context, seed: &mut [u8]
     shake256_inject(rng, seed);
 }
 
+#[allow(dead_code)]
 pub fn shake_init_prng_from_system(rng: &mut InnerShake256Context) -> i32 {
     let mut seed: [u8; 48] = [0; 48];
     // TODO ? get_seed defined in rng for Extra/c/rng
@@ -135,6 +143,7 @@ pub fn shake_init_prng_from_system(rng: &mut InnerShake256Context) -> i32 {
 }
 
 // see inner.h for set_fpu_cw for better / more correct implementation.
+#[allow(dead_code)]
 pub(crate) fn set_fpu_cw(x: u32) -> u32 {
     x
 }
@@ -281,7 +290,7 @@ pub fn falcon_sign_dyn(mut rng: &mut InnerShake256Context, signature: &mut [u8],
                        private_len: usize, data: &mut [u8],
                        tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut nonce = [0u8; 40];
@@ -291,6 +300,7 @@ pub fn falcon_sign_dyn(mut rng: &mut InnerShake256Context, signature: &mut [u8],
                            private_key, private_len, &mut hd, &mut nonce, tmp, tmp_len)
 }
 
+#[allow(non_snake_case)]
 pub fn falcon_expand_privatekey(expanded_key: &mut [u8], expanded_len: usize,
                                 sk: &mut [u8], sk_len: usize,
                                 tmp: &mut [u8], tmp_len: usize) -> i32 {
@@ -355,7 +365,7 @@ pub fn falcon_sign_tree(mut rng: &mut InnerShake256Context, signature: &mut [u8]
                         data: &mut [u8],
                         tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let mut nonce = [0u8; 40];
@@ -385,6 +395,7 @@ fn align_fpr(tmp: &mut [u16]) -> &mut [u8] {
     bytemuck::cast_slice_mut(fpr)
 }
 
+#[allow(non_snake_case)]
 pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                               signature_type: i32, private_key: &mut [u8],
                               private_len: usize,
@@ -463,12 +474,11 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
     shake256_flip(&mut hash_data);
 
     loop {
-        let mut hash_data_restart: &mut InnerShake256Context = &mut unsafe {
-            InnerShake256Context {
-                st: St { a: hash_data.st.a },
+        let mut hash_data_restart: &mut InnerShake256Context =
+            &mut InnerShake256Context {
+                st: hash_data.st,
                 dptr: hash_data.dptr,
-            }
-        };
+            };
         if signature_type == FALCON_SIG_CT {
             hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
         } else {
@@ -480,7 +490,7 @@ pub fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mu
         sign_dyn(sv, &mut rng, f, g, F, G, hm, logn, atmp);
         signature[1..41].copy_from_slice(nonce);
         let u = 41;
-        let mut v = 0;
+        let mut v: usize;
         match signature_type {
             FALCON_SIG_COMPRESS => {
                 signature[0] = 0x30 + logn as u8;
@@ -553,12 +563,11 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
     let atmp = bytemuck::cast_slice_mut::<u64, u8>(atmp);
     shake256_flip(&mut hash_data);
     loop {
-        let mut hash_data_restart: &mut InnerShake256Context = &mut unsafe {
-            InnerShake256Context {
-                st: St { a: hash_data.st.a },
+        let mut hash_data_restart: &mut InnerShake256Context =
+            &mut InnerShake256Context {
+                st: hash_data.st,
                 dptr: hash_data.dptr,
-            }
-        };
+            };
         if signature_type == FALCON_SIG_CT {
             hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
         } else {
@@ -571,7 +580,7 @@ pub fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &m
 
         signature[1..41].copy_from_slice(nonce);
         let u = 41;
-        let mut v = 0;
+        let mut v: usize;
         match signature_type {
             FALCON_SIG_COMPRESS => {
                 signature[0] = 0x30 + logn as u8;
@@ -611,7 +620,7 @@ pub fn falcon_verify(signature: &mut [u8], signature_len: usize, signature_type:
                      data: &mut [u8],
                      tmp: &mut [u8], tmp_len: usize) -> i32 {
     let mut hd: InnerShake256Context = InnerShake256Context {
-        st: St { a: [0; 25] },
+        st: [0; 25],
         dptr: 0,
     };
     let r = falcon_verify_start(&mut hd, signature, signature_len);
