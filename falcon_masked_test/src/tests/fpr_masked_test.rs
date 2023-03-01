@@ -1,0 +1,207 @@
+#[cfg(test)]
+mod tests {
+    use falcon::falcon::fpr;
+    use falcon::fpr::{fpr_add as add, fpr_div as div, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
+    use falcon_masked::fpr_masked::{fpr_add, fpr_div, fpr_double, fpr_floor, fpr_half, fpr_inv, fpr_lt, fpr_mul, fpr_neg, fpr_rint, fpr_sqr, fpr_sqrt, fpr_sub, fpr_trunc};
+
+    #[test]
+    fn fpr_add_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let add_shares = fpr_add(&shares_x, &shares_y);
+            let (xx, yy) = reconstruct(&add_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, add(x, y));
+        }
+    }
+
+    #[test]
+    fn fpr_sub_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let sub_shares = fpr_sub(&shares_x, &shares_y);
+            let (xx, yy) = reconstruct(&sub_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, sub(x, y));
+        }
+    }
+
+    #[test]
+    fn fpr_mul_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let mul_shares = fpr_mul(&shares_x, &shares_y);
+            let (xx, yy) = reconstruct(&mul_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, mul(x, y));
+        }
+    }
+
+    #[test]
+    fn fpr_sqr_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let sqr_shares = fpr_sqr(&shares_x);
+            let (xx, yy) = reconstruct(&sqr_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, mul(x, x));
+        }
+    }
+
+    #[test]
+    fn fpr_neg_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let neg_shares = fpr_neg(&shares_x);
+            let (xx, yy) = reconstruct(&neg_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, neg(x));
+        }
+    }
+
+    #[test]
+    fn fpr_half_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let half_shares = fpr_half(&shares_x);
+            let (xx, yy) = reconstruct(&half_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, half(x));
+        }
+    }
+
+    #[test]
+    fn fpr_double_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let double_shares = fpr_double(&shares_x);
+            let (xx, yy) = reconstruct(&double_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, double(x));
+        }
+    }
+
+    #[test]
+    fn fpr_inv_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let inv_shares = fpr_inv(&shares_x);
+            let (xx, yy) = reconstruct(&inv_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, inv(x));
+        }
+    }
+
+    #[test]
+    fn fpr_sqrt_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let add_shares = fpr_sqrt(&shares_x);
+            let (xx, yy) = reconstruct(&add_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, sqrt(x));
+        }
+    }
+
+    #[test]
+    fn fpr_div_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let div_shares = fpr_div(&shares_x, &shares_y);
+            let (xx, yy) = reconstruct(&div_shares, &shares_y);
+            assert_eq!(yy, y);
+            assert_eq!(xx, div(x, y));
+        }
+    }
+
+    #[test]
+    fn fpr_rint_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, _) = create_masked(&mut shares_x, &mut shares_y);
+            let rint_res = fpr_rint(&shares_x);
+            assert_eq!(rint_res[0] + rint_res[1], rint(x));
+        }
+    }
+
+    #[test]
+    fn fpr_trunc_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, _) = create_masked(&mut shares_x, &mut shares_y);
+            let rtrunc_res = fpr_trunc(&shares_x);
+
+            assert_eq!(rtrunc_res[0] + rtrunc_res[1], trunc(x));
+        }
+    }
+
+    #[test]
+    fn fpr_floor_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, _) = create_masked(&mut shares_x, &mut shares_y);
+            let floor_res = fpr_floor(&shares_x);
+
+            assert_eq!(floor_res[0] + floor_res[1], floor(x));
+        }
+    }
+
+    #[test]
+    fn fpr_lt_test() {
+        for _ in 0..100 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, _) = create_masked(&mut shares_x, &mut shares_y);
+            let random = create_random_fpr();
+            let lt_res = fpr_lt(&shares_x, random);
+
+            assert_eq!(lt_res, lt(x, random));
+        }
+    }
+
+    pub fn create_masked(x: &mut [fpr], y: &mut [fpr]) -> (fpr, fpr) {
+        let x_fpr = create_random_fpr();
+        let y_fpr = create_random_fpr();
+        let x_random = create_random_fpr();
+        let y_random = create_random_fpr();
+        let first = vec![sub(x_fpr, x_random), x_random];
+        let second = vec![sub(y_fpr, y_random), y_random];
+        x.clone_from_slice(&first);
+        y.clone_from_slice(&second);
+        (x_fpr, y_fpr)
+    }
+
+    pub fn reconstruct(x: &[fpr], y: &[fpr]) -> (fpr, fpr) {
+        let xx = add(x[0], x[1]);
+        let yy = add(y[0], y[1]);
+        (xx, yy)
+    }
+
+    pub fn create_random_fpr() -> fpr {
+        let random: i32 = rand::random();
+        fpr_of((random >> 10) as i64)
+    }
+}
