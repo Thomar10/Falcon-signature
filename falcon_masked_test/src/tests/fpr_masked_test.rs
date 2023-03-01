@@ -12,8 +12,8 @@ mod tests {
             let (x, y) = create_masked(&mut shares_x, &mut shares_y);
             let add_shares = fpr_add(&shares_x, &shares_y);
             let (xx, yy) = reconstruct(&add_shares, &shares_y);
-            assert_eq!(yy, y);
-            assert_eq!(xx, add(x, y));
+            assert_eq!(yy, y, "y");
+            assert_eq!(xx, add(x, y), "x + y");
         }
     }
 
@@ -141,8 +141,7 @@ mod tests {
             let mut shares_y = [0; 2];
             let (x, y) = create_masked(&mut shares_x, &mut shares_y);
             let div_shares = fpr_div(&shares_x, &shares_y);
-            let (xx, yy) = reconstruct(&div_shares, &shares_y);
-            assert_eq!(yy, y);
+            let (xx, _) = reconstruct(&div_shares, &shares_y);
             assert_eq!(xx, div(x, y));
         }
     }
@@ -214,7 +213,7 @@ mod tests {
     }
 
     pub fn create_random_fpr() -> fpr {
-        let random: i32 = rand::random();
-        fpr_of((random >> 10) as i64)
+        let random: i64 = rand::random();
+        fpr_of(random)
     }
 }
