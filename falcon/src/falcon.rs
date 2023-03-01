@@ -613,7 +613,6 @@ pub fn falcon_verify(signature: &[u8], signature_len: usize, signature_type: i32
 
 fn falcon_verify_start(mut hash_data: &mut InnerShake256Context, signature: &[u8], signature_len: usize) -> i32 {
     if signature_len < 41 {
-        panic!("WHERE");
         return -6;
     }
     shake256_init(&mut hash_data);
@@ -638,14 +637,14 @@ fn falcon_verify_finish(signature: &[u8], signature_len: usize, signature_type: 
     if (signature[0] & 0x0F) != logn as u8 {
         return -6;
     }
-    let mut ct = 0;
+    let mut ct = false;
     match signature_type {
         0 => {
             if (signature[0] & 0xF0) == 0x50 {
                 if signature_len != falcon_sig_ct_size!(logn) {
                     return -6;
                 }
-                ct = 1;
+                ct = true;
             } else if (signature[0] & 0xF0) == 0x30 {
                 // DO NATHING
             } else {
@@ -672,7 +671,7 @@ fn falcon_verify_finish(signature: &[u8], signature_len: usize, signature_type: 
             if signature_len != falcon_sig_ct_size!(logn) {
                 return -6;
             }
-            ct = 1;
+            ct = true;
         }
         _ => { return -6; }
     }
@@ -697,7 +696,7 @@ fn falcon_verify_finish(signature: &[u8], signature_len: usize, signature_type: 
 
     let u = 41;
     let mut v;
-    if ct == 1 {
+    if ct {
         v = trim_i16_decode(sv, logn, max_sig_bits[logn as usize] as u32, signature, u, signature_len - u);
     } else {
         v = comp_decode(sv, logn, signature, u, signature_len - u);
@@ -719,7 +718,7 @@ fn falcon_verify_finish(signature: &[u8], signature_len: usize, signature_type: 
     }
 
     shake256_flip(&mut hash_data);
-    if ct == 1 {
+    if ct {
         hash_to_point_ct(&mut hash_data, hm, logn, atmp);
     } else {
         hash_to_point_vartime(&mut hash_data, hm, logn);
