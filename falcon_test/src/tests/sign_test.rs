@@ -8,7 +8,7 @@ mod tests {
     use falcon::fpr::{fpr_div, fpr_of, FPR_SIGMA_MIN};
     use falcon::keygen::keygen;
     use falcon::shake::{i_shake256_extract, i_shake256_flip, i_shake256_inject};
-    use falcon::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_tree, smallints_to_fpr};
+    use falcon::sign::{BerExp, expand_privkey, ffLDL_binary_normalize, ffLDL_fft, ffLDL_fft_inner, ffLDL_treesize, ffSampling_fft_dyntree, gaussian0_sampler, sampler, SamplerContext, sign_dyn, sign_dyn_same, sign_tree, smallints_to_fpr};
     use falcon_c::keygen_c::falcon_inner_keygen;
     use falcon_c::shake_c::InnerShake256Context as InnerShake256ContextC;
     use falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, smallints_to_fpr_func as smallints_to_fpr_c};
@@ -356,7 +356,6 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_sign_dyn_same() {
         for _ in 0..100 {
-
             const LOGN: usize = 4;
 
             const BUFFER_SIZE: usize = 2048 * 8;
@@ -387,7 +386,7 @@ mod tests {
             i_shake256_flip(&mut sc);
             hash_to_point_vartime(&mut sc, bytemuck::cast_slice_mut(&mut sig), LOGN as u32);
 
-            keygen(&mut rng_rust, f.as_mut_ptr(), g.as_mut_ptr(), F.as_mut_ptr(), G.as_mut_ptr(), h.as_mut_ptr(), LOGN as u32, tmp.as_mut_ptr());
+            keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, LOGN as u32, &mut tmp);
 
             unsafe { falcon_inner_keygen(&rng_c, f_c.as_ptr(), g_c.as_ptr(), F_c.as_ptr(), G_c.as_ptr(), h_c.as_ptr(), LOGN as u32, tmp_c.as_ptr()); }
 
