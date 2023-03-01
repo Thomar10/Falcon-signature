@@ -6,3 +6,4 @@ edition = "2021"
 
 [dependencies]
 bytemuck = "1.13.0"
+falcon = { path = "../falcon" }

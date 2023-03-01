@@ -1,4 +1,5 @@
 mod fft_masked_test;
+mod fpr_masked_test;
 
 #[cfg(test)]
 mod tests {
