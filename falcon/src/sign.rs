@@ -1,4 +1,3 @@
-use std::slice::from_raw_parts_mut;
 use bytemuck;
 
 use crate::common::is_short_half;
@@ -850,7 +849,7 @@ pub fn sign_dyn_same(sig: &mut [i16], rng: &mut InnerShake256Context, f: &[i8], 
 
     //Don't worry about it ;)
     let sig_ptr: *mut u16 = sig.as_mut_ptr() as *mut u16;
-    let hm: &[u16] = unsafe {from_raw_parts_mut(sig_ptr, sig.len())};
+    let hm: &[u16] = &mut [0u16; 0]; //unsafe {from_raw_parts_mut(sig_ptr, sig.len())};
 
     loop {
         let mut spc: SamplerContext = SamplerContext {p: Prng {buf: [0; 512], ptr: 0, state: State {d: [0; 256]}, typ: 0}, sigma_min: FPR_SIGMA_MIN[logn as usize]};
