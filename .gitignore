@@ -11,4 +11,9 @@ Cargo.lock
 /.idea
 
 falcon/target
+falcon_masked/target
+falcon_c/target
+falcon_test/target
+falcon_masked_test/target
 hawk/target
+out
