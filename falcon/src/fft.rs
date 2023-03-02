@@ -1,21 +1,21 @@
 use crate::fpr::{fpr_add, fpr_double, FPR_GM_TAB, fpr_half, fpr_inv, fpr_mul, fpr_neg, FPR_P2_TAB, fpr_sqr, fpr_sub, FPR_ZERO};
 
-fn fpc_add(a_re: u64, a_im: u64,
-           b_re: u64, b_im: u64) -> (u64, u64) {
+pub fn fpc_add(a_re: u64, a_im: u64,
+               b_re: u64, b_im: u64) -> (u64, u64) {
     let fpct_re: u64 = fpr_add(a_re, b_re);
     let fpct_im: u64 = fpr_add(a_im, b_im);
     (fpct_re, fpct_im)
 }
 
-fn fpc_sub(a_re: u64, a_im: u64,
-           b_re: u64, b_im: u64) -> (u64, u64) {
+pub fn fpc_sub(a_re: u64, a_im: u64,
+               b_re: u64, b_im: u64) -> (u64, u64) {
     let fpct_re: u64 = fpr_sub(a_re, b_re);
     let fpct_im: u64 = fpr_sub(a_im, b_im);
     (fpct_re, fpct_im)
 }
 
-fn fpc_mul(a_re: u64, a_im: u64,
-           b_re: u64, b_im: u64) -> (u64, u64) {
+pub fn fpc_mul(a_re: u64, a_im: u64,
+               b_re: u64, b_im: u64) -> (u64, u64) {
     let fpct_d_re = fpr_sub(
         fpr_mul(a_re, b_re),
         fpr_mul(a_im, b_im));

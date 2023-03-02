@@ -1,58 +1,58 @@
-use crate::falcon_masked::fpr;
-use crate::fpr_masked::{fpr_add, fpr_double, FPR_GM_TAB, fpr_half, fpr_inv, fpr_mul, fpr_neg, FPR_P2_TAB, fpr_sqr, fpr_sub, FPR_ZERO};
+use falcon::falcon::fpr;
+use crate::fpr_masked::{fpr_add, fpr_double, fpr_half, fpr_inv, fpr_mul, fpr_neg,  fpr_sqr, fpr_sub, FPR_GM_TAB};
 
-fn fpc_add(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+pub fn fpc_add(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     let fpct_re: [fpr; 2] = fpr_add(a_re, b_re);
     let fpct_im: [fpr; 2] = fpr_add(a_im, b_im);
     return (fpct_re, fpct_im);
 }
 
-fn fpc_sub(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+pub fn fpc_sub(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     let fpct_re: [fpr; 2] = fpr_sub(a_re, b_re);
     let fpct_im: [fpr; 2] = fpr_sub(a_im, b_im);
     return (fpct_re, fpct_im);
 }
 
-fn fpc_mul(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+pub fn fpc_mul(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     let fpct_d_re: [fpr; 2] = fpr_sub(
-        fpr_mul(a_re, b_re),
-        fpr_mul(a_im, b_im));
+        &fpr_mul(a_re, b_re),
+        &fpr_mul(a_im, b_im));
     let fpct_d_im: [fpr; 2] = fpr_add(
-        fpr_mul(a_re, b_im),
-        fpr_mul(a_im, b_re));
+        &fpr_mul(a_re, b_im),
+        &fpr_mul(a_im, b_re));
     return (fpct_d_re, fpct_d_im);
 }
 
-fn fpc_div(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
-    let mut fpct_m: [fpr; 2] = fpr_add(fpr_sqr(b_re), fpr_sqr(b_im));
+pub fn fpc_div(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+    let mut fpct_m: [fpr; 2] = fpr_add(&fpr_sqr(b_re), &fpr_sqr(b_im));
     fpct_m = fpr_inv(&fpct_m);
-    let b_re: [fpr; 2] = fpr_mul(b_re, fpct_m);
-    let b_im: [fpr; 2] = fpr_mul(fpr_neg(b_im), fpct_m);
+    let b_re: [fpr; 2] = fpr_mul(b_re, &fpct_m);
+    let b_im: [fpr; 2] = fpr_mul(&fpr_neg(b_im), &fpct_m);
     let fpct_d_re: [fpr; 2] = fpr_sub(
-        fpr_mul(a_re, b_re),
-        fpr_mul(a_im, b_im));
+        &fpr_mul(a_re, &b_re),
+        &fpr_mul(a_im, &b_im));
     let fpct_d_im: [fpr; 2] = fpr_add(
-        fpr_mul(a_re, b_im),
-        fpr_mul(a_im, b_re));
+        &fpr_mul(a_re, &b_im),
+        &fpr_mul(a_im, &b_re));
     (fpct_d_re, fpct_d_im)
 }
 
-fn fpc_sqr(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
-    let fpct_d_re: [fpr; 2] = fpr_sub(fpr_sqr(a_re), fpr_sqr(a_im));
-    let fpct_d_im: [fpr; 2] = fpr_double(fpr_mul(a_re, a_im));
+pub fn fpc_sqr(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+    let fpct_d_re: [fpr; 2] = fpr_sub(&fpr_sqr(a_re), &fpr_sqr(a_im));
+    let fpct_d_im: [fpr; 2] = fpr_double(&fpr_mul(a_re, a_im));
     (fpct_d_re, fpct_d_im)
 }
 
-fn fpc_inv(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
-    let mut fpct_m: [fpr; 2] = fpr_add(fpr_sqr(a_re), fpr_sqr(a_im));
+pub fn fpc_inv(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+    let mut fpct_m: [fpr; 2] = fpr_add(&fpr_sqr(a_re), &fpr_sqr(a_im));
     fpct_m = fpr_inv(&fpct_m);
-    let fpct_d_re: [fpr; 2] = fpr_mul(a_re, fpct_m);
-    let fpct_d_im: [fpr; 2] = fpr_mul(fpr_neg(a_im), fpct_m);
+    let fpct_d_re: [fpr; 2] = fpr_mul(a_re, &fpct_m);
+    let fpct_d_im: [fpr; 2] = fpr_mul(&fpr_neg(a_im), &fpct_m);
     (fpct_d_re, fpct_d_im)
 }
 
 //Column order - Don't know which is best right now
-pub fn m_fft_c(f: &mut [[fpr; 2]], logn: u32) {
+pub fn fft(f: &mut [[fpr; 2]], logn: u32) {
     let mut u: u32 = 1;
     let mut m: usize = 2;
     let (mut t, n, hn): (usize, usize, usize);
@@ -71,8 +71,8 @@ pub fn m_fft_c(f: &mut [[fpr; 2]], logn: u32) {
             let (mut j, j2): (usize, usize);
             j2 = j1 + ht;
             let (s_re, s_im): ([fpr; 2], [fpr; 2]);
-            s_re = [FPR_GM_TAB[((m + i1) << 1) + 0]; 2];
-            s_im = [FPR_GM_TAB[((m + i1) << 1) + 1]; 2];
+            s_re = [FPR_GM_TAB[((m + i1) << 1) + 0], 0];
+            s_im = [FPR_GM_TAB[((m + i1) << 1) + 1], 0];
             j = j1;
 
             while j < j2 {
@@ -98,7 +98,7 @@ pub fn m_fft_c(f: &mut [[fpr; 2]], logn: u32) {
 }
 
 //Row order - Don't know which is best right now
-pub fn m_fft_r(f: &mut [[fpr]; 2], logn: u32) {
+/*pub fn m_fft_r(f: &mut [&mut [fpr]], logn: u32) {
     let mut u: u32 = 1;
     let mut m: usize = 2;
     let (mut t, n, hn): (usize, usize, usize);
@@ -128,10 +128,10 @@ pub fn m_fft_r(f: &mut [[fpr]; 2], logn: u32) {
                 y_re = get_column(f, j + ht);
                 y_im = get_column(f, j + ht + hn);
                 (y_re, y_im) = fpc_mul(&y_re, &y_im, &s_re, &s_im);
-                let (res_re, res_im): ([fpr; 2], [fpr; 2]) = fpc_add(&x_re, &x_im, &y_re, &y_im);
+                let (mut res_re, mut res_im): ([fpr; 2], [fpr; 2]) = fpc_add(&x_re, &x_im, &y_re, &y_im);
                 set_column(f, j,res_re);
                 set_column(f, j + hn, res_im);
-                (res_re, res_im): ([fpr; 2], [fpr; 2]) = fpc_sub(&x_re, &x_im, &y_re, &y_im);
+                (res_re, res_im) = fpc_sub(&x_re, &x_im, &y_re, &y_im);
                 set_column(f, j + ht, res_re);
                 set_column(f, j + ht + hn, res_im);
 
@@ -148,18 +148,20 @@ pub fn m_fft_r(f: &mut [[fpr]; 2], logn: u32) {
 }
 
 //Should probably be moved somewhere else
-fn get_column(arr: &[[fpr]], index: usize) -> [fpr; 2] {
+fn get_column(arr: &[&[fpr]], index: usize) -> [fpr; 2] {
     let mut col: [fpr; 2] = [0; 2];
-    arr.iter().map(|s| s.get(index).unwrap()).collect_into(&mut col);
+    for i in 0..2 {
+        col[i] = arr[index][i];
+    }
     return col;
 }
 
-fn set_column(arr: &mut [[fpr]; 2], index: usize, value: [fpr; 2]) {
+fn set_column(arr: &mut [&mut [fpr]], index: usize, value: [fpr; 2]) {
     for i in 0..value.len() {
         arr[index][i] = value[i];
     }
-}
-
+}*/
+/*
 pub fn ifft(f: &mut [u64], logn: u32) {
     let (mut u, n, hn, mut t, mut m): (u32, usize, usize, usize, usize);
     n = (1 as usize) << logn;
@@ -437,7 +439,7 @@ pub fn poly_merge_fft(f: &mut [u64], f0: &[u64], f1: &[u64], logn: u32) {
         f[(u << 1) + 1] = t_re;
         f[(u << 1) + 1 + hn] = t_im;
     }
-}
+}*/
 
 
 
