@@ -1,5 +1,7 @@
+use core::ops::Sub;
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr_add as add, fpr_div as div, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
+use rand::{Rng, thread_rng};
 
 pub fn fpr_add(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
@@ -48,16 +50,8 @@ pub fn fpr_trunc(x: &[fpr]) -> [i64; 2] {
 
 
 pub fn fpr_div(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
-    // d[0] = div(x[0], y[0]);
-    // let yy = add(y[0], y[1]);
-    // d[1] = sub(div(x[1], yy), div(mul(y[1], x[0]), mul(yy, y[1])));
-    let xx = add(x[0], x[1]);
-    let yy = add(y[0], y[1]);
-    let one = fpr_of(1);
-    d[0] = sub(div(xx, yy), one);
-    d[1] = one;
-    d
+    let d = fpr_inv(y);
+    fpr_mul(x, &d)
 }
 
 
@@ -105,8 +99,14 @@ pub fn fpr_double(x: &[fpr]) -> [fpr; 2] {
 #[inline(always)]
 pub fn fpr_inv(x: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
-    d[0] = x[0];
-    d[1] = inv(x[1]);
+    let mut rng = thread_rng();
+    let r1: fpr = f64::to_bits(rng.gen_range(-100f64..100f64));
+    let share_two: fpr = f64::to_bits(rng.gen_range(-100f64..100f64));
+    let share_one = sub(r1, share_two);
+    let y = fpr_mul(&[share_one, share_two], x);
+    let y_open_inv = inv(add(y[0], y[1]));
+    d[0] = mul(share_one, y_open_inv);
+    d[1] = mul(share_two, y_open_inv);
     d
 }
 
