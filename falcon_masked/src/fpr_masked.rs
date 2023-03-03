@@ -1,9 +1,5 @@
 use falcon::falcon::fpr;
-use falcon::fpr::{fpr_add as add, fpr_div as div, fpr_double as double,
-                  fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half,
-                  fpr_inv as inv, fpr_lt as lt, fpr_mul as mul,
-                  fpr_neg as neg, fpr_rint as rint, fpr_sqrt as sqrt,
-                  fpr_sub as sub, fpr_trunc as trunc};
+use falcon::fpr::{fpr_add as add, fpr_div as div, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
 
 pub fn fpr_add(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
@@ -53,9 +49,14 @@ pub fn fpr_trunc(x: &[fpr]) -> [i64; 2] {
 
 pub fn fpr_div(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
-    d[0] = div(x[0], y[0]);
-    d[1] = add(div(x[1], y[0]),
-               div(y[1], x[0]));
+    // d[0] = div(x[0], y[0]);
+    // let yy = add(y[0], y[1]);
+    // d[1] = sub(div(x[1], yy), div(mul(y[1], x[0]), mul(yy, y[1])));
+    let xx = add(x[0], x[1]);
+    let yy = add(y[0], y[1]);
+    let one = fpr_of(1);
+    d[0] = sub(div(xx, yy), one);
+    d[1] = one;
     d
 }
 
@@ -104,7 +105,7 @@ pub fn fpr_double(x: &[fpr]) -> [fpr; 2] {
 #[inline(always)]
 pub fn fpr_inv(x: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
-    d[0] = inv(x[0]);
+    d[0] = x[0];
     d[1] = inv(x[1]);
     d
 }
