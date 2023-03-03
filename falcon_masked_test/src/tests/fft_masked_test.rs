@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use rand::{Rng, thread_rng};
     use falcon::falcon::fpr;
     use falcon::fpr::{fpr_of as u_fpr_of, fpr_sub as u_fpr_sub, fpr_add as u_fpr_add};
     use falcon_masked::fft_masked::{fft, fpc_add, fpc_mul, fpc_sub};
@@ -95,7 +96,8 @@ mod tests {
     }
 
     pub fn create_random_fpr() -> fpr {
-        let random: i32 = rand::random();
-        u_fpr_of((random >> 10) as i64)
+        let mut rng = thread_rng();
+        let random: f64 = rng.gen_range(-200f64..200f64);
+        return f64::to_bits(random);
     }
 }
