@@ -3,6 +3,8 @@ use falcon::falcon::fpr;
 use falcon::fpr::{fpr_add as add, fpr_div as div, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
 use rand::{Rng, thread_rng};
 
+pub static FPR_ZERO: fpr = 0;
+
 pub fn fpr_add(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
     d[0] = add(x[0], y[0]);

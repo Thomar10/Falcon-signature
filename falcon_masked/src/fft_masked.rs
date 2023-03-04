@@ -1,5 +1,5 @@
 use falcon::falcon::fpr;
-use crate::fpr_masked::{fpr_add, fpr_double, fpr_half, fpr_inv, fpr_mul, fpr_neg,  fpr_sqr, fpr_sub, FPR_GM_TAB, FPR_P2_TAB};
+use crate::fpr_masked::{fpr_add, fpr_double, fpr_half, fpr_inv, fpr_mul, fpr_neg, fpr_sqr, fpr_sub, FPR_GM_TAB, FPR_P2_TAB, FPR_ZERO};
 
 pub fn fpc_add(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     let fpct_re: [fpr; 2] = fpr_add(a_re, b_re);
@@ -243,56 +243,57 @@ pub fn poly_neg(a: &mut [[fpr; 2]], logn: u32) {
         a[u] = fpr_neg(&a[u]);
     }
 }
-/*
-pub fn poly_adj_fft(a: &mut [u64], logn: u32) {
+
+pub fn poly_adj_fft(a: &mut [[fpr; 2]], logn: u32) {
     let n: usize;
 
     n = (1 as usize) << logn;
     for u in (n >> 1)..n {
-        a[u] = fpr_neg(a[u]);
+        a[u] = fpr_neg(&a[u]);
     }
 }
 
-pub fn poly_mul_fft(a: &mut [u64], b: &[u64], logn: u32) {
+pub fn poly_mul_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
 
     n = (1 as usize) << logn;
     hn = n >> 1;
     for u in 0..hn {
-        (a[u], a[u + hn]) = fpc_mul(a[u], a[u + hn], b[u], b[u + hn]);
+        (a[u], a[u + hn]) = fpc_mul(&a[u], &a[u + hn], &b[u], &b[u + hn]);
     }
 }
 
-pub fn poly_muladj_fft(a: &mut [u64], b: &[u64], logn: u32) {
+pub fn poly_muladj_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
 
     n = (1 as usize) << logn;
     hn = n >> 1;
     for u in 0..hn {
-        (a[u], a[u + hn]) = fpc_mul(a[u], a[u + hn], b[u], fpr_neg(b[u + hn]));
+        (a[u], a[u + hn]) = fpc_mul(&a[u], &a[u + hn], &b[u], &fpr_neg(&b[u + hn]));
     }
 }
 
-pub fn poly_mulselfadj_fft(a: &mut [u64], logn: u32) {
+pub fn poly_mulselfadj_fft(a: &mut [[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
 
     n = (1 as usize) << logn;
     hn = n >> 1;
     for u in 0..hn {
-        a[u] = fpr_add(fpr_sqr(a[u]), fpr_sqr(a[u + hn]));
-        a[u + hn] = FPR_ZERO;
+        a[u] = fpr_add(&fpr_sqr(&a[u]), &fpr_sqr(&a[u + hn]));
+        a[u + hn] = [FPR_ZERO; 2];
     }
 }
 
-pub fn poly_mulconst(a: &mut [u64], x: u64, logn: u32) {
+pub fn poly_mulconst(a: &mut [[fpr; 2]], x: fpr, logn: u32) {
     let n: usize;
 
     n = (1 as usize) << logn;
     for u in 0..n {
-        a[u] = fpr_mul(a[u], x);
+        a[u] = fpr_mul(&a[u], &[x, FPR_ZERO]);
     }
 }
 
+/*
 pub fn poly_div_fft(a: &mut [u64], b: &[u64], logn: u32) {
     let (n, hn): (usize, usize);
 
@@ -443,7 +444,7 @@ pub fn poly_merge_fft(f: &mut [u64], f0: &[u64], f1: &[u64], logn: u32) {
         f[(u << 1) + 1] = t_re;
         f[(u << 1) + 1 + hn] = t_im;
     }
-}*/
+} */
 
 
 
