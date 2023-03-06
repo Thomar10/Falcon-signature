@@ -3,7 +3,7 @@ mod tests {
     use float_cmp::approx_eq;
     use rand::{Rng, thread_rng};
     use falcon::falcon::fpr;
-    use falcon::fpr::{fpr_of as u_fpr_of, fpr_sub as u_fpr_sub, fpr_add as u_fpr_add};
+    use falcon::fpr::{fpr_sub as u_fpr_sub, fpr_add as u_fpr_add};
     use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_sub, poly_split_fft, poly_merge_fft};
     use falcon::fft::{poly_merge_fft as u_poly_merge_fft, poly_split_fft as u_poly_split_fft, poly_LDLmv_fft as u_poly_LDLmv_fft, poly_LDL_fft as u_poly_LDL_fft, poly_div_autoadj_fft as u_poly_div_autoadj_fft, poly_mul_autoadj_fft as u_poly_mul_autoadj_fft, poly_add_muladj_fft as u_poly_add_muladj_fft, fpc_inv as u_fpc_inv, fpc_sqr as u_fpc_sqr, fpc_div as u_fpc_div, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_div_fft as u_poly_div_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mul_fft as u_poly_mul_fft, poly_adj_fft as u_poly_adj_fft, fpc_add as u_fpc_add, fpc_mul as u_fpc_mul, fpc_sub as u_fpc_sub, fft as u_fft, ifft as u_ifft, poly_add as u_poly_add, poly_sub as u_poly_sub, poly_neg as u_poly_neg};
 
@@ -139,7 +139,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_add(&mut a, &b, LOGN);
             poly_add(&mut a_shares, &b_shares, LOGN);
@@ -158,7 +158,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_sub(&mut a, &b, LOGN);
             poly_sub(&mut a_shares, &b_shares, LOGN);
@@ -209,7 +209,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_mul_fft(&mut a, &b, LOGN);
             poly_mul_fft(&mut a_shares, &b_shares, LOGN);
@@ -228,7 +228,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_muladj_fft(&mut a, &b, LOGN);
             poly_muladj_fft(&mut a_shares, &b_shares, LOGN);
@@ -280,7 +280,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_div_fft(&mut a, &b, LOGN);
             poly_div_fft(&mut a_shares, &b_shares, LOGN);
@@ -298,8 +298,8 @@ mod tests {
         const LOGN: u32 = 10;
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
-            let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (a, a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
             let (mut d, mut d_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_invnorm2_fft(&mut d, &a, &b,LOGN);
@@ -322,10 +322,10 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut d, mut d_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut F, mut F_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut G, mut G_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut g, mut g_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (F, F_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (G, G_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (f, f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (g, g_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_add_muladj_fft(&mut d, &F, &G, &f, &g,LOGN);
             poly_add_muladj_fft(&mut d_shares, &F_shares, &G_shares, &f_shares, &g_shares, LOGN);
@@ -350,7 +350,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_mul_autoadj_fft(&mut a, &b, LOGN);
             poly_mul_autoadj_fft(&mut a_shares, &b_shares, LOGN);
@@ -369,7 +369,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_div_autoadj_fft(&mut a, &b, LOGN);
             poly_div_autoadj_fft(&mut a_shares, &b_shares, LOGN);
@@ -388,7 +388,7 @@ mod tests {
         const LOGN: u32 = 10;
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
-            let (mut g00, mut g00_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (g00, g00_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
             let (mut g01, mut g01_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
             let (mut g11, mut g11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
@@ -413,12 +413,12 @@ mod tests {
         for _ in 0..100 {
             let (mut d11, mut d11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
             let (mut l10, mut l10_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut g00, mut g00_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut g01, mut g01_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut g11, mut g11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (g00, g00_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (g01, g01_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (g11, g11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
-            u_poly_LDLmv_fft(&mut d11, &mut l10, &mut g00, &mut g01, &mut g11, LOGN);
-            poly_LDLmv_fft(&mut d11_shares, &mut l10_shares, &mut g00_shares, &mut g01_shares, &mut g11_shares, LOGN);
+            u_poly_LDLmv_fft(&mut d11, &mut l10, &g00, &g01, &g11, LOGN);
+            poly_LDLmv_fft(&mut d11_shares, &mut l10_shares, &g00_shares, &g01_shares, &g11_shares, LOGN);
 
             let d11_reconstructed: [fpr; LENGTH] = reconstruct_arr(&d11_shares);
             let l10_reconstructed: [fpr; LENGTH] = reconstruct_arr(&l10_shares);
@@ -441,7 +441,7 @@ mod tests {
         for _ in 0..100 {
             let (mut f0, mut f0_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
             let (mut f1, mut f1_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (f, f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_split_fft(&mut f0, &mut f1, &f, LOGN);
             poly_split_fft(&mut f0_shares, &mut f1_shares, &f_shares, LOGN);
@@ -462,11 +462,11 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..100 {
             let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut f0, mut f0_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
-            let (mut f1, mut f1_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (f0, f0_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (f1, f1_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_merge_fft(&mut f, &f0, &f1, LOGN);
-            poly_merge_fft(&mut f_shares, &mut f0_shares, &f1_shares, LOGN);
+            poly_merge_fft(&mut f_shares, &f0_shares, &f1_shares, LOGN);
 
             let f_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f_shares);
             let f0_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f0_shares);

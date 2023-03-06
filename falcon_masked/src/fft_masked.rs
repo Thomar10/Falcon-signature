@@ -163,14 +163,11 @@ fn set_column(arr: &mut [&mut [fpr]], index: usize, value: [fpr; 2]) {
 }*/
 
 pub fn ifft(f: &mut [[fpr; 2]], logn: u32) {
-    let mut u: u32 = 1;
-    let mut m: usize = 2;
-    let (mut t, n, hn): (usize, usize, usize);
-    n = (1 as usize) << logn;
-    t = 1;
-    m = n;
-    hn = n >> 1;
-    u = logn;
+    let mut u: u32 = logn;
+    let mut t: usize = 1;
+    let n: usize = (1 as usize) << logn;
+    let hn: usize = n >> 1;
+    let mut m: usize = n;
     while u > 1 {
         let (hm, dt, mut i1, mut j1): (usize, usize, usize, usize);
         hm = m >> 1;
@@ -317,7 +314,6 @@ pub fn poly_invnorm2_fft(d: &mut [[fpr; 2]], a: &[[fpr; 2]], b: &[[fpr; 2]], log
     }
 }
 
-//TODO add tests from here
 #[allow(non_snake_case)]
 pub fn poly_add_muladj_fft(d: &mut [[fpr; 2]], F: &[[fpr; 2]], G: &[[fpr; 2]], f: &[[fpr; 2]], g: &[[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
@@ -373,7 +369,7 @@ pub fn poly_LDL_fft(g00: &[[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]]
 }
 
 #[allow(non_snake_case)]
-pub fn poly_LDLmv_fft(d11: &mut [[fpr; 2]], l10: &mut [[fpr; 2]], g00: &mut [[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]], logn: u32) {
+pub fn poly_LDLmv_fft(d11: &mut [[fpr; 2]], l10: &mut [[fpr; 2]], g00: &[[fpr; 2]], g01: &[[fpr; 2]], g11: &[[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
