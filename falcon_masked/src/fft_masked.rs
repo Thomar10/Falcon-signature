@@ -319,7 +319,7 @@ pub fn poly_invnorm2_fft(d: &mut [[fpr; 2]], a: &[[fpr; 2]], b: &[[fpr; 2]], log
 
 //TODO add tests from here
 #[allow(non_snake_case)]
-pub fn poly_add_muladj_fft(d: &mut [[fpr; 2]], F: &mut [[fpr; 2]], G: &mut [[fpr; 2]], f: &mut [[fpr; 2]], g: &mut [[fpr; 2]], logn: u32) {
+pub fn poly_add_muladj_fft(d: &mut [[fpr; 2]], F: &[[fpr; 2]], G: &[[fpr; 2]], f: &[[fpr; 2]], g: &[[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
@@ -331,7 +331,7 @@ pub fn poly_add_muladj_fft(d: &mut [[fpr; 2]], F: &mut [[fpr; 2]], G: &mut [[fpr
     }
 }
 
-pub fn poly_mul_autoadj_fft(a: &mut [[fpr; 2]], b: &mut [[fpr; 2]], logn: u32) {
+pub fn poly_mul_autoadj_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
@@ -341,7 +341,7 @@ pub fn poly_mul_autoadj_fft(a: &mut [[fpr; 2]], b: &mut [[fpr; 2]], logn: u32) {
     }
 }
 
-pub fn poly_div_autoadj_fft(a: &mut [[fpr; 2]], b: &mut [[fpr; 2]], logn: u32) {
+pub fn poly_div_autoadj_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
@@ -353,7 +353,7 @@ pub fn poly_div_autoadj_fft(a: &mut [[fpr; 2]], b: &mut [[fpr; 2]], logn: u32) {
 }
 
 #[allow(non_snake_case)]
-pub fn poly_LDL_fft(g00: &mut [[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]], logn: u32) {
+pub fn poly_LDL_fft(g00: &[[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]], logn: u32) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;

@@ -4,8 +4,8 @@ mod tests {
     use rand::{Rng, thread_rng};
     use falcon::falcon::fpr;
     use falcon::fpr::{fpr_of as u_fpr_of, fpr_sub as u_fpr_sub, fpr_add as u_fpr_add};
-    use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_adj_fft, poly_div_fft, poly_invnorm2_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_sub};
-    use falcon::fft::{fpc_inv as u_fpc_inv, fpc_sqr as u_fpc_sqr, fpc_div as u_fpc_div, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_div_fft as u_poly_div_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mul_fft as u_poly_mul_fft, poly_adj_fft as u_poly_adj_fft, fpc_add as u_fpc_add, fpc_mul as u_fpc_mul, fpc_sub as u_fpc_sub, fft as u_fft, ifft as u_ifft, poly_add as u_poly_add, poly_sub as u_poly_sub, poly_neg as u_poly_neg};
+    use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_sub, poly_split_fft, poly_merge_fft};
+    use falcon::fft::{poly_merge_fft as u_poly_merge_fft, poly_split_fft as u_poly_split_fft, poly_LDLmv_fft as u_poly_LDLmv_fft, poly_LDL_fft as u_poly_LDL_fft, poly_div_autoadj_fft as u_poly_div_autoadj_fft, poly_mul_autoadj_fft as u_poly_mul_autoadj_fft, poly_add_muladj_fft as u_poly_add_muladj_fft, fpc_inv as u_fpc_inv, fpc_sqr as u_fpc_sqr, fpc_div as u_fpc_div, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_div_fft as u_poly_div_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mul_fft as u_poly_mul_fft, poly_adj_fft as u_poly_adj_fft, fpc_add as u_fpc_add, fpc_mul as u_fpc_mul, fpc_sub as u_fpc_sub, fft as u_fft, ifft as u_ifft, poly_add as u_poly_add, poly_sub as u_poly_sub, poly_neg as u_poly_neg};
 
     #[test]
     fn test_fpc_add() {
@@ -312,6 +312,169 @@ mod tests {
             check_fpr_arr_eq(&a, &a_reconstructed);
             check_fpr_arr_eq(&b, &b_reconstructed);
             check_fpr_arr_eq(&d, &d_reconstructed);
+        }
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_poly_add_muladj_fft() {
+        const LOGN: u32 = 10;
+        const LENGTH: usize = 1 << LOGN;
+        for _ in 0..100 {
+            let (mut d, mut d_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut F, mut F_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut G, mut G_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut g, mut g_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+
+            u_poly_add_muladj_fft(&mut d, &F, &G, &f, &g,LOGN);
+            poly_add_muladj_fft(&mut d_shares, &F_shares, &G_shares, &f_shares, &g_shares, LOGN);
+
+            let d_reconstructed: [fpr; LENGTH] = reconstruct_arr(&d_shares);
+            let F_reconstructed: [fpr; LENGTH] = reconstruct_arr(&F_shares);
+            let G_reconstructed: [fpr; LENGTH] = reconstruct_arr(&G_shares);
+            let f_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f_shares);
+            let g_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g_shares);
+
+            check_fpr_arr_eq(&d, &d_reconstructed);
+            check_fpr_arr_eq(&F, &F_reconstructed);
+            check_fpr_arr_eq(&G, &G_reconstructed);
+            check_fpr_arr_eq(&f, &f_reconstructed);
+            check_fpr_arr_eq(&g, &g_reconstructed);
+        }
+    }
+
+    #[test]
+    fn test_poly_mul_autoadj_fft() {
+        const LOGN: u32 = 10;
+        const LENGTH: usize = 1 << LOGN;
+        for _ in 0..100 {
+            let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+
+            u_poly_mul_autoadj_fft(&mut a, &b, LOGN);
+            poly_mul_autoadj_fft(&mut a_shares, &b_shares, LOGN);
+
+            let a_reconstructed: [fpr; LENGTH] = reconstruct_arr(&a_shares);
+            let b_reconstructed: [fpr; LENGTH] = reconstruct_arr(&b_shares);
+
+            check_fpr_arr_eq(&a, &a_reconstructed);
+            check_fpr_arr_eq(&b, &b_reconstructed);
+        }
+    }
+
+    #[test]
+    fn test_poly_div_autoadj_fft() {
+        const LOGN: u32 = 10;
+        const LENGTH: usize = 1 << LOGN;
+        for _ in 0..100 {
+            let (mut a, mut a_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut b, mut b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+
+            u_poly_div_autoadj_fft(&mut a, &b, LOGN);
+            poly_div_autoadj_fft(&mut a_shares, &b_shares, LOGN);
+
+            let a_reconstructed: [fpr; LENGTH] = reconstruct_arr(&a_shares);
+            let b_reconstructed: [fpr; LENGTH] = reconstruct_arr(&b_shares);
+
+            check_fpr_arr_eq(&a, &a_reconstructed);
+            check_fpr_arr_eq(&b, &b_reconstructed);
+        }
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_poly_LDL_fft() {
+        const LOGN: u32 = 10;
+        const LENGTH: usize = 1 << LOGN;
+        for _ in 0..100 {
+            let (mut g00, mut g00_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut g01, mut g01_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut g11, mut g11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+
+            u_poly_LDL_fft(&g00, &mut g01, &mut g11, LOGN);
+            poly_LDL_fft(&g00_shares, &mut g01_shares, &mut g11_shares, LOGN);
+
+            let g00_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g00_shares);
+            let g01_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g01_shares);
+            let g11_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g11_shares);
+
+            check_fpr_arr_eq(&g00, &g00_reconstructed);
+            check_fpr_arr_eq(&g01, &g01_reconstructed);
+            check_fpr_arr_eq(&g11, &g11_reconstructed);
+        }
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_poly_LDLmv_fft() {
+        const LOGN: u32 = 10;
+        const LENGTH: usize = 1 << LOGN;
+        for _ in 0..100 {
+            let (mut d11, mut d11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut l10, mut l10_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut g00, mut g00_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut g01, mut g01_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut g11, mut g11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+
+            u_poly_LDLmv_fft(&mut d11, &mut l10, &mut g00, &mut g01, &mut g11, LOGN);
+            poly_LDLmv_fft(&mut d11_shares, &mut l10_shares, &mut g00_shares, &mut g01_shares, &mut g11_shares, LOGN);
+
+            let d11_reconstructed: [fpr; LENGTH] = reconstruct_arr(&d11_shares);
+            let l10_reconstructed: [fpr; LENGTH] = reconstruct_arr(&l10_shares);
+            let g00_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g00_shares);
+            let g01_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g01_shares);
+            let g11_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g11_shares);
+
+            check_fpr_arr_eq(&d11, &d11_reconstructed);
+            check_fpr_arr_eq(&l10, &l10_reconstructed);
+            check_fpr_arr_eq(&g00, &g00_reconstructed);
+            check_fpr_arr_eq(&g01, &g01_reconstructed);
+            check_fpr_arr_eq(&g11, &g11_reconstructed);
+        }
+    }
+
+    #[test]
+    fn test_poly_split_fft() {
+        const LOGN: u32 = 10;
+        const LENGTH: usize = 1 << LOGN;
+        for _ in 0..100 {
+            let (mut f0, mut f0_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut f1, mut f1_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+
+            u_poly_split_fft(&mut f0, &mut f1, &f, LOGN);
+            poly_split_fft(&mut f0_shares, &mut f1_shares, &f_shares, LOGN);
+
+            let f0_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f0_shares);
+            let f1_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f1_shares);
+            let f_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f_shares);
+
+            check_fpr_arr_eq(&f0, &f0_reconstructed);
+            check_fpr_arr_eq(&f1, &f1_reconstructed);
+            check_fpr_arr_eq(&f, &f_reconstructed);
+        }
+    }
+
+    #[test]
+    fn test_poly_merge_fft() {
+        const LOGN: u32 = 10;
+        const LENGTH: usize = 1 << LOGN;
+        for _ in 0..100 {
+            let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut f0, mut f0_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+            let (mut f1, mut f1_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
+
+            u_poly_merge_fft(&mut f, &f0, &f1, LOGN);
+            poly_merge_fft(&mut f_shares, &mut f0_shares, &f1_shares, LOGN);
+
+            let f_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f_shares);
+            let f0_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f0_shares);
+            let f1_reconstructed: [fpr; LENGTH] = reconstruct_arr(&f1_shares);
+
+            check_fpr_arr_eq(&f, &f_reconstructed);
+            check_fpr_arr_eq(&f0, &f0_reconstructed);
+            check_fpr_arr_eq(&f1, &f1_reconstructed);
         }
     }
 
