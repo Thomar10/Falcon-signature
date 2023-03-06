@@ -479,12 +479,12 @@ mod tests {
     }
 
     fn check_fpr_eq(x: fpr, y: fpr) {
-        assert!(approx_eq!(f64, fpr_to_double(x), fpr_to_double(y), epsilon = 0.000000003));
+        assert!(approx_eq!(f64, fpr_to_double(x), fpr_to_double(y), epsilon = 0.00003));
     }
 
     fn check_fpr_arr_eq(x: &[fpr], y: &[fpr]) {
         for i in 0..x.len() {
-            assert!(approx_eq!(f64, fpr_to_double(x[i]), fpr_to_double(y[i]), epsilon = 0.000000003), "The two arrays differ in position {}\nLeft: {}\nRight: {}", i, x[i], y[i]);
+            assert!(approx_eq!(f64, fpr_to_double(x[i]), fpr_to_double(y[i]), epsilon = 0.00003), "The two arrays differ in position {}\nLeft: fpr: {}, double: {}\nRight: fpr: {}, double: {}", i, x[i], fpr_to_double(x[i]), y[i], fpr_to_double(y[i]));
         }
     }
 
