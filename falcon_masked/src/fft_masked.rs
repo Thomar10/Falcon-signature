@@ -23,7 +23,6 @@ pub fn fpc_mul(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr;
     return (fpct_d_re, fpct_d_im);
 }
 
-//TODO add test
 pub fn fpc_div(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     let mut fpct_m: [fpr; 2] = fpr_add(&fpr_sqr(b_re), &fpr_sqr(b_im));
     fpct_m = fpr_inv(&fpct_m);
@@ -38,14 +37,12 @@ pub fn fpc_div(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr;
     (fpct_d_re, fpct_d_im)
 }
 
-//TODO add test
 pub fn fpc_sqr(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     let fpct_d_re: [fpr; 2] = fpr_sub(&fpr_sqr(a_re), &fpr_sqr(a_im));
     let fpct_d_im: [fpr; 2] = fpr_double(&fpr_mul(a_re, a_im));
     (fpct_d_re, fpct_d_im)
 }
 
-//TODO add test
 pub fn fpc_inv(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     let mut fpct_m: [fpr; 2] = fpr_add(&fpr_sqr(a_re), &fpr_sqr(a_im));
     fpct_m = fpr_inv(&fpct_m);

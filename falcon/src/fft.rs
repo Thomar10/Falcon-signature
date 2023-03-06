@@ -25,8 +25,8 @@ pub fn fpc_mul(a_re: u64, a_im: u64,
     (fpct_d_re, fpct_d_im)
 }
 
-fn fpc_div(a_re: u64, a_im: u64,
-           mut b_re: u64, mut b_im: u64) -> (u64, u64) {
+pub fn fpc_div(a_re: u64, a_im: u64,
+               mut b_re: u64, mut b_im: u64) -> (u64, u64) {
     let mut fpct_m = fpr_add(fpr_sqr(b_re), fpr_sqr(b_im));
     fpct_m = fpr_inv(fpct_m);
     b_re = fpr_mul(b_re, fpct_m);
@@ -41,14 +41,14 @@ fn fpc_div(a_re: u64, a_im: u64,
 }
 
 #[allow(dead_code)]
-fn fpc_sqr(a_re: u64, a_im: u64) -> (u64, u64) {
+pub fn fpc_sqr(a_re: u64, a_im: u64) -> (u64, u64) {
     let fpct_d_re = fpr_sub(fpr_sqr(a_re), fpr_sqr(a_im));
     let fpct_d_im = fpr_double(fpr_mul(a_re, a_im));
     (fpct_d_re, fpct_d_im)
 }
 
 #[allow(dead_code)]
-fn fpc_inv(a_re: u64, a_im: u64) -> (u64, u64) {
+pub fn fpc_inv(a_re: u64, a_im: u64) -> (u64, u64) {
     let mut fpct_m = fpr_add(fpr_sqr(a_re), fpr_sqr(a_im));
     fpct_m = fpr_inv(fpct_m);
     let fpct_d_re = fpr_mul(a_re, fpct_m);

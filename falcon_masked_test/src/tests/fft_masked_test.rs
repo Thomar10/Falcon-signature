@@ -4,8 +4,8 @@ mod tests {
     use rand::{Rng, thread_rng};
     use falcon::falcon::fpr;
     use falcon::fpr::{fpr_of as u_fpr_of, fpr_sub as u_fpr_sub, fpr_add as u_fpr_add};
-    use falcon_masked::fft_masked::{fft, fpc_add, fpc_mul, fpc_sub, ifft, poly_add, poly_adj_fft, poly_div_fft, poly_invnorm2_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_sub};
-    use falcon::fft::{poly_invnorm2_fft as u_poly_invnorm2_fft, poly_div_fft as u_poly_div_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mul_fft as u_poly_mul_fft, poly_adj_fft as u_poly_adj_fft, fpc_add as u_fpc_add, fpc_mul as u_fpc_mul, fpc_sub as u_fpc_sub, fft as u_fft, ifft as u_ifft, poly_add as u_poly_add, poly_sub as u_poly_sub, poly_neg as u_poly_neg};
+    use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_adj_fft, poly_div_fft, poly_invnorm2_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_sub};
+    use falcon::fft::{fpc_inv as u_fpc_inv, fpc_sqr as u_fpc_sqr, fpc_div as u_fpc_div, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_div_fft as u_poly_div_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mul_fft as u_poly_mul_fft, poly_adj_fft as u_poly_adj_fft, fpc_add as u_fpc_add, fpc_mul as u_fpc_mul, fpc_sub as u_fpc_sub, fft as u_fft, ifft as u_ifft, poly_add as u_poly_add, poly_sub as u_poly_sub, poly_neg as u_poly_neg};
 
     #[test]
     fn test_fpc_add() {
@@ -17,6 +17,22 @@ mod tests {
 
             let (shares_res_re, shares_res_im) = fpc_add(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
             let (res_re, res_im) = u_fpc_add(a_re, a_im, b_re, b_im);
+
+            check_fpr_eq(reconstruct(&shares_res_re), res_re);
+            check_fpr_eq(reconstruct(&shares_res_im), res_im);
+        }
+    }
+
+    #[test]
+    fn test_fpc_sub() {
+        for _ in 0..100 {
+            let (a_re, shares_a_re): (fpr, [fpr; 2]) = create_random_mask();
+            let (a_im, shares_a_im): (fpr, [fpr; 2]) = create_random_mask();
+            let (b_re, shares_b_re): (fpr, [fpr; 2]) = create_random_mask();
+            let (b_im, shares_b_im): (fpr, [fpr; 2]) = create_random_mask();
+
+            let (shares_res_re, shares_res_im) = fpc_sub(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
+            let (res_re, res_im) = u_fpc_sub(a_re, a_im, b_re, b_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
             check_fpr_eq(reconstruct(&shares_res_im), res_im);
@@ -40,15 +56,43 @@ mod tests {
     }
 
     #[test]
-    fn test_fpc_sub() {
+    fn test_fpc_div() {
         for _ in 0..100 {
             let (a_re, shares_a_re): (fpr, [fpr; 2]) = create_random_mask();
             let (a_im, shares_a_im): (fpr, [fpr; 2]) = create_random_mask();
             let (b_re, shares_b_re): (fpr, [fpr; 2]) = create_random_mask();
             let (b_im, shares_b_im): (fpr, [fpr; 2]) = create_random_mask();
 
-            let (shares_res_re, shares_res_im) = fpc_sub(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
-            let (res_re, res_im) = u_fpc_sub(a_re, a_im, b_re, b_im);
+            let (shares_res_re, shares_res_im) = fpc_div(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
+            let (res_re, res_im) = u_fpc_div(a_re, a_im, b_re, b_im);
+
+            check_fpr_eq(reconstruct(&shares_res_re), res_re);
+            check_fpr_eq(reconstruct(&shares_res_im), res_im);
+        }
+    }
+
+    #[test]
+    fn test_fpc_sqr() {
+        for _ in 0..100 {
+            let (a_re, shares_a_re): (fpr, [fpr; 2]) = create_random_mask();
+            let (a_im, shares_a_im): (fpr, [fpr; 2]) = create_random_mask();
+
+            let (shares_res_re, shares_res_im) = fpc_sqr(&shares_a_re, &shares_a_im);
+            let (res_re, res_im) = u_fpc_sqr(a_re, a_im);
+
+            check_fpr_eq(reconstruct(&shares_res_re), res_re);
+            check_fpr_eq(reconstruct(&shares_res_im), res_im);
+        }
+    }
+
+    #[test]
+    fn test_fpc_inv() {
+        for _ in 0..100 {
+            let (a_re, shares_a_re): (fpr, [fpr; 2]) = create_random_mask();
+            let (a_im, shares_a_im): (fpr, [fpr; 2]) = create_random_mask();
+
+            let (shares_res_re, shares_res_im) = fpc_inv(&shares_a_re, &shares_a_im);
+            let (res_re, res_im) = u_fpc_inv(a_re, a_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
             check_fpr_eq(reconstruct(&shares_res_im), res_im);
