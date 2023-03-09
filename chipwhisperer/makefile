@@ -36,12 +36,12 @@ TARGET = simpleserial-target
 # Header files (.h) are automatically pulled in.
 SRC += main.c
 
-SS_VER=SS_VER_2_0
-PLATFORM=CWLITEARM
+SS_VER=SS_VER_2_1
+PLATFORM=CW308_STM32F3
 
 # -----------------------------------------------------------------------------
-debugging:
-	gcc -o debug-target debug-source.c main.c
+#debugging:
+#	gcc -o debug-target debug-source.c main.c
 
 #Add simpleserial project to build
 include simpleserial/Makefile.simpleserial

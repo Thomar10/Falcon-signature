@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define SS_VER 2
+//#define SS_VER 2.1
 
 #include "simpleserial/simpleserial.h"
 
