@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "rustlib.h"
 
 //#define SS_VER 2.1
 
@@ -27,11 +28,13 @@ uint8_t handle(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
   // Cause more clock cycles to happen the higher the scmd is
   // We need 'volatile' here because we don't want the compiler to optimize the
   // loop out.
-  for (volatile uint8_t i = 0; i < 255; i++) {
-    if (i == scmd) {
-        result = scmd * scmd;
-    }
-  }
+  //for (volatile uint8_t i = 0; i < 255; i++) {
+  //  if (i == scmd) {
+  //      result = scmd * scmd;
+  //  }
+  //}
+
+  result = test(32, 32);
 
   // Stop measurement.
   trigger_low();

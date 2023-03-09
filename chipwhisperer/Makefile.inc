@@ -251,6 +251,7 @@ LDFLAGS += $(EXTMEMOPTS)
 LDFLAGS += $(patsubst %,-L%,$(EXTRALIBDIRS))
 LDFLAGS += $(MATH_LIB)
 LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB)
+LDFLAGS += -L./target/thumbv7em-none-eabi/debug -lrustlib
 #LDFLAGS += -T linker_script.x
 
 

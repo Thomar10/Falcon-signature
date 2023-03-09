@@ -1,5 +1,6 @@
 .dep/
 objdir/
+target/
 
 *.eep
 *.elf
