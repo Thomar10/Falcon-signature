@@ -381,128 +381,129 @@ fn falcon_sign_dyn_finish(mut rng: &mut InnerShake256Context, signature: &mut [u
                               private_len: usize,
                               mut hash_data: &mut InnerShake256Context, nonce: &mut [u8],
                               tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
-    if private_len == 0 {
-        return (-6, 0);
-    }
-    let sk = private_key;
-    if (sk[0] & 0xF0) != 0x50 {
-        return (-6, 0);
-    }
-    let logn: u32 = (sk[0] & 0x0F) as u32;
-    if logn < 1 || logn > 10 {
-        return (-6, 0);
-    }
-    if private_len != falcon_privatekey_size!(logn) as usize {
-        return (-6, 0);
-    }
-    if tmp_len < falcon_tmpsize_signdyn!(logn) {
-        return (-6, 0);
-    }
-    if signature_len < 41 {
-        return (-6, 0);
-    }
-    match signature_type {
-        FALCON_SIG_COMPRESS => {
-            // Lul
-        }
-        FALCON_SIG_PADDED => {
-            if signature_len < falcon_sig_padded_size!(logn) {
-                return (-6, 0);
-            }
-        }
-        FALCON_SIG_CT => {
-            if signature_len < falcon_sig_ct_size!(logn) {
-                return (-6, 0);
-            }
-        }
-        _ => { return (-6, 0); }
-    }
-
-    let n: usize = 1 << logn;
-    let (f, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
-    let (g, inter) = inter.split_at_mut(n);
-    let (F, inter) = inter.split_at_mut(n);
-    let (G, inter) = inter.split_at_mut(n);
-    let inter = bytemuck::pod_align_to_mut::<i8, u16>(inter).1;
-    let (hm, inter) = inter.split_at_mut(n);
-    let atmp: &mut [u8] = bytemuck::cast_slice_mut(bytemuck::pod_align_to_mut::<u16, fpr>(inter).1);
-    let mut u = 1;
-    let mut v = trim_i8_decode(f, logn, max_fg_bits[logn as usize] as u32, sk, u,
-                               private_len - u);
-    if v == 0 {
-        return (-6, 0);
-    }
-    u += v;
-    v = trim_i8_decode(g, logn, max_fg_bits[logn as usize] as u32, sk, u,
-                       private_len - u);
-    if v == 0 {
-        return (-6, 0);
-    }
-    u += v;
-    v = trim_i8_decode(F, logn, max_FG_bits[logn as usize] as u32, sk, u,
-                       private_len - u);
-    if v == 0 {
-        return (-6, 0);
-    }
-    u += v;
-    if u != private_len {
-        return (-6, 0);
-    }
-    if !complete_private(G, f, g, F, logn, atmp) {
-        return (-6, 0);
-    }
-    shake256_flip(&mut hash_data);
-
-    loop {
-        let mut hash_data_restart: &mut InnerShake256Context =
-            &mut InnerShake256Context {
-                st: hash_data.st,
-                dptr: hash_data.dptr,
-            };
-        if signature_type == FALCON_SIG_CT {
-            hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
-        } else {
-            hash_to_point_vartime(&mut hash_data_restart, hm, logn);
-        }
-        let mut sv = vec![0u16; hm.len()];
-        sv.clone_from_slice(hm);
-        let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
-        sign_dyn(sv, &mut rng, f, g, F, G, hm, logn, atmp);
-        signature[1..41].copy_from_slice(nonce);
-        let u = 41;
-        let mut v: usize;
-        match signature_type {
-            FALCON_SIG_COMPRESS => {
-                signature[0] = 0x30 + logn as u8;
-                v = comp_encode(signature, u, signature_len - u, sv, logn as usize);
-                if v == 0 {
-                    return (-6, 0);
-                }
-            }
-            FALCON_SIG_PADDED => {
-                signature[0] = 0x30 + logn as u8;
-                let tu = falcon_sig_padded_size!(logn);
-                v = comp_encode(signature, u, tu - u, sv, logn as usize);
-                if v == 0 {
-                    // Signature does not fit loop (idk why).
-                    continue;
-                }
-                if (v + u) < tu {
-                    signature[(u + v)..tu].fill(0);
-                    v = tu - u;
-                }
-            }
-            FALCON_SIG_CT => {
-                signature[0] = 0x50 + logn as u8;
-                v = trim_i16_encode(signature, u, signature_len - u, sv, logn, max_sig_bits[logn as usize] as u32);
-                if v == 0 {
-                    return (-6, 0);
-                }
-            }
-            _ => { return (-6, 0); }
-        }
-        return (0, u + v);
-    }
+    // if private_len == 0 {
+    //     return (-6, 0);
+    // }
+    // let sk = private_key;
+    // if (sk[0] & 0xF0) != 0x50 {
+    //     return (-6, 0);
+    // }
+    // let logn: u32 = (sk[0] & 0x0F) as u32;
+    // if logn < 1 || logn > 10 {
+    //     return (-6, 0);
+    // }
+    // if private_len != falcon_privatekey_size!(logn) as usize {
+    //     return (-6, 0);
+    // }
+    // if tmp_len < falcon_tmpsize_signdyn!(logn) {
+    //     return (-6, 0);
+    // }
+    // if signature_len < 41 {
+    //     return (-6, 0);
+    // }
+    // match signature_type {
+    //     FALCON_SIG_COMPRESS => {
+    //         // Lul
+    //     }
+    //     FALCON_SIG_PADDED => {
+    //         if signature_len < falcon_sig_padded_size!(logn) {
+    //             return (-6, 0);
+    //         }
+    //     }
+    //     FALCON_SIG_CT => {
+    //         if signature_len < falcon_sig_ct_size!(logn) {
+    //             return (-6, 0);
+    //         }
+    //     }
+    //     _ => { return (-6, 0); }
+    // }
+    //
+    // let n: usize = 1 << logn;
+    // let (f, inter) = bytemuck::cast_slice_mut::<u8, i8>(tmp).split_at_mut(n);
+    // let (g, inter) = inter.split_at_mut(n);
+    // let (F, inter) = inter.split_at_mut(n);
+    // let (G, inter) = inter.split_at_mut(n);
+    // let inter = bytemuck::pod_align_to_mut::<i8, u16>(inter).1;
+    // let (hm, inter) = inter.split_at_mut(n);
+    // let atmp: &mut [u8] = bytemuck::cast_slice_mut(bytemuck::pod_align_to_mut::<u16, fpr>(inter).1);
+    // let mut u = 1;
+    // let mut v = trim_i8_decode(f, logn, max_fg_bits[logn as usize] as u32, sk, u,
+    //                            private_len - u);
+    // if v == 0 {
+    //     return (-6, 0);
+    // }
+    // u += v;
+    // v = trim_i8_decode(g, logn, max_fg_bits[logn as usize] as u32, sk, u,
+    //                    private_len - u);
+    // if v == 0 {
+    //     return (-6, 0);
+    // }
+    // u += v;
+    // v = trim_i8_decode(F, logn, max_FG_bits[logn as usize] as u32, sk, u,
+    //                    private_len - u);
+    // if v == 0 {
+    //     return (-6, 0);
+    // }
+    // u += v;
+    // if u != private_len {
+    //     return (-6, 0);
+    // }
+    // if !complete_private(G, f, g, F, logn, atmp) {
+    //     return (-6, 0);
+    // }
+    // shake256_flip(&mut hash_data);
+    //
+    // loop {
+    //     let mut hash_data_restart: &mut InnerShake256Context =
+    //         &mut InnerShake256Context {
+    //             st: hash_data.st,
+    //             dptr: hash_data.dptr,
+    //         };
+    //     if signature_type == FALCON_SIG_CT {
+    //         hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
+    //     } else {
+    //         hash_to_point_vartime(&mut hash_data_restart, hm, logn);
+    //     }
+    //     let mut sv = vec![0u16; hm.len()];
+    //     sv.clone_from_slice(hm);
+    //     let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
+    //     sign_dyn(sv, &mut rng, f, g, F, G, hm, logn, atmp);
+    //     signature[1..41].copy_from_slice(nonce);
+    //     let u = 41;
+    //     let mut v: usize;
+    //     match signature_type {
+    //         FALCON_SIG_COMPRESS => {
+    //             signature[0] = 0x30 + logn as u8;
+    //             v = comp_encode(signature, u, signature_len - u, sv, logn as usize);
+    //             if v == 0 {
+    //                 return (-6, 0);
+    //             }
+    //         }
+    //         FALCON_SIG_PADDED => {
+    //             signature[0] = 0x30 + logn as u8;
+    //             let tu = falcon_sig_padded_size!(logn);
+    //             v = comp_encode(signature, u, tu - u, sv, logn as usize);
+    //             if v == 0 {
+    //                 // Signature does not fit loop (idk why).
+    //                 continue;
+    //             }
+    //             if (v + u) < tu {
+    //                 signature[(u + v)..tu].fill(0);
+    //                 v = tu - u;
+    //             }
+    //         }
+    //         FALCON_SIG_CT => {
+    //             signature[0] = 0x50 + logn as u8;
+    //             v = trim_i16_encode(signature, u, signature_len - u, sv, logn, max_sig_bits[logn as usize] as u32);
+    //             if v == 0 {
+    //                 return (-6, 0);
+    //             }
+    //         }
+    //         _ => { return (-6, 0); }
+    //     }
+    //     return (0, u + v);
+    // }
+    return (0, 0);
 }
 
 fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
@@ -510,89 +511,90 @@ fn falcon_sign_tree_finish(mut rng: &mut InnerShake256Context, signature: &mut [
                                mut hash_data: &mut InnerShake256Context,
                                nonce: &mut [u8],
                                tmp: &mut [u8], tmp_len: usize) -> (i32, usize) {
-    let logn: u32 = expanded_key[0] as u32;
-    let n: usize = 1 << logn;
-    if logn < 1 || logn > 10 {
-        return (-6, 0);
-    }
-    if tmp_len < falcon_tmpsize_signtree!(logn) {
-        return (-6, 0);
-    }
-    if signature_len < 41 {
-        return (-6, 0);
-    }
-    let (_, expkey) = expanded_key.split_at(8); // alignment
-    let expkey = bytemuck::cast_slice(expkey);
-    match signature_type {
-        FALCON_SIG_COMPRESS => {}
-        FALCON_SIG_PADDED => {
-            if signature_len < falcon_sig_padded_size!(logn) {
-                return (-6, 0);
-            }
-        }
-        FALCON_SIG_CT => {
-            if signature_len < falcon_sig_ct_size!(logn) {
-                return (-6, 0);
-            }
-        }
-        _ => { return (-6, 0); }
-    }
-    let (_, hm, _) = bytemuck::pod_align_to_mut::<u8, u16>(tmp);
-    let (hm, atmp) = hm.split_at_mut(n);
-    let (_, atmp, _) = bytemuck::pod_align_to_mut::<u16, u64>(atmp);
-    let atmp = bytemuck::cast_slice_mut::<u64, u8>(atmp);
-    shake256_flip(&mut hash_data);
-    loop {
-        let mut hash_data_restart: &mut InnerShake256Context =
-            &mut InnerShake256Context {
-                st: hash_data.st,
-                dptr: hash_data.dptr,
-            };
-        if signature_type == FALCON_SIG_CT {
-            hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
-        } else {
-            hash_to_point_vartime(&mut hash_data_restart, hm, logn);
-        }
-        let mut sv = vec![0u16; hm.len()];
-        sv.clone_from_slice(hm);
-        let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
-        sign_tree(sv, &mut rng, expkey, hm, logn, atmp);
-
-        signature[1..41].copy_from_slice(nonce);
-        let u = 41;
-        let mut v: usize;
-        match signature_type {
-            FALCON_SIG_COMPRESS => {
-                signature[0] = 0x30 + logn as u8;
-                v = comp_encode(signature, u, signature_len - u, sv, logn as usize);
-                if v == 0 {
-                    return (-6, 0);
-                }
-            }
-            FALCON_SIG_PADDED => {
-                signature[0] = 0x30 + logn as u8;
-                let tu = falcon_sig_padded_size!(logn);
-                v = comp_encode(signature, u, tu - u, sv, logn as usize);
-                if v == 0 {
-                    // Signature does not fit loop (idk why).
-                    continue;
-                }
-                if (v + u) < tu {
-                    signature[(u + v)..tu].fill(0);
-                    v = tu - u;
-                }
-            }
-            FALCON_SIG_CT => {
-                signature[0] = 0x50 + logn as u8;
-                v = trim_i16_encode(signature, u, signature_len - u, sv, logn, max_sig_bits[logn as usize] as u32);
-                if v == 0 {
-                    return (-6, 0);
-                }
-            }
-            _ => { return (-6, 0); }
-        }
-        return (0, u + v);
-    }
+    // let logn: u32 = expanded_key[0] as u32;
+    // let n: usize = 1 << logn;
+    // if logn < 1 || logn > 10 {
+    //     return (-6, 0);
+    // }
+    // if tmp_len < falcon_tmpsize_signtree!(logn) {
+    //     return (-6, 0);
+    // }
+    // if signature_len < 41 {
+    //     return (-6, 0);
+    // }
+    // let (_, expkey) = expanded_key.split_at(8); // alignment
+    // let expkey = bytemuck::cast_slice(expkey);
+    // match signature_type {
+    //     FALCON_SIG_COMPRESS => {}
+    //     FALCON_SIG_PADDED => {
+    //         if signature_len < falcon_sig_padded_size!(logn) {
+    //             return (-6, 0);
+    //         }
+    //     }
+    //     FALCON_SIG_CT => {
+    //         if signature_len < falcon_sig_ct_size!(logn) {
+    //             return (-6, 0);
+    //         }
+    //     }
+    //     _ => { return (-6, 0); }
+    // }
+    // let (_, hm, _) = bytemuck::pod_align_to_mut::<u8, u16>(tmp);
+    // let (hm, atmp) = hm.split_at_mut(n);
+    // let (_, atmp, _) = bytemuck::pod_align_to_mut::<u16, u64>(atmp);
+    // let atmp = bytemuck::cast_slice_mut::<u64, u8>(atmp);
+    // shake256_flip(&mut hash_data);
+    // loop {
+    //     let mut hash_data_restart: &mut InnerShake256Context =
+    //         &mut InnerShake256Context {
+    //             st: hash_data.st,
+    //             dptr: hash_data.dptr,
+    //         };
+    //     if signature_type == FALCON_SIG_CT {
+    //         hash_to_point_ct(&mut hash_data_restart, hm, logn, atmp);
+    //     } else {
+    //         hash_to_point_vartime(&mut hash_data_restart, hm, logn);
+    //     }
+    //     let mut sv = vec![0u16; hm.len()];
+    //     sv.clone_from_slice(hm);
+    //     let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
+    //     sign_tree(sv, &mut rng, expkey, hm, logn, atmp);
+    //
+    //     signature[1..41].copy_from_slice(nonce);
+    //     let u = 41;
+    //     let mut v: usize;
+    //     match signature_type {
+    //         FALCON_SIG_COMPRESS => {
+    //             signature[0] = 0x30 + logn as u8;
+    //             v = comp_encode(signature, u, signature_len - u, sv, logn as usize);
+    //             if v == 0 {
+    //                 return (-6, 0);
+    //             }
+    //         }
+    //         FALCON_SIG_PADDED => {
+    //             signature[0] = 0x30 + logn as u8;
+    //             let tu = falcon_sig_padded_size!(logn);
+    //             v = comp_encode(signature, u, tu - u, sv, logn as usize);
+    //             if v == 0 {
+    //                 // Signature does not fit loop (idk why).
+    //                 continue;
+    //             }
+    //             if (v + u) < tu {
+    //                 signature[(u + v)..tu].fill(0);
+    //                 v = tu - u;
+    //             }
+    //         }
+    //         FALCON_SIG_CT => {
+    //             signature[0] = 0x50 + logn as u8;
+    //             v = trim_i16_encode(signature, u, signature_len - u, sv, logn, max_sig_bits[logn as usize] as u32);
+    //             if v == 0 {
+    //                 return (-6, 0);
+    //             }
+    //         }
+    //         _ => { return (-6, 0); }
+    //     }
+    //     return (0, u + v);
+    // }
+    return (0, 0);
 }
 
 pub fn falcon_verify(signature: &[u8], signature_len: usize, signature_type: i32,

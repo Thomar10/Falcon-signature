@@ -30,7 +30,10 @@ target.flush()
 data = bytearray([0x42] * 16)
 
 # Send command to trigger code execution
-target.send_cmd('p', 0x80, data)
+#Trigger test
+#target.send_cmd('t', 0x80, data)
+
+target.send_cmd('g', 0x80, data)
 
 # Fetch trace
 ret = scope.capture()
