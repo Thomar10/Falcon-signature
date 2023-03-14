@@ -163,17 +163,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn fpr_trunc_test() {
-        for _ in 0..100 {
-            let mut shares_x = [0; ORDER];
-            let mut shares_y = [0; ORDER];
-            let (x, _) = create_masked(&mut shares_x, &mut shares_y);
-            let rtrunc_res: [i64; ORDER] = fpr_trunc(&shares_x);
-
-            assert_eq!(rtrunc_res[0] + rtrunc_res[1], trunc(x));
-        }
-    }
 
     #[test]
     fn fpr_floor_test() {

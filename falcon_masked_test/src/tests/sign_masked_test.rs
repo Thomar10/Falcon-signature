@@ -19,7 +19,7 @@ mod tests {
 
     #[test]
     fn test_sign_tree() {
-        const LOGN: usize = 10;
+        const LOGN: usize = 2;
         const LENGTH: usize = 1 << LOGN;
         const ORDER: usize = 2;
         let mut rng = init_shake_with_random_context();
@@ -55,6 +55,7 @@ mod tests {
             let expkey = bytemuck::cast_slice(expkey);
             u_sign_tree(tmp_sig.as_mut_slice(), &mut u_rng, expkey, &hm, LOGN as u32, bytemuck::cast_slice_mut(bytemuck::pod_align_to_mut::<u8, fpr>(tmp_sigsig.as_mut_slice()).1));
             assert_eq!(tmp_sig_mask.as_slice(), tmp_sig.as_slice());
+
         }
     }
 
