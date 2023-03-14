@@ -7,38 +7,11 @@ use falcon::shake::InnerShake256Context;
 use falcon::sign::{ffLDL_treesize, sampler, SamplerContext, SamplerZ};
 
 use crate::fft_masked::{fft, ifft, poly_add, poly_merge_fft, poly_mul_fft, poly_mulconst, poly_split_fft, poly_sub};
-use crate::fpr_masked::{fpr_add, fpr_half, fpr_mul, fpr_neg_fpr, fpr_of, fpr_of_i, fpr_sub};
-
-/*#[allow(non_snake_case)]
-#[inline(always)]
-pub fn ffLDL_treesize(logn: u32) -> u32 {
-    return (logn + 1) << logn;
-}
-
-pub fn smallints_to_fpr(r: &mut [fpr], t: &[i8], logn: u32) {
-    let n: usize = MKN!(logn);
-
-    for u in 0..n {
-        r[u] = fpr_of(t[u] as i64);
-    }
-}
-
-pub struct SamplerContext {
-    pub p: Prng,
-    pub sigma_min: fpr
-}
-
-type SamplerZ = fn(&mut SamplerContext, fpr, fpr) -> i32;
-
-*/
+use crate::fpr_masked::{fpr_add, fpr_half, fpr_mul, fpr_mul_const, fpr_neg_fpr, fpr_of, fpr_of_i, fpr_sub};
 
 #[allow(non_snake_case)]
 pub fn ffSampling_fft<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [[fpr; ORDER]],
                                           z1: &mut [[fpr; ORDER]], tree: &[[fpr; ORDER]], t0: &mut [[fpr; ORDER]], t1: &[[fpr; ORDER]], logn: u32, tmp: &mut [[fpr; ORDER]]) {
-    let mut fpr_invsqrt8: [fpr; ORDER] = [0; ORDER];
-    fpr_invsqrt8[0] = FPR_INVSQRT8;
-    let mut fpr_invsqrt2: [fpr; ORDER] = [0; ORDER];
-    fpr_invsqrt2[0] = FPR_INVSQRT2;
     if logn == 2 {
         let (_, treerest): (_, &[[fpr; ORDER]]) = tree.split_at(4);
         let (tree0, tree1): (&[[fpr; ORDER]], &[[fpr; ORDER]]) = treerest.split_at(4);
@@ -53,8 +26,8 @@ pub fn ffSampling_fft<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut Sampler
         let mut w1: [fpr; ORDER] = fpr_half(&c_im);
         c_re = fpr_sub(&a_re, &b_re);
         c_im = fpr_sub(&a_im, &b_im);
-        let mut w2: [fpr; ORDER] = fpr_mul(&fpr_add::<ORDER>(&c_re, &c_im), &fpr_invsqrt8);
-        let mut w3: [fpr; ORDER] = fpr_mul(&fpr_sub::<ORDER>(&c_im, &c_re), &fpr_invsqrt8);
+        let mut w2: [fpr; ORDER] = fpr_mul_const(&fpr_add::<ORDER>(&c_re, &c_im), FPR_INVSQRT8);
+        let mut w3: [fpr; ORDER] = fpr_mul_const(&fpr_sub::<ORDER>(&c_im, &c_re), FPR_INVSQRT8);
 
         let mut x0: [fpr; ORDER] = w2;
         let mut x1: [fpr; ORDER] = w3;
@@ -77,8 +50,8 @@ pub fn ffSampling_fft<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut Sampler
         a_im = w1;
         b_re = w2;
         b_im = w3;
-        c_re = fpr_mul(&fpr_sub::<ORDER>(&b_re, &b_im), &fpr_invsqrt2);
-        c_im = fpr_mul(&fpr_add::<ORDER>(&b_re, &b_im), &fpr_invsqrt2);
+        c_re = fpr_mul_const(&fpr_sub::<ORDER>(&b_re, &b_im), FPR_INVSQRT2);
+        c_im = fpr_mul_const(&fpr_add::<ORDER>(&b_re, &b_im), FPR_INVSQRT2);
         w0 = fpr_add(&a_re, &c_re);
         w2 = fpr_add(&a_im, &c_im);
         w1 = fpr_sub(&a_re, &c_re);
@@ -121,8 +94,8 @@ pub fn ffSampling_fft<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut Sampler
         w1 = fpr_half(&c_im);
         c_re = fpr_sub(&a_re, &b_re);
         c_im = fpr_sub(&a_im, &b_im);
-        w2 = fpr_mul(&fpr_add::<ORDER>(&c_re, &c_im), &fpr_invsqrt8);
-        w3 = fpr_mul(&fpr_sub::<ORDER>(&c_im, &c_re), &fpr_invsqrt8);
+        w2 = fpr_mul_const(&fpr_add::<ORDER>(&c_re, &c_im), FPR_INVSQRT8);
+        w3 = fpr_mul_const(&fpr_sub::<ORDER>(&c_im, &c_re), FPR_INVSQRT8);
 
         x0 = w2;
         x1 = w3;
@@ -147,8 +120,8 @@ pub fn ffSampling_fft<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut Sampler
         a_im = w1;
         b_re = w2;
         b_im = w3;
-        c_re = fpr_mul(&fpr_sub::<ORDER>(&b_re, &b_im), &fpr_invsqrt2);
-        c_im = fpr_mul(&fpr_add::<ORDER>(&b_re, &b_im), &fpr_invsqrt2);
+        c_re = fpr_mul_const(&fpr_sub::<ORDER>(&b_re, &b_im), FPR_INVSQRT2);
+        c_im = fpr_mul_const(&fpr_add::<ORDER>(&b_re, &b_im), FPR_INVSQRT2);
         z0[0] = fpr_add(&a_re, &c_re);
         z0[2] = fpr_add(&a_im, &c_im);
         z0[1] = fpr_sub(&a_re, &c_re);

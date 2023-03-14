@@ -55,9 +55,6 @@ mod tests {
             let expkey = bytemuck::cast_slice(expkey);
             u_sign_tree(tmp_sig.as_mut_slice(), &mut u_rng, expkey, &hm, LOGN as u32, bytemuck::cast_slice_mut(bytemuck::pod_align_to_mut::<u8, fpr>(tmp_sigsig.as_mut_slice()).1));
             assert_eq!(tmp_sig_mask.as_slice(), tmp_sig.as_slice());
-            // println!("{:?}", tmp_sig_mask.as_mut_slice());
-            // println!("{:?}", tmp_sig.as_slice());
-            // assert_eq!(1, 0);
         }
     }
 

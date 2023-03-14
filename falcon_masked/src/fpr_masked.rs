@@ -34,6 +34,13 @@ pub fn fpr_mul<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
     d
 }
 
+pub fn fpr_mul_const<const ORDER: usize>(x: &[fpr], c: fpr) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
+    d[0] = mul(x[0], c);
+    d[1] = mul(x[1], c);
+    d
+}
+
 pub fn fpr_sqrt(x: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
     d[0] = sqrt(x[0]);
