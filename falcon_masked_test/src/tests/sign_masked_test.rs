@@ -2,17 +2,11 @@
 
 #[cfg(test)]
 mod tests {
-    use float_cmp::approx_eq;
-    use rand::{Rng, thread_rng};
-
     use falcon::{falcon_privatekey_size, falcon_publickey_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signtree};
     use falcon::common::hash_to_point_vartime;
     use falcon::falcon::{falcon_expand_privatekey, falcon_keygen_make, fpr};
-    use falcon::fpr::{fpr_add as u_fpr_add, fpr_sub as u_fpr_sub};
-    use falcon::keygen::keygen;
     use falcon::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
     use falcon::sign::sign_tree as u_sign_tree;
-    use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
     use falcon_masked::sign_masked::sign_tree;
 
     pub fn init_shake_with_random_context() -> InnerShake256Context {
@@ -29,7 +23,7 @@ mod tests {
         const LENGTH: usize = 1 << LOGN;
         const ORDER: usize = 2;
         let mut rng = init_shake_with_random_context();
-        let buffer_size = falcon_tmpsize_keygen!(LOGN);
+
         let pk_len = falcon_publickey_size!(LOGN);
         let sk_len = falcon_privatekey_size!(LOGN);
         let tmp_len = falcon_tmpsize_keygen!(LOGN);
@@ -67,13 +61,7 @@ mod tests {
         }
     }
 
-    fn reconstruct_signature<const LENGTH: usize>(signature: &[[i16; 2]]) -> [i16; LENGTH] {
-        let mut signature_re = [0i16; LENGTH];
-        for i in 0..LENGTH {
-            signature_re[i] = signature[i][0] + signature[i][1];
-        }
-        signature_re
-    }
+
 
     fn mask_hashed_message<const ORDER: usize, const LENGTH: usize>(hm: &mut [u16]) -> [[u16; ORDER]; LENGTH] {
         let mut mhm: [[u16; ORDER]; LENGTH] = [[0; ORDER]; LENGTH];
@@ -95,15 +83,6 @@ mod tests {
             mkey[i] = mask;
         }
         mkey
-    }
-
-
-    fn make_masked_buffer_signature<const ORDER: usize, const LENGTH: usize>() -> [[i16; ORDER]; LENGTH] {
-        let mut buffer: [[i16; ORDER]; LENGTH] = [[0; ORDER]; LENGTH];
-        for i in 0..LENGTH {
-            buffer[i] = [0; ORDER];
-        }
-        buffer
     }
 
 }

@@ -7,7 +7,7 @@ use falcon::shake::InnerShake256Context;
 use falcon::sign::{ffLDL_treesize, sampler, SamplerContext, SamplerZ};
 
 use crate::fft_masked::{fft, ifft, poly_add, poly_merge_fft, poly_mul_fft, poly_mulconst, poly_split_fft, poly_sub};
-use crate::fpr_masked::{fpr_add, fpr_half, fpr_mul, fpr_neg, fpr_neg_fpr, fpr_of, fpr_of_i, fpr_rint, fpr_sub};
+use crate::fpr_masked::{fpr_add, fpr_half, fpr_mul, fpr_neg_fpr, fpr_of, fpr_of_i, fpr_sub};
 
 /*#[allow(non_snake_case)]
 #[inline(always)]
@@ -271,7 +271,7 @@ pub fn do_sign_tree<const ORDER: usize, const LENGTH: usize>(samp: SamplerZ, sam
     sqn |= -((ng >> 31) as i32) as u32;
 
     let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(&mut t0_r);
-    let mut t1_r = reconstruct_fpr::<ORDER, LENGTH>(t1);
+    let t1_r = reconstruct_fpr::<ORDER, LENGTH>(t1);
 
     for u in 0..n {
         s2tmp[u] = -rint(t1_r[u]) as i16;
@@ -302,7 +302,7 @@ fn reconstruct_hash_message<const ORDER: usize, const LENGTH: usize>(hm: &[[u16;
 
 pub fn sign_tree<const ORDER: usize, const TMP_LENGTH: usize, const LENGTH: usize>(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: &[[fpr; ORDER]], hm: &[[u16; ORDER]],
                                                                                    logn: u32) {
-    let mut ftmp: &mut [[fpr; ORDER]; TMP_LENGTH] = &mut [[0; ORDER]; TMP_LENGTH];
+    let ftmp: &mut [[fpr; ORDER]; TMP_LENGTH] = &mut [[0; ORDER]; TMP_LENGTH];
     for i in 0..TMP_LENGTH {
         ftmp[i] = [0; ORDER];
     }
