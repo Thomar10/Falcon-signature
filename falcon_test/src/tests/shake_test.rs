@@ -167,13 +167,14 @@ mod tests {
             }
 
             for _ in 0..20 {
-                let output_rust = i_shake256_extract(&mut sc_rust, 100);
+                let mut output_rust: [u8; 100] = [0; 100];
+                i_shake256_extract(&mut sc_rust, &mut output_rust);
                 let output_c: [u8; 100] = [0; 100];
                 unsafe {
                     falcon_inner_i_shake256_extract(&sc_c as *const InnerShake256ContextC, output_c.as_ptr(), 100);
                 }
 
-                assert_eq!(output_rust.as_slice(), output_c);
+                assert_eq!(output_rust, output_c);
             }
         }
     }

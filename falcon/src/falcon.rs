@@ -117,8 +117,7 @@ pub fn shake256_flip(rng: &mut InnerShake256Context) {
 }
 
 pub fn shake256_extract(rng: &mut InnerShake256Context, out: &mut [u8], len: usize) {
-    let vec = i_shake256_extract(rng, len);
-    out.copy_from_slice(vec.as_slice());
+    return i_shake256_extract(rng, out);
 }
 
 pub fn shake_init_prng_from_seed(rng: &mut InnerShake256Context, seed: &mut [u8], _len: usize) {

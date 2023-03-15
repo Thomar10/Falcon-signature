@@ -773,7 +773,8 @@ pub fn poly_sub_scaled_ntt(F: &mut [u32], Flen: usize, Fstride: usize, f: &[u32]
 
 #[inline(always)]
 pub fn get_rng_u64(rng: &mut InnerShake256Context) -> u64 {
-    let tmp = i_shake256_extract(rng, 8);
+    let mut tmp: [u8; 8] = [0; 8];
+    i_shake256_extract(rng, &mut tmp);
     (tmp[0] as u64)
         | ((tmp[1] as u64) << 8)
         | ((tmp[2] as u64) << 16)

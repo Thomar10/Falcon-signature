@@ -326,7 +326,8 @@ mod tests {
 
             let mut hm: [u16; 1024] = [0; 1024];
 
-            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
+            let mut msg: [u8; 128] = [0; 128];
+            i_shake256_extract(&mut rng_rust, &mut msg);
 
             let (mut rng_rust, rng_c) = init_shake_with_random_context();
 
@@ -377,7 +378,8 @@ mod tests {
             let mut tmp: Vec<u8> = vec![0; BUFFER_SIZE];
             let tmp_c: Vec<u8> = vec![0; BUFFER_SIZE];
 
-            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
+            let mut msg: [u8; 128] = [0; 128];
+            i_shake256_extract(&mut rng_rust, &mut msg);
 
             let (mut rng_rust, rng_c) = init_shake_with_random_context();
 
@@ -420,7 +422,8 @@ mod tests {
 
             let mut hm: [u16; 1024] = [0; 1024];
 
-            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
+            let mut msg: [u8; 128] = [0; 128];
+            i_shake256_extract(&mut rng_rust, &mut msg);
 
             let (mut rng_rust, _) = init_shake_with_random_context();
 
