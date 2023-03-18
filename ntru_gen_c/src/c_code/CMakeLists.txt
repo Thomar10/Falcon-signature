@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+project(NTRU_GEN C)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+add_library(ng_mp31 STATIC ng_mp31.c ng_config.h ng_inner.h sha3.h)
+install(TARGETS ng_mp31 DESTINATION .)
