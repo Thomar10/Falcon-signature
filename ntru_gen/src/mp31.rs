@@ -177,6 +177,25 @@ fn mp_half(a: u32, p: u32) -> u32 {
     a.wrapping_add(p & (!(a & 1)).wrapping_add(1)) >> 1
 }
 
+fn mp_ninv32(p: u32) -> u32 {
+    let mut y: u32 = 2.wrapping_sub(p);
+    y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
+    y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
+    y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
+    y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
+    (!y).wrapping_add(1)
+}
+
+fn mp_norm(x: u32, p: u32) -> i32 {
+    let w: u32 = x - (p & tbmask((p >> 1) - x));
+    w as i32
+}
+
+fn mp_set(v: i32, p: u32) -> u32 {
+    let w: u32 = v as u32;
+    w.wrapping_add(p & tbmask(w))
+}
+
 #[inline(always)]
 fn tbmask(a: u32) -> u32 {
     ((a as i32) >> 31) as u32
