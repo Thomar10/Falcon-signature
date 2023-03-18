@@ -154,7 +154,7 @@ fn mp_hr(p: u32) -> u32 {
 }
 
 #[inline(always)]
-fn mp_montymul(a: u32, b: u32, p: u32, p0i: u32) -> u32 {
+pub fn mp_montymul(a: u32, b: u32, p: u32, p0i: u32) -> u32 {
     let z: u64 = (a as u64) * (b as u64);
     let w: u32 = (z as u32).wrapping_mul(p0i);
     let d = (((z + (w as u64).wrapping_mul(p as u64)) >> 32) as u32).wrapping_sub(p);
@@ -162,7 +162,7 @@ fn mp_montymul(a: u32, b: u32, p: u32, p0i: u32) -> u32 {
 }
 
 #[inline(always)]
-fn mp_add(a: u32, b: u32, p: u32) -> u32 {
+pub fn mp_add(a: u32, b: u32, p: u32) -> u32 {
     let d = a.wrapping_add(b).wrapping_sub(p);
     d.wrapping_add(p & tbmask(d))
 }
@@ -173,12 +173,13 @@ fn mp_sub(a: u32, b: u32, p: u32) -> u32 {
     d.wrapping_add(p & tbmask(d))
 }
 
-fn mp_half(a: u32, p: u32) -> u32 {
+#[inline(always)]
+pub fn mp_half(a: u32, p: u32) -> u32 {
     a.wrapping_add(p & (!(a & 1)).wrapping_add(1)) >> 1
 }
 
 fn mp_ninv32(p: u32) -> u32 {
-    let mut y: u32 = 2.wrapping_sub(p);
+    let mut y: u32 = 2u32.wrapping_sub(p);
     y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
     y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
     y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
@@ -186,18 +187,20 @@ fn mp_ninv32(p: u32) -> u32 {
     (!y).wrapping_add(1)
 }
 
+#[inline(always)]
 fn mp_norm(x: u32, p: u32) -> i32 {
     let w: u32 = x - (p & tbmask((p >> 1) - x));
     w as i32
 }
 
-fn mp_set(v: i32, p: u32) -> u32 {
+#[inline(always)]
+pub fn mp_set(v: i32, p: u32) -> u32 {
     let w: u32 = v as u32;
     w.wrapping_add(p & tbmask(w))
 }
 
 #[inline(always)]
-fn tbmask(a: u32) -> u32 {
+pub fn tbmask(a: u32) -> u32 {
     ((a as i32) >> 31) as u32
 }
 
