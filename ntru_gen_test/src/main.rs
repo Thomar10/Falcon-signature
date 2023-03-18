@@ -1,3 +1,5 @@
+extern crate core;
+
 mod mp31_test;
 
 
