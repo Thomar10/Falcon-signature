@@ -1,8 +1,9 @@
 extern crate core;
 
-mod mp31_test;
+mod mp31;
 mod poly;
 mod zint31;
+mod fxp;
 
 
 fn main() {
