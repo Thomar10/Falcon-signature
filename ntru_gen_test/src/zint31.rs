@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use ntru_gen::zint31::{zint_add_mul_small, zint_mod_small_unsigned, zint_mul_small, zint_norm_zero, zint_rebuild_crt};
-    use ntru_gen_c::zint31::{ntrugen_rebuild_CRT, ntrugen_zint_add_mul_small, ntrugen_zint_mod_small_unsigned, ntrugen_zint_mul_small, ntrugen_zint_norm_zero};
+    use ntru_gen::zint31::{zint_add_mul_small, zint_bezout, zint_mod_small_unsigned, zint_mul_small, zint_norm_zero, zint_rebuild_crt};
+    use ntru_gen_c::zint31::{ntrugen_rebuild_CRT, ntrugen_zint_add_mul_small, ntrugen_zint_bezout, ntrugen_zint_mod_small_unsigned, ntrugen_zint_mul_small, ntrugen_zint_norm_zero};
     use rand::Rng;
 
     const P: u32 = 12289;
@@ -52,7 +52,6 @@ mod tests {
     fn zint_norm_zero_test() {
         let mut rng = rand::thread_rng();
         for _ in 0..100 {
-            let s: u32 = rand::random();
             let stride: usize = 1;
             let mut x: [u32; 20] = core::array::from_fn(|_| rng.gen::<u32>());
             let xc: [u32; 20] = x.clone();
@@ -95,6 +94,32 @@ mod tests {
                 assert_eq!(tmp, tmp_c);
                 assert_eq!(xx, xxc);
             }
+        }
+    }
+
+    #[test]
+    fn test_zint_bezout() {
+        for _ in 0..100 {
+            let mut rng = rand::thread_rng();
+            let mut u: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let u_c: [u32; 300] = u.clone();
+            let mut v: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let v_c: [u32; 300] = v.clone();
+            let x: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let x_c: [u32; 300] = x.clone();
+            let y: [u32; 300] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y_c: [u32; 300] = y.clone();
+            let mut tmp: [u32; 300 * 4] = [0; 1200];
+            let tmp_c: [u32; 300 * 4] = tmp.clone();
+            let len: usize = u.len();
+            let res = zint_bezout(&mut u, &mut v, &x, &y, len, &mut tmp);
+            let c_res = unsafe { ntrugen_zint_bezout(u_c.as_ptr(), v_c.as_ptr(), x_c.as_ptr(), y_c.as_ptr(), len, tmp_c.as_ptr()) };
+            assert_eq!(x, x_c, "x");
+            assert_eq!(y, y_c, "y");
+            assert_eq!(res, c_res, "res");
+            assert_eq!(tmp, tmp_c, "tmp");
+            assert_eq!(v, v_c, "v");
+            assert_eq!(u, u_c, "u");
         }
     }
 }
