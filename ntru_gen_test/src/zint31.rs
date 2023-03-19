@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
-
     use ntru_gen::zint31::{zint_add_mul_small, zint_mod_small_unsigned, zint_mul_small};
     use ntru_gen_c::zint31::{ntrugen_zint_add_mul_small, ntrugen_zint_mod_small_unsigned, ntrugen_zint_mul_small};
+    use rand::Rng;
 
     const P: u32 = 12289;
 
@@ -40,11 +39,11 @@ mod tests {
         for _ in 0..100 {
             let s: u32 = rand::random();
             let stride: usize = 1;
-            let mut x: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
-            let xc: [u32; 1024] = x.clone();
-            let y: [u32; 1024] = core::array::from_fn(|_| rng.gen::<u32>());
-            zint_add_mul_small(&mut x, 1024, stride, &y, s);
-            unsafe { ntrugen_zint_add_mul_small(xc.as_ptr(), 1024, stride, y.as_ptr(), s) };
+            let mut x: [u32; 20] = core::array::from_fn(|_| rng.gen::<u32>());
+            let xc: [u32; 20] = x.clone();
+            let y: [u32; 20] = core::array::from_fn(|_| rng.gen::<u32>());
+            zint_add_mul_small(&mut x, 19, stride, &y, s);
+            unsafe { ntrugen_zint_add_mul_small(xc.as_ptr(), 19, stride, y.as_ptr(), s) };
             assert_eq!(x, xc);
         }
     }

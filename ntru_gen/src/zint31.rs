@@ -35,5 +35,5 @@ pub fn zint_add_mul_small(x: &mut [u32], len: usize, xstride: usize, y: &[u32], 
         cc = (z >> 31) as u32;
         x_index += xstride;
     }
-    x[xstride] = cc;
+    x[x_index] = cc;
 }
