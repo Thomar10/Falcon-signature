@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use ntru_gen::zint31::{zint_add_mul_small, zint_bezout, zint_mod_small_unsigned, zint_mul_small, zint_norm_zero, zint_rebuild_crt};
-    use ntru_gen_c::zint31::{ntrugen_rebuild_CRT, ntrugen_zint_add_mul_small, ntrugen_zint_bezout, ntrugen_zint_mod_small_unsigned, ntrugen_zint_mul_small, ntrugen_zint_norm_zero};
+    use ntru_gen::zint31::{zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_mod_small_unsigned, zint_mul_small, zint_norm_zero, zint_rebuild_crt, zint_sub_scaled};
+    use ntru_gen_c::zint31::{ntrugen_rebuild_CRT, ntrugen_zint_add_mul_small, ntrugen_zint_add_scaled_mul_small, ntrugen_zint_bezout, ntrugen_zint_mod_small_unsigned, ntrugen_zint_mul_small, ntrugen_zint_norm_zero, ntrugen_zint_sub_scaled};
     use rand::Rng;
 
     const P: u32 = 12289;
@@ -66,7 +66,7 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_zint_rebuild_CRT() {
         for _ in 0..200 {
-             for stride in 1usize..3 {
+            for stride in 1usize..3 {
                 let mut rng = rand::thread_rng();
                 let mut xx: [u32; 2048] = [10; 2048];
                 let xxc: [u32; 2048] = [10; 2048];
@@ -120,6 +120,47 @@ mod tests {
             assert_eq!(tmp, tmp_c, "tmp");
             assert_eq!(v, v_c, "v");
             assert_eq!(u, u_c, "u");
+        }
+    }
+
+    #[test]
+    fn test_zint_sub_scaled() {
+        for _ in 0..200 {
+            let mut rng = rand::thread_rng();
+            let mut x: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
+            let x_c: [u32; 2048] = x.clone();
+            let xlen: usize = x.len();
+            let y: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y_c: [u32; 2048] = y.clone();
+            let ylen: usize = 1024;
+            let sch: u32 = rand::random();
+            let scl: u32 = rand::random();
+            let stride = 2;
+            zint_sub_scaled(&mut x, xlen, &y, ylen, stride, sch as usize, scl);
+            unsafe { ntrugen_zint_sub_scaled(x_c.as_ptr(), xlen, y_c.as_ptr(), ylen, stride, sch, scl) };
+            assert_eq!(x, x_c);
+            assert_eq!(y, y_c);
+        }
+    }
+
+    #[test]
+    fn test_zint_add_scaled_mul_small() {
+        for _ in 0..200 {
+            let mut rng = rand::thread_rng();
+            let mut x: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
+            let x_c: [u32; 2048] = x.clone();
+            let k: i32 = rand::random();
+            let xlen: usize = x.len();
+            let y: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
+            let y_c: [u32; 2048] = y.clone();
+            let ylen: usize = 1024;
+            let sch: u32 = rand::random();
+            let scl: u32 = rand::random();
+            let stride = 2;
+            zint_add_scaled_mul_small(&mut x, xlen, &y, ylen, stride, k, sch as usize, scl);
+            unsafe { ntrugen_zint_add_scaled_mul_small(x_c.as_ptr(), xlen, y_c.as_ptr(), ylen, stride, k, sch, scl) };
+            assert_eq!(x, x_c);
+            assert_eq!(y, y_c);
         }
     }
 }

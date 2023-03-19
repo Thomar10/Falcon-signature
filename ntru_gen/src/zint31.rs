@@ -117,7 +117,6 @@ pub fn zint_negate(a: &mut [u32], len: usize, ctl: u32) {
 }
 
 
-
 pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usize, tmp: &mut [u32]) -> bool {
     let (u1_index, v1_index, a_index, b_index): (usize, usize, usize, usize);
     let (x0i, y0i): (u32, u32);
@@ -214,7 +213,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usiz
         let mut g1 = (fg1 >> 32) as i64 - 0x7FFFFFFF;
 
 
-        let negab  = zint_co_reduce(a, b, len, f0, g0, f1, g1);
+        let negab = zint_co_reduce(a, b, len, f0, g0, f1, g1);
         f0 -= (f0 + f0) & -((negab & 1) as i64);
         g0 -= (g0 + g0) & -((negab & 1) as i64);
         f1 -= (f1 + f1) & -((negab >> 1) as i64);
@@ -311,4 +310,69 @@ pub fn zint_co_reduce(a: &mut [u32], b: &mut [u32], len: usize, xa: i64, xb: i64
     zint_negate(a, len, nega);
     zint_negate(b, len, negb);
     nega | (negb << 1)
+}
+
+
+pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &[u32], mut ylen: usize, stride: usize, k: i32, sch: usize, scl: u32) {
+    let mut cc: i32;
+    let mut tw: u32;
+    if ylen == 0 {
+        return;
+    }
+    let ysign = (!(y[stride * (ylen - 1)] >> 30)).wrapping_add(1) >> 1;
+    tw = 0;
+    cc = 0;
+    let mut x_index = sch * stride;
+    let mut y_index = 0;
+    for _ in sch..xlen {
+        let mut wy = 0;
+        if ylen > 0 {
+            wy = y[y_index];
+            y_index += stride;
+            ylen -= 1;
+        } else {
+            wy = ysign;
+        }
+        let wys: u32 = ((wy << scl) & 0x7FFFFFFF) | tw;
+        tw = wy >> (31 - scl);
+
+        let z = ((wys as i64) * (k as i64) + (x[x_index] as i64) + (cc as i64)) as u64;
+        x[x_index] = (z as u32) & 0x7FFFFFFF;
+
+        let ccu = (z >> 31) as u32;
+        cc = ccu as i32;
+        x_index += stride;
+    }
+}
+
+pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &[u32], ylen: usize, stride: usize, sch: usize, scl: u32) {
+    if ylen == 0 {
+        return;
+    }
+
+    let ysign: u32 = (!(y[stride * (ylen - 1)] >> 30)).wrapping_add(1) >> 1;
+    let mut tw = 0;
+    let mut cc = 0;
+    let mut x_index = sch * stride;
+    let mut y_index = 0;
+    for u in sch..xlen {
+        let v: usize;
+        let (w, wy, wys): (u32, u32, u32);
+
+        if ylen > 0 {
+            wy = y[y_index];
+            y_index += stride
+        } else {
+            wy = ysign;
+        }
+        v = (u as usize) - sch;
+
+        wys = ((wy << scl) & 0x7FFFFFFF) | tw;
+        tw = wy >> (31 - scl);
+
+        w = x[x_index].wrapping_sub(wys).wrapping_sub(cc);
+        x[x_index] = w & 0x7FFFFFFF;
+        cc = w >> 31;
+        x_index += stride;
+    }
 }
