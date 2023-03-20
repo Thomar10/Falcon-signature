@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use ntru_gen::fxp::{fxr, fxr_div, vect_fft};
-    use ntru_gen_c::fxp::ntrugen_inner_fxr_div;
     use rand::Rng;
+
+    use ntru_gen::fxp::{fxr, fxr_div, vect_fft};
+    use ntru_gen_c::fxp::{ntrugen_inner_fxr_div, ntrugen_vect_FFT};
 
     const P: u32 = 12289;
 
@@ -19,7 +20,9 @@ mod tests {
         let logn = 10;
         let mut rng = rand::thread_rng();
         let mut f: [fxr; 1024] = core::array::from_fn(|_| rng.gen::<fxr>());
+        let fc: [fxr; 1024] = f.clone();
         vect_fft(logn, &mut f);
-        // assert_eq!(fxr_div(x, y),  });
+        unsafe { ntrugen_vect_FFT(logn, fc.as_ptr()); }
+        assert_eq!(f, fc);
     }
 }

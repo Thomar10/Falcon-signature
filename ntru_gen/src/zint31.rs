@@ -118,7 +118,6 @@ pub fn zint_negate(a: &mut [u32], len: usize, ctl: u32) {
 
 
 pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usize, tmp: &mut [u32]) -> bool {
-    let (u1_index, v1_index, a_index, b_index): (usize, usize, usize, usize);
     let (x0i, y0i): (u32, u32);
     let mut num: u32;
     let mut j: usize;
@@ -126,13 +125,6 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usiz
     if len == 0 {
         return false;
     }
-
-
-    u1_index = 0;
-    v1_index = len;
-    a_index = 2 * len;
-    b_index = 3 * len;
-
 
     x0i = mp_ninv31(x[0]);
     y0i = mp_ninv31(y[0]);
@@ -325,7 +317,7 @@ pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &[u32], mut ylen
     let mut x_index = sch * stride;
     let mut y_index = 0;
     for _ in sch..xlen {
-        let mut wy = 0;
+        let mut wy;
         if ylen > 0 {
             wy = y[y_index];
             y_index += stride;
@@ -355,8 +347,7 @@ pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &[u32], ylen: usize, strid
     let mut cc = 0;
     let mut x_index = sch * stride;
     let mut y_index = 0;
-    for u in sch..xlen {
-        let v: usize;
+    for _ in sch..xlen {
         let (w, wy, wys): (u32, u32, u32);
 
         if ylen > 0 {
@@ -365,7 +356,6 @@ pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &[u32], ylen: usize, strid
         } else {
             wy = ysign;
         }
-        v = (u as usize) - sch;
 
         wys = ((wy << scl) & 0x7FFFFFFF) | tw;
         tw = wy >> (31 - scl);

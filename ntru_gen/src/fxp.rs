@@ -1,6 +1,8 @@
 #[allow(non_camel_case_types)]
 pub type fxr = u64;
 
+
+#[derive(Copy, Clone)]
 pub struct FXC {
     pub re: fxr,
     pub im: fxr,
@@ -45,13 +47,8 @@ pub fn vect_fft(logn: u32, f: &mut [fxr]) {
         for i in 0..hm {
             let s: FXC = GM_TAB[m + i];
             for j in j0..(j0 + ht) {
-                let mut x: FXC = fxc_c(0, 0);
-                let mut y: FXC = fxc_c(0, 0);
-                x.re = f[j];
-                x.re = f[j];
-                x.im = f[j + hn];
-                y.re = f[j + ht];
-                y.im = f[j + ht + hn];
+                let x: FXC = fxc_c(f[j], f[j + hn]);
+                let mut y: FXC = fxc_c(f[j + ht], f[j + ht + hn]);
                 y = fxc_mul(s, y);
                 let z1 = fxc_add(x, y);
                 f[j] = z1.re;
@@ -72,36 +69,41 @@ fn fxr_mul(x: fxr, y: fxr) -> fxr {
     let yl = y as u32;
     let xh = ((x as i64) >> 32) as i32;
     let yh = ((y as i64) >> 32) as i32;
-    let z0 = ((xl as u64) * (yl as u64)) >> 32;
-    let z1 = ((xl as i64) * (yl as i64)) as u64;
-    let z2 = ((yl as i64) * (xh as i64)) as u64;
-    let z3 = (((xh as i64) * (yh as i64)) as u64) << 32;
-    z0 + z1 + z2 + z3
+    let z0 = ((xl as u64).wrapping_mul(yl as u64)) >> 32;
+    let z1 = ((xl as i64).wrapping_mul(yh as i64)) as u64;
+    let z2 = ((yl as i64).wrapping_mul(xh as i64)) as u64;
+    let z3 = (((xh as i64).wrapping_mul(yh as i64)) as u64) << 32;
+    z0.wrapping_add(z1).wrapping_add(z2).wrapping_add(z3)
 }
 
 #[inline(always)]
-fn fxc_mul(mut x: FXC, y: FXC) -> FXC {
+fn fxr_sub(mut x: fxr, y: fxr) -> fxr {
+    x = x.wrapping_sub(y);
+    x
+}
+
+#[inline(always)]
+fn fxr_add(mut x: fxr, y: fxr) -> fxr {
+    x = x.wrapping_add(y);
+    x
+}
+
+#[inline(always)]
+fn fxc_mul(x: FXC, y: FXC) -> FXC {
     let z0 = fxr_mul(x.re, y.re);
     let z1 = fxr_mul(x.im, y.im);
-    let z2 = fxr_mul(x.re + x.im, y.re + y.im);
-    let mut z = FXC { re: 0, im: 0 };
-    z.re = z0 - z1;
-    z.im = z2 - z0 + z1;
-    z
+    let z2 = fxr_mul(fxr_add(x.re, x.im), fxr_add(y.re, y.im));
+    fxc_c(fxr_sub(z0, z1), fxr_sub(z2, fxr_add(z0, z1)))
 }
 
 #[inline(always)]
-fn fxc_add(mut x: FXC, y: FXC) -> FXC {
-    x.re = x.re + y.re;
-    x.im = x.im + y.im;
-    x
+fn fxc_add(x: FXC, y: FXC) -> FXC {
+    fxc_c(x.re.wrapping_add(y.re), x.im.wrapping_add(y.im))
 }
 
 #[inline(always)]
-fn fxc_sub(mut x: FXC, y: FXC) -> FXC {
-    x.re = x.re - y.re;
-    x.im = x.im - y.im;
-    x
+fn fxc_sub(x: FXC, y: FXC) -> FXC {
+    fxc_c(x.re.wrapping_sub(y.re), x.im.wrapping_sub(y.im))
 }
 
 #[inline(always)]
