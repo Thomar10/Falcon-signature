@@ -36,7 +36,7 @@ pub fn fxr_div(mut x: u64, mut y: u64) -> u64 {
     q
 }
 
-pub fn vect_fft(logn: u32, f: &mut [fxr]) {
+pub fn vect_fft(logn: usize, f: &mut [fxr]) {
     let hn = 1 << (logn as usize - 1);
     let mut t = hn;
     for lm in 1..logn {
@@ -61,6 +61,54 @@ pub fn vect_fft(logn: u32, f: &mut [fxr]) {
         }
         t = ht;
     }
+}
+
+pub fn vect_ifft(logn: usize, f: &mut [fxr]) {
+    let hn = 1 << (logn - 1);
+    let ht: usize = 1;
+    for lm in (0..(logn - 1)).rev() {
+        let m = 1 << lm;
+        let t = ht << 1;
+        let j0 = 0;
+        let hm = m >> 1;
+        for i in 0..hm {
+            s = fxc_conj(GM_TAB[m + i]);
+            for j in j0..(j0 + ht) {
+                let x = fxc_c(f[j], f[j + hn]);
+                let y = fxc_c(f[j + ht], f[j + ht + hn]);
+                let z1: FXC = fxc_half(fxc_add(x, y));
+                f[j] = z1.re;
+                f[j + hn] = z1.im;
+                let z2: FXC = fxc_mul(s, fxc_half(fxc_sub(x, y)));
+                f[j + ht] = z2.re;
+                f[j + ht + hn] = z2.im;
+            }
+            j0 += t;
+        }
+        ht = t;
+    }
+}
+
+#[inline(always)]
+fn fxr_neg(x: fxr) -> fxr {
+    (!x).wrapping_add(1)
+}
+
+#[inline(always)]
+fn fxc_conj(x: fxc) -> FXC {
+    x.im = fxr_neg(x.im);
+    x
+}
+
+#[inline(always)]
+fn fxc_half(x: fxr) -> fxr {
+
+}
+
+#[inline(always)]
+fn fxr_div2e(x: fxr, n: u32) -> fxr {
+    let v = x as i64;
+
 }
 
 #[inline(always)]

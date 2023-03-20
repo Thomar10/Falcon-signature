@@ -22,7 +22,7 @@ mod tests {
         let mut f: [fxr; 1024] = core::array::from_fn(|_| rng.gen::<fxr>());
         let fc: [fxr; 1024] = f.clone();
         vect_fft(logn, &mut f);
-        unsafe { ntrugen_vect_FFT(logn, fc.as_ptr()); }
+        unsafe { ntrugen_vect_FFT(logn as u32, fc.as_ptr()); }
         assert_eq!(f, fc);
     }
 }
