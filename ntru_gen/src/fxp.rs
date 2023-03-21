@@ -147,6 +147,13 @@ pub fn vect_div_autoadj_fft(logn: usize, a: &mut [fxr], b: &[fxr]) {
     }
 }
 
+pub fn vect_mul2e(logn: usize, a: &mut [fxr], e: u32) {
+    let n = 1 << logn;
+    for u in 0..n {
+        a[u] = fxr_mul2e(a[u], e);
+    }
+}
+
 pub fn vect_norm_fft(logn: usize, d: &mut [fxr], a: &[fxr], b: &[fxr]) {
     let hn = 1 << (logn - 1);
     for u in 0..hn {
@@ -169,6 +176,12 @@ pub fn vect_invnorm_fft(logn: usize, d: &mut [fxr], a: &[fxr], b: &[fxr], e: u32
 }
 
 #[inline(always)]
+pub fn fxr_mul2e(x: fxr, n: u32) -> fxr {
+    x << n
+}
+
+
+#[inline(always)]
 fn fxr_sqr(x: fxr) -> fxr {
     let xl = x as u32;
     let xh: i32 = (x >> 32) as i32;
@@ -189,7 +202,7 @@ fn fxr_of(x: i32) -> fxr {
 }
 
 #[inline(always)]
-fn fxr_neg(x: fxr) -> fxr {
+pub fn fxr_neg(x: fxr) -> fxr {
     (!x).wrapping_add(1)
 }
 

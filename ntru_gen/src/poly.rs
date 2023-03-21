@@ -408,7 +408,7 @@ pub fn poly_sqnorm(logn: usize, f: &[i8]) -> u32 {
 }
 
 #[inline(always)]
-fn divrev31(x: u32) -> (u32, u32) {
+pub fn divrev31(x: u32) -> (u32, u32) {
     let qq = (x.wrapping_mul(67651u32)) >> 21;
     (qq, x - 31 * qq)
 }
