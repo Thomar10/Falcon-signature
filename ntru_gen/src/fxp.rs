@@ -30,7 +30,7 @@ pub fn fxr_div(mut x: u64, mut y: u64) -> u64 {
         num <<= 1;
     }
     let b: u64 = 1u64.wrapping_sub((num.wrapping_sub(y as u64)) >> 63);
-    q += b;
+    q = q.wrapping_add(b);
     sx ^= sy;
     q = (q ^ (!sx).wrapping_add(1)) + sx;
     q
@@ -178,6 +178,10 @@ fn fxr_sqr(x: fxr) -> fxr {
     z0.wrapping_add(z1 << 1).wrapping_add(z3)
 }
 
+#[inline(always)]
+pub fn fxr_round(x: fxr) -> i32 {
+    ((x + 0x80000000) >> 32) as i32
+}
 
 #[inline(always)]
 fn fxr_of(x: i32) -> fxr {

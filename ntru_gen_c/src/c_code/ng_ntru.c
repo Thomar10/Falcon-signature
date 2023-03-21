@@ -203,6 +203,13 @@ make_fg_intermediate(const ntru_profile *prof,
 	}
 }
 
+void make_fg_intermediate_test(const ntru_profile *prof,
+     	unsigned logn_top,
+     	const int8_t *restrict f, const int8_t *restrict g,
+     	unsigned depth, uint32_t *tmp) {
+     	make_fg_intermediate(prof, logn_top, f, g, depth, tmp);
+     	}
+
 /*
  * Compute (f,g) at the deepest level (i.e. get Res(f,X^n+1) and
  * Res(g,X^n+1)). Intermediate (f,g) values (below the save threshold)
@@ -251,6 +258,15 @@ make_fg_deepest(const ntru_profile *prof,
 	}
 	return r;
 }
+ int
+make_fg_deepest_test(const ntru_profile *prof,
+	unsigned logn_top,
+	const int8_t *restrict f, const int8_t *restrict g,
+	uint32_t *tmp, size_t sav_off)
+{
+  return make_fg_deepest(prof, logn_top, f, g, tmp, sav_off);
+}
+
 
 /* Error code: no error (so far) */
 #define SOLVE_OK           0
@@ -337,6 +353,14 @@ solve_NTRU_deepest(const ntru_profile *prof,
 	}
 
 	return SOLVE_OK;
+}
+
+int
+solve_NTRU_deepest_test(const ntru_profile *prof,
+	unsigned logn_top, const int8_t *restrict f, const int8_t *restrict g,
+	uint32_t *tmp)
+{
+  return solve_NTRU_deepest(prof, logn_top, f, g, tmp);
 }
 
 /*
@@ -1057,6 +1081,13 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 
 	return SOLVE_OK;
 }
+int solve_NTRU_intermediate_test(const ntru_profile *restrict prof,
+	unsigned logn_top,
+	const int8_t *restrict f, const int8_t *restrict g,
+	unsigned depth, uint32_t *restrict tmp)
+{
+return solve_NTRU_intermediate(prof, logn_top, f, g, depth, tmp);
+}
 
 /*
  * Solving the NTRU equation, top recursion level. This is a specialized
@@ -1362,6 +1393,15 @@ solve_NTRU_depth0(const ntru_profile *restrict prof,
 	poly_mp_norm(logn, Gp, p);
 
 	return SOLVE_OK;
+}
+
+ int
+solve_NTRU_depth0_test(const ntru_profile *restrict prof,
+	unsigned logn,
+	const int8_t *restrict f, const int8_t *restrict g,
+	uint32_t *restrict tmp)
+{
+return solve_NTRU_depth0(prof, logn, f, g, tmp);
 }
 
 #if 0
