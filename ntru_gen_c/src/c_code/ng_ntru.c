@@ -714,6 +714,7 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	 */
 
 	fxr *rt3 = (fxr *)t1;
+
 	fxr *rt4 = rt3 + n;
 	fxr *rt1 = rt4 + n;
 	/* obsolete
@@ -724,61 +725,26 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	/*
 	 * We consider only the top rlen words of (f,g).
 	 */
-	size_t rlen = prof->word_win[depth];
-	if (rlen > slen) {
-		rlen = slen;
-	}
-	size_t blen = slen - rlen;
-	uint32_t *ftb = ft + blen * n;
-	uint32_t *gtb = gt + blen * n;
-	uint32_t scale_fg = 31 * (uint32_t)blen;
-	uint32_t scale_FG = 31 * (uint32_t)llen;
-
-	/*
-	 * Convert f and g into fixed-point approximations, in rt3 and rt4,
-	 * respectively. They are scaled down by 2^(scale_fg + scale_x).
-	 * scale_fg is public (it depends only on the recursion depth), but
-	 * scale_x comes from a measurement on the actual values of (f,g) and
-	 * is thus secret.
-	 *
-	 * The value scale_x is adjusted so that the largest coefficient is
-	 * close to, but lower than, some limit t (in absolute value). The
-	 * limit t is chosen so that f*adj(f) + g*adj(g) does not overflow,
-	 * i.e. all coefficients must remain below 2^31.
-	 *
-	 * Let n be the degree; we know that n <= 2^10. The squared norm
-	 * of a polynomial is the sum of the squared norms of the
-	 * coefficients, with the squared norm of a complex number being
-	 * the product of that number with its complex conjugate. If all
-	 * coefficients of f are less than t (in absolute value), then
-	 * the squared norm of f is less than n*t^2. The squared norm of
-	 * FFT(f) (f in FFT representation) is exactly n times the
-	 * squared norm of f, so this leads to n^2*t^2 as a maximum
-	 * bound. adj(f) has the same norm as f. This implies that each
-	 * complex coefficient of FFT(f) has a maximum squared norm of
-	 * n^2*t^2 (with a maximally imbalanced polynomial with all
-	 * coefficient but one being zero). The computation of f*adj(f)
-	 * exactly is, in FFT representation, the product of each
-	 * coefficient with its conjugate; thus, the coefficients of
-	 * f*adj(f), in FFT representation, are at most n^2*t^2.
-	 *
-	 * Since we want the coefficients of f*adj(f)+g*adj(g) not to exceed
-	 * 2^31, we need n^2*t^2 <= 2^30, i.e. n*t <= 2^15. We can adjust t
-	 * accordingly (called scale_t in the code below). We also need to
-	 * take care that t must not exceed scale_x. Approximation of f and
-	 * g are extracted with scale scale_fg + scale_x - scale_t, and
-	 * later fixed by dividing them by 2^scale_t.
-	 */
-	uint32_t scale_xf = poly_max_bitlength(logn, ftb, rlen);
-	uint32_t scale_xg = poly_max_bitlength(logn, gtb, rlen);
-	uint32_t scale_x = scale_xf;
-	scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
+//	size_t rlen = prof->word_win[depth];
+//	if (rlen > slen) {
+//		rlen = slen;
+//	}
+//	size_t blen = slen - rlen;
+//	uint32_t *ftb = ft + blen * n;
+//	uint32_t *gtb = gt + blen * n;
+//	uint32_t scale_fg = 31 * (uint32_t)blen;
+//	uint32_t scale_FG = 31 * (uint32_t)llen;
+//
+//	uint32_t scale_xf = poly_max_bitlength(logn, ftb, rlen);
+//	uint32_t scale_xg = poly_max_bitlength(logn, gtb, rlen);
+//	uint32_t scale_x = scale_xf;
+//	scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
 	uint32_t scale_t = 15 - logn;
-	scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
-	uint32_t scdiff = scale_x - scale_t;
-
-	poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
-	poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
+//	scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
+//	uint32_t scdiff = scale_x - scale_t;
+//
+//	poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
+//	poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
 	/*
 	 * Compute adj(f)/(f*adj(f) + g*adj(g)) into rt3 (FFT).
@@ -890,194 +856,194 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 		memmove(gt, tn, (slen + 1) * n * sizeof *tn);
 	}
 
-	/*
-	 * Reduce F and G repeatedly.
-	 */
-	size_t FGlen = llen;
-	for (;;) {
-		/*
-		 * Convert the current F and G into fixed-point. We want
-		 * to apply scaling scale_FG + scale_x.
-		 */
-		uint32_t tlen, toff;
-		DIVREM31(tlen, toff, scale_FG);
-		poly_big_to_fixed(logn, rt1,
-			Ft + tlen * n, FGlen - tlen, scale_x + toff);
-		poly_big_to_fixed(logn, rt2,
-			Gt + tlen * n, FGlen - tlen, scale_x + toff);
-
-		/*
-		 * rt2 <- (F*adj(f) + G*adj(g)) / (f*adj(f) + g*adj(g))
-		 */
-		vect_FFT(logn, rt1);
-		vect_FFT(logn, rt2);
-		vect_mul_fft(logn, rt1, rt3);
-		vect_mul_fft(logn, rt2, rt4);
-		vect_add(logn, rt2, rt1);
-		vect_iFFT(logn, rt2);
-
-		/*
-		 * k <- round(rt2)
-		 */
-		for (size_t u = 0; u < n; u ++) {
-			k[u] = fxr_round(rt2[u]);
-		}
-
-		/*
-		 * (f,g) are scaled by scale_fg + scale_x
-		 * (F,G) are scaled by scale_FG + scale_x
-		 * Thus, k is scaled by scale_FG - scale_fg, which is public.
-		 */
-		uint32_t scale_k = scale_FG - scale_fg;
-		if (depth == 1) {
-			poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen,
-				(uint32_t *)k, scale_k, f, g, t2);
-		} else if (use_sub_ntt) {
-			poly_sub_scaled_ntt(logn, Ft, FGlen, ft, slen,
-				k, scale_k, t2);
-			poly_sub_scaled_ntt(logn, Gt, FGlen, gt, slen,
-				k, scale_k, t2);
-		} else {
-			poly_sub_scaled(logn, Ft, FGlen, ft, slen, k, scale_k);
-			poly_sub_scaled(logn, Gt, FGlen, gt, slen, k, scale_k);
-		}
-
-		/*
-		 * We now assume that F and G have shrunk by at least
-		 * reduce_bits (profile-dependent). We adjust FGlen accordinly.
-		 */
-		if (scale_FG <= scale_fg) {
-			break;
-		}
-		if (scale_FG <= (scale_fg + prof->reduce_bits)) {
-			scale_FG = scale_fg;
-		} else {
-			scale_FG -= prof->reduce_bits;
-		}
-		while (FGlen > slen
-			&& 31 * (FGlen - slen) > scale_FG - scale_fg + 30)
-		{
-			FGlen --;
-		}
-	}
-
-	/*
-	 * Output F is already in the right place; G is in Gt, and must be
-	 * moved back a bit.
-	 */
-	memmove(tmp + slen * n, Gt, slen * n * sizeof *tmp);
-	Gt = tmp + slen * n;
-
-	/*
-	 * Reduction is done. We test the current solution modulo a single
-	 * prime.
-	 * Exception: we cannot do that if depth == 1, since in that case
-	 * we did not keep (ft,gt). Reduction errors rarely occur at this
-	 * stage, so we can omit that test (depth-0 test will cover it).
-	 *
-	 * If use_sub_ntt != 0, then ft and gt are already in NTT
-	 * representation.
-	 */
-	if (depth == 1) {
-		return SOLVE_OK;
-	}
-
-	t2 = t1 + n;
-	uint32_t *t3 = t2 + n;
-	uint32_t *t4 = t3 + n;
-	uint32_t p = PRIMES[0].p;
-	uint32_t p0i = PRIMES[0].p0i;
-	uint32_t R2 = PRIMES[0].R2;
-	uint32_t Rx = mp_Rx31(slen, p, p0i, R2);
-	mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
-	if (use_sub_ntt) {
-		t1 = ft;
-		for (size_t u = 0; u < n; u ++) {
-			t2[u] = zint_mod_small_signed(
-				Gt + u, slen, n, p, p0i, R2, Rx);
-		}
-		mp_NTT(logn, t2, t4, p, p0i);
-	} else {
-		for (size_t u = 0; u < n; u ++) {
-			t1[u] = zint_mod_small_signed(
-				ft + u, slen, n, p, p0i, R2, Rx);
-			t2[u] = zint_mod_small_signed(
-				Gt + u, slen, n, p, p0i, R2, Rx);
-		}
-		mp_NTT(logn, t1, t4, p, p0i);
-		mp_NTT(logn, t2, t4, p, p0i);
-	}
-#if NTRUGEN_AVX2
-	if (n >= 8) {
-		__m256i yp = _mm256_set1_epi32(p);
-		__m256i yp0i = _mm256_set1_epi32(p0i);
-		for (size_t u = 0; u < n; u += 8) {
-			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
-			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
-			__m256i y3 = mp_montymul_x8(y1, y2, yp, yp0i);
-			_mm256_storeu_si256((__m256i *)(t3 + u), y3);
-		}
-	} else {
-		for (size_t u = 0; u < n; u ++) {
-			t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
-		}
-	}
-#else // NTRUGEN_AVX2
-	for (size_t u = 0; u < n; u ++) {
-		t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
-	}
-#endif // NTRUGEN_AVX2
-	if (use_sub_ntt) {
-		t1 = gt;
-		for (size_t u = 0; u < n; u ++) {
-			t2[u] = zint_mod_small_signed(
-				Ft + u, slen, n, p, p0i, R2, Rx);
-		}
-		mp_NTT(logn, t2, t4, p, p0i);
-	} else {
-		for (size_t u = 0; u < n; u ++) {
-			t1[u] = zint_mod_small_signed(
-				gt + u, slen, n, p, p0i, R2, Rx);
-			t2[u] = zint_mod_small_signed(
-				Ft + u, slen, n, p, p0i, R2, Rx);
-		}
-		mp_NTT(logn, t1, t4, p, p0i);
-		mp_NTT(logn, t2, t4, p, p0i);
-	}
-	uint32_t rv = mp_montymul(prof->q, 1, p, p0i);
-#if NTRUGEN_AVX2
-	if (n >= 8) {
-		__m256i yp = _mm256_set1_epi32(p);
-		__m256i yp0i = _mm256_set1_epi32(p0i);
-		__m256i yrv = _mm256_set1_epi32(rv);
-		for (size_t u = 0; u < n; u += 8) {
-			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
-			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
-			__m256i y3 = _mm256_loadu_si256((__m256i *)(t3 + u));
-			__m256i yx = mp_sub_x8(y3,
-				mp_montymul_x8(y1, y2, yp, yp0i), yp);
-			if ((uint32_t)_mm256_movemask_epi8(
-				_mm256_cmpeq_epi32(yx, yrv)) != 0xFFFFFFFF)
-			{
-				return SOLVE_ERR_REDUCE;
-			}
-		}
-	} else {
-		for (size_t u = 0; u < n; u ++) {
-			uint32_t x = mp_montymul(t1[u], t2[u], p, p0i);
-			if (mp_sub(t3[u], x, p) != rv) {
-				return SOLVE_ERR_REDUCE;
-			}
-		}
-	}
-#else // NTRUGEN_AVX2
-	for (size_t u = 0; u < n; u ++) {
-		uint32_t x = mp_montymul(t1[u], t2[u], p, p0i);
-		if (mp_sub(t3[u], x, p) != rv) {
-			return SOLVE_ERR_REDUCE;
-		}
-	}
-#endif // NTRUGEN_AVX2
+//	/*
+//	 * Reduce F and G repeatedly.
+//	 */
+//	size_t FGlen = llen;
+//	for (;;) {
+//		/*
+//		 * Convert the current F and G into fixed-point. We want
+//		 * to apply scaling scale_FG + scale_x.
+//		 */
+//		uint32_t tlen, toff;
+//		DIVREM31(tlen, toff, scale_FG);
+//		poly_big_to_fixed(logn, rt1,
+//			Ft + tlen * n, FGlen - tlen, scale_x + toff);
+//		poly_big_to_fixed(logn, rt2,
+//			Gt + tlen * n, FGlen - tlen, scale_x + toff);
+//
+//		/*
+//		 * rt2 <- (F*adj(f) + G*adj(g)) / (f*adj(f) + g*adj(g))
+//		 */
+//		vect_FFT(logn, rt1);
+//		vect_FFT(logn, rt2);
+//		vect_mul_fft(logn, rt1, rt3);
+//		vect_mul_fft(logn, rt2, rt4);
+//		vect_add(logn, rt2, rt1);
+//		vect_iFFT(logn, rt2);
+//
+//		/*
+//		 * k <- round(rt2)
+//		 */
+//		for (size_t u = 0; u < n; u ++) {
+//			k[u] = fxr_round(rt2[u]);
+//		}
+//
+//		/*
+//		 * (f,g) are scaled by scale_fg + scale_x
+//		 * (F,G) are scaled by scale_FG + scale_x
+//		 * Thus, k is scaled by scale_FG - scale_fg, which is public.
+//		 */
+//		uint32_t scale_k = scale_FG - scale_fg;
+//		if (depth == 1) {
+//			poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen,
+//				(uint32_t *)k, scale_k, f, g, t2);
+//		} else if (use_sub_ntt) {
+//			poly_sub_scaled_ntt(logn, Ft, FGlen, ft, slen,
+//				k, scale_k, t2);
+//			poly_sub_scaled_ntt(logn, Gt, FGlen, gt, slen,
+//				k, scale_k, t2);
+//		} else {
+//			poly_sub_scaled(logn, Ft, FGlen, ft, slen, k, scale_k);
+//			poly_sub_scaled(logn, Gt, FGlen, gt, slen, k, scale_k);
+//		}
+//
+//		/*
+//		 * We now assume that F and G have shrunk by at least
+//		 * reduce_bits (profile-dependent). We adjust FGlen accordinly.
+//		 */
+//		if (scale_FG <= scale_fg) {
+//			break;
+//		}
+//		if (scale_FG <= (scale_fg + prof->reduce_bits)) {
+//			scale_FG = scale_fg;
+//		} else {
+//			scale_FG -= prof->reduce_bits;
+//		}
+//		while (FGlen > slen
+//			&& 31 * (FGlen - slen) > scale_FG - scale_fg + 30)
+//		{
+//			FGlen --;
+//		}
+//	}
+//
+//	/*
+//	 * Output F is already in the right place; G is in Gt, and must be
+//	 * moved back a bit.
+//	 */
+//	memmove(tmp + slen * n, Gt, slen * n * sizeof *tmp);
+//	Gt = tmp + slen * n;
+//
+//	/*
+//	 * Reduction is done. We test the current solution modulo a single
+//	 * prime.
+//	 * Exception: we cannot do that if depth == 1, since in that case
+//	 * we did not keep (ft,gt). Reduction errors rarely occur at this
+//	 * stage, so we can omit that test (depth-0 test will cover it).
+//	 *
+//	 * If use_sub_ntt != 0, then ft and gt are already in NTT
+//	 * representation.
+//	 */
+//	if (depth == 1) {
+//		return SOLVE_OK;
+//	}
+//
+//	t2 = t1 + n;
+//	uint32_t *t3 = t2 + n;
+//	uint32_t *t4 = t3 + n;
+//	uint32_t p = PRIMES[0].p;
+//	uint32_t p0i = PRIMES[0].p0i;
+//	uint32_t R2 = PRIMES[0].R2;
+//	uint32_t Rx = mp_Rx31(slen, p, p0i, R2);
+//	mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
+//	if (use_sub_ntt) {
+//		t1 = ft;
+//		for (size_t u = 0; u < n; u ++) {
+//			t2[u] = zint_mod_small_signed(
+//				Gt + u, slen, n, p, p0i, R2, Rx);
+//		}
+//		mp_NTT(logn, t2, t4, p, p0i);
+//	} else {
+//		for (size_t u = 0; u < n; u ++) {
+//			t1[u] = zint_mod_small_signed(
+//				ft + u, slen, n, p, p0i, R2, Rx);
+//			t2[u] = zint_mod_small_signed(
+//				Gt + u, slen, n, p, p0i, R2, Rx);
+//		}
+//		mp_NTT(logn, t1, t4, p, p0i);
+//		mp_NTT(logn, t2, t4, p, p0i);
+//	}
+//#if NTRUGEN_AVX2
+//	if (n >= 8) {
+//		__m256i yp = _mm256_set1_epi32(p);
+//		__m256i yp0i = _mm256_set1_epi32(p0i);
+//		for (size_t u = 0; u < n; u += 8) {
+//			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
+//			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
+//			__m256i y3 = mp_montymul_x8(y1, y2, yp, yp0i);
+//			_mm256_storeu_si256((__m256i *)(t3 + u), y3);
+//		}
+//	} else {
+//		for (size_t u = 0; u < n; u ++) {
+//			t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
+//		}
+//	}
+//#else // NTRUGEN_AVX2
+//	for (size_t u = 0; u < n; u ++) {
+//		t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
+//	}
+//#endif // NTRUGEN_AVX2
+//	if (use_sub_ntt) {
+//		t1 = gt;
+//		for (size_t u = 0; u < n; u ++) {
+//			t2[u] = zint_mod_small_signed(
+//				Ft + u, slen, n, p, p0i, R2, Rx);
+//		}
+//		mp_NTT(logn, t2, t4, p, p0i);
+//	} else {
+//		for (size_t u = 0; u < n; u ++) {
+//			t1[u] = zint_mod_small_signed(
+//				gt + u, slen, n, p, p0i, R2, Rx);
+//			t2[u] = zint_mod_small_signed(
+//				Ft + u, slen, n, p, p0i, R2, Rx);
+//		}
+//		mp_NTT(logn, t1, t4, p, p0i);
+//		mp_NTT(logn, t2, t4, p, p0i);
+//	}
+//	uint32_t rv = mp_montymul(prof->q, 1, p, p0i);
+//#if NTRUGEN_AVX2
+//	if (n >= 8) {
+//		__m256i yp = _mm256_set1_epi32(p);
+//		__m256i yp0i = _mm256_set1_epi32(p0i);
+//		__m256i yrv = _mm256_set1_epi32(rv);
+//		for (size_t u = 0; u < n; u += 8) {
+//			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
+//			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
+//			__m256i y3 = _mm256_loadu_si256((__m256i *)(t3 + u));
+//			__m256i yx = mp_sub_x8(y3,
+//				mp_montymul_x8(y1, y2, yp, yp0i), yp);
+//			if ((uint32_t)_mm256_movemask_epi8(
+//				_mm256_cmpeq_epi32(yx, yrv)) != 0xFFFFFFFF)
+//			{
+//				return SOLVE_ERR_REDUCE;
+//			}
+//		}
+//	} else {
+//		for (size_t u = 0; u < n; u ++) {
+//			uint32_t x = mp_montymul(t1[u], t2[u], p, p0i);
+//			if (mp_sub(t3[u], x, p) != rv) {
+//				return SOLVE_ERR_REDUCE;
+//			}
+//		}
+//	}
+//#else // NTRUGEN_AVX2
+//	for (size_t u = 0; u < n; u ++) {
+//		uint32_t x = mp_montymul(t1[u], t2[u], p, p0i);
+//		if (mp_sub(t3[u], x, p) != rv) {
+//			return SOLVE_ERR_REDUCE;
+//		}
+//	}
+//#endif // NTRUGEN_AVX2
 
 	return SOLVE_OK;
 }

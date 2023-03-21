@@ -210,20 +210,22 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     let llen: usize = profile.max_bl_large[depth] as usize;
     let dlen: usize = profile.max_bl_small[depth + 1] as usize;
 
-    let (Fd, inter) = tmp.split_at_mut(dlen * hn);
-    let (Gd, fgt) = tmp.split_at_mut(dlen * hn);
 
     if depth < profile.min_save_fg[logn_top] as usize {
-        make_fg_intermediate(profile, logn_top, f, g, depth as u32, fgt);
+        make_fg_intermediate(profile, logn_top, f, g, depth as u32, tmp.split_at_mut(dlen * hn * 2).1);
     } else {
-        // GAY
+        let mut sav_fg_index = (6 << logn_top) as usize;
+        for d in profile.min_save_fg[logn_top]..=(depth as u16) {
+            sav_fg_index -= (profile.max_bl_small[d as usize] as usize) << (logn_top + 1 - d as usize);
+        }
+        tmp.copy_within(sav_fg_index..sav_fg_index + 2 * slen * n, 2 * dlen * hn);
     }
     tmp.copy_within(2 * dlen * hn..2 * dlen * hn + 2 * n * slen, 2 * llen * n);
     tmp.copy_within(0..2 * dlen * hn, 2 * llen * n + 2 * slen * n);
-    let (Ft, inter) = tmp.split_at_mut(llen * n);
-    let (Gt, inter) = inter.split_at_mut(llen * n);
-    let (ft, inter) = inter.split_at_mut(slen * n);
-    let (gt, t1) = inter.split_at_mut(slen * n);
+    let (mut Ft, inter) = tmp.split_at_mut(llen * n);
+    let (mut Gt, mut inter) = inter.split_at_mut(llen * n);
+    let (mut ft, intergt) = inter.split_at_mut(slen * n);
+    let (mut gt, mut t1) = intergt.split_at_mut(slen * n);
     let (Fd, Gd) = t1.split_at_mut(dlen * hn);
 
     for u in 0..llen {
@@ -256,8 +258,8 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
         let (fx, gx) = inter.split_at_mut(n);
         mp_mkgmigm(logn, gm, igm, PRIMES[u].g, PRIMES[u].ig, p, p0i);
         if u < slen {
-            fx[..n].copy_from_slice(&ft[u * n..]);
-            gx[..n].copy_from_slice(&gt[u * n..]);
+            fx[..n].copy_from_slice(&ft[u * n..u * n + n]);
+            gx[..n].copy_from_slice(&gt[u * n..u * n + n]);
             mp_intt(logn, ft.split_at_mut(u * n).1, igm, p, p0i);
             mp_intt(logn, gt.split_at_mut(u * n).1, igm, p, p0i);
         } else {
@@ -301,33 +303,38 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     zint_rebuild_crt(Gt, llen, n, 1, true, t1);
     let use_sub_ntt = depth > 1 && logn >= MIN_LOGN_FGNTT;
     if use_sub_ntt {
-        // do something
+        tmp.copy_within(slen * n + 2 * llen * n..slen * n + 2 * llen * n + n * slen, slen * n + 2 * llen * n + n);
+        (Ft, inter) = tmp.split_at_mut(llen * n);
+        (Gt, inter) = inter.split_at_mut(llen * n);
+        (ft, inter) = inter.split_at_mut(slen * n + n);
+        (gt, t1) = inter.split_at_mut(slen * n + n);
     }
 
-    let rt3 = bytemuck::pod_align_to_mut::<u32, fxr>(t1).1;
-    let (rt3, inter) = rt3.split_at_mut(n);
-    let (rt4, rt1) = inter.split_at_mut(n);
+    let rt3 = bytemuck::cast_slice_mut::<u32, fxr>(t1);
+    let (mut rt3, mut inter_fxr) = rt3.split_at_mut(n);
+    let (mut rt4, mut rt1) = inter_fxr.split_at_mut(n);
 
-    let mut rlen = profile.word_win[depth] as usize;
-    if rlen > slen {
-        rlen = slen;
-    }
-    let blen = slen - rlen;
-    let ftb = ft.split_at_mut(blen * n).1;
-    let gtb = gt.split_at_mut(blen * n).1;
-    let scale_fg = 31 * blen;
-    let mut scale_FG = 31 * llen;
+    // let mut rlen = profile.word_win[depth] as usize;
+    // if rlen > slen {
+    //     rlen = slen;
+    // }
+    // let blen = slen - rlen;
+    // let ftb = ft.split_at_mut(blen * n).1;
+    // let gtb = gt.split_at_mut(blen * n).1;
+    // let scale_fg = 31 * (blen as u32);
+    // let mut scale_FG = 31 * (llen as u32);
+    //
+    // let scale_xf: u32 = poly_max_bitlength(logn, ftb, rlen);
+    // let scale_xg: u32 = poly_max_bitlength(logn, gtb, rlen);
+    // let mut scale_x = scale_xf;
+    // scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
+    let mut scale_t: u32 = (15 - logn) as u32;
+    // scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
+    // let scdiff = scale_x - scale_t;
+    //
+    // poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
+    // poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
-    let scale_xf = poly_max_bitlength(logn, ftb, rlen);
-    let scale_xg = poly_max_bitlength(logn, gtb, rlen);
-    let mut scale_x = scale_xf;
-    scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
-    let mut scale_t = (15 - logn) as u32;
-    scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
-    let scdiff = scale_x - scale_t;
-
-    poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
-    poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
     vect_fft(logn, rt3);
     vect_fft(logn, rt4);
@@ -342,18 +349,63 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     }
 
     if depth == 1 {
-        // gay
+        tmp.copy_within(2 * llen * n + 2 * slen * n..2 * llen * n + 2 * slen * n + 4 * n, 2 * llen * n);
+        (Ft, inter) = tmp.split_at_mut(llen * n);
+        (Gt, inter) = inter.split_at_mut(llen * n);
+        let nrt3 = bytemuck::cast_slice_mut::<u32, fxr>(inter);
+        (rt3, inter_fxr) = nrt3.split_at_mut(n);
+        (rt4, rt1) = inter_fxr.split_at_mut(n);
     }
-    let k = bytemuck::cast_slice_mut::<fxr, i32>(rt1);
-    let (k, t2) = k.split_at_mut(n);
+    let mut k = bytemuck::cast_slice_mut::<fxr, i32>(rt1);
+    let mut t2: &mut [i32] = &mut [];
+    (k, t2) = k.split_at_mut(n);
     let mut rt2 = bytemuck::cast_slice_mut::<i32, fxr>(t2);
-    if rt2.as_ptr() < rt1.split_at(n).1.as_ptr() {
-        rt2 = rt1.split_at_mut(n).1;
+    // if rt2.as_ptr() < rt1.split_at(n).1.as_ptr() {
+    //     rt2 = rt1.split_at_mut(n).1;
+    // }
+
+    if use_sub_ntt {
+        // We have to reborrow because and IF STATEMENT FUCKES IT UP.
+        (Ft, inter) = tmp.split_at_mut(llen * n);
+        (Gt, inter) = inter.split_at_mut(llen * n);
+        (ft, inter) = inter.split_at_mut(slen * n + n);
+        (gt, inter) = inter.split_at_mut(slen * n + n);
+        let (_, t2) = inter.split_at_mut(5 * n);
+
+        let (mut gm, mut tn) = t2.split_at_mut(n);
+        for u in 0..=slen {
+            let p = PRIMES[u].p;
+            let p0i = PRIMES[u].p0i;
+            let r2 = PRIMES[u].r2;
+            let rx = mp_rx31(slen as u32, p, p0i, r2);
+            mp_mkgm(logn, gm, PRIMES[u].g, p, p0i);
+            for v in 0..n {
+                tn[v] = zint_mod_small_signed(
+                    ft.split_at_mut(v).1, slen, n, p, p0i, r2, rx);
+            }
+            mp_ntt(logn, tn, gm, p, p0i);
+            tn = tn.split_at_mut(n).1;
+        }
+        let (mut gm, mut tn) = t2.split_at_mut(n);
+        ft[..(slen + 1) * n].copy_from_slice(&tn[..(slen + 1) * n]);
+        for u in 0..=slen {
+            let p = PRIMES[u].p;
+            let p0i = PRIMES[u].p0i;
+            let r2 = PRIMES[u].r2;
+            let rx = mp_rx31(slen as u32, p, p0i, r2);
+            mp_mkgm(logn, gm, PRIMES[u].g, p, p0i);
+            for v in 0..n {
+                tn[v] = zint_mod_small_signed(
+                    gt.split_at_mut(v).1, slen, n, p, p0i, r2, rx);
+            }
+            mp_ntt(logn, tn, gm, p, p0i);
+            tn = tn.split_at_mut(n).1;
+        }
+        let (_, mut tn) = t2.split_at_mut(n);
+        gt[..(slen + 1) * n].copy_from_slice(&tn[..(slen + 1) * n]);
     }
 
-    if use_sub_ntt {}
-
-    let mut FGlen = llen;
+    // let mut FGlen = llen;
     // loop {
     //     let (tlen, toff) = divrev31(scale_FG as u32);
     //     poly_big_to_fixed(logn, rt1,

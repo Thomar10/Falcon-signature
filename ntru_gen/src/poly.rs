@@ -75,13 +75,13 @@ pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: 
     }
 
     let (mut sch, mut scl) = divrev31(sc);
-    let z: u32 = (scl - 1) >> 31;
-    sch -= z;
+    let z: u32 = (scl.wrapping_sub(1)) >> 31;
+    sch = sch.wrapping_sub(z);
     scl |= 31 & (!z).wrapping_add(1);
 
-    let t0 = ((sch - 1) as u32) & 0xFFFFFF;
+    let t0 = ((sch.wrapping_sub(1)) as u32) & 0xFFFFFF;
     let t1 = sch & 0xFFFFFF;
-    let t2 = ((sch + 1) as u32) & 0xFFFFFF;
+    let t2 = ((sch.wrapping_add(1)) as u32) & 0xFFFFFF;
 
 
     let mut f_index = 0;
@@ -92,15 +92,15 @@ pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: 
         for v in 0..len {
             let w = f[(v << logn) + f_index];
             let t = (v as u32) & 0xFFFFFF;
-            w0 |= w & (!(((t ^ t0) - 1) >> 31) as u32).wrapping_add(1);
-            w1 |= w & (!(((t ^ t1) - 1) >> 31) as u32).wrapping_add(1);
-            w2 |= w & (!(((t ^ t2) - 1) >> 31) as u32).wrapping_add(1);
+            w0 |= w & (!(((t ^ t0).wrapping_sub(1)) >> 31) as u32).wrapping_add(1);
+            w1 |= w & (!(((t ^ t1).wrapping_sub(1)) >> 31) as u32).wrapping_add(1);
+            w2 |= w & (!(((t ^ t2).wrapping_sub(1)) >> 31) as u32).wrapping_add(1);
         }
 
         let ws = (!(f[((len - 1) << logn) + f_index] >> 30)).wrapping_add(1) >> 1;
         w0 |= ws & (!((((len as u32).wrapping_sub(sch)) >> 31) as u32)).wrapping_add(1);
-        w1 |= ws & (!((((len as u32).wrapping_sub(sch - 1)) >> 31) as u32)).wrapping_add(1);
-        w2 |= ws & (!((((len as u32).wrapping_sub(sch - 2)) >> 31) as u32)).wrapping_add(1);
+        w1 |= ws & (!((((len as u32).wrapping_sub(sch.wrapping_sub(1))) >> 31) as u32)).wrapping_add(1);
+        w2 |= ws & (!((((len as u32).wrapping_sub(sch.wrapping_sub(2))) >> 31) as u32)).wrapping_add(1);
 
         w2 |= ((w2 & 0x40000000) as u32) << 1;
         let xl: u32 = (w0 >> (scl - 1)) | (w1 << (32 - scl));

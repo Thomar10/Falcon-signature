@@ -7,6 +7,7 @@ extern "C" {
     pub fn make_fg_deepest_test(profile: &NtruProfileC, logn_top: u32, f: *const i8, g: *const i8, tmp: *const u32, sav_off: usize);
     pub fn solve_NTRU_depth0_test(profile: &NtruProfileC, logn: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
     pub fn solve_NTRU_deepest_test(profile: &NtruProfileC, logn: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
+    pub fn solve_NTRU_intermediate_test(profile: &NtruProfileC, logn: u32, f: *const i8, g: *const i8, depth: usize, tmp: *const u32) -> i32;
     pub fn ntrugen_solve_ntru(profile: &NtruProfileC, logn: u32, f: *const i8, g: *const i8, tmp: *const u32) -> i32;
 }
 
