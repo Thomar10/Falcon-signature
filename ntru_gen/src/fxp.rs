@@ -29,7 +29,7 @@ pub fn fxr_div(mut x: u64, mut y: u64) -> u64 {
         num -= y & (!b).wrapping_add(1);
         num <<= 1;
     }
-    let b: u64 = 1 - ((num - y as u64) >> 63);
+    let b: u64 = 1u64.wrapping_sub((num.wrapping_sub(y as u64)) >> 63);
     q += b;
     sx ^= sy;
     q = (q ^ (!sx).wrapping_add(1)) + sx;
@@ -65,14 +65,15 @@ pub fn vect_fft(logn: usize, f: &mut [fxr]) {
 
 pub fn vect_ifft(logn: usize, f: &mut [fxr]) {
     let hn = 1 << (logn - 1);
-    let ht: usize = 1;
-    for lm in (0..(logn - 1)).rev() {
+    let mut ht: usize = 1;
+    let mut lm = logn - 1;
+    while lm > 0 {
         let m = 1 << lm;
         let t = ht << 1;
-        let j0 = 0;
+        let mut j0 = 0;
         let hm = m >> 1;
         for i in 0..hm {
-            s = fxc_conj(GM_TAB[m + i]);
+            let s = fxc_conj(GM_TAB[m + i]);
             for j in j0..(j0 + ht) {
                 let x = fxc_c(f[j], f[j + hn]);
                 let y = fxc_c(f[j + ht], f[j + ht + hn]);
@@ -86,7 +87,101 @@ pub fn vect_ifft(logn: usize, f: &mut [fxr]) {
             j0 += t;
         }
         ht = t;
+        lm -= 1;
     }
+}
+
+pub fn vect_set(logn: usize, d: &mut [fxr], f: &[i8]) {
+    let n = 1 << logn;
+    for u in 0..n {
+        d[u] = fxr_of(f[u] as i32);
+    }
+}
+
+pub fn vect_add(logn: usize, a: &mut [fxr], b: &[fxr]) {
+    let n = 1 << logn;
+    for u in 0..n {
+        a[u] = fxr_add(a[u], b[u]);
+    }
+}
+
+
+pub fn vect_mul_realconst(logn: usize, a: &mut [fxr], c: fxr) {
+    let n = 1 << logn;
+    for u in 0..n {
+        a[u] = fxr_mul(a[u], c);
+    }
+}
+
+pub fn vect_mul_fft(logn: usize, a: &mut [fxr], b: &[fxr]) {
+    let hn = 1 << (logn - 1);
+    for u in 0..hn {
+        let z = fxc_mul(fxc_c(a[u], a[u + hn]),
+                        fxc_c(b[u], b[u + hn]));
+        a[u] = z.re;
+        a[u + hn] = z.im;
+    }
+}
+
+pub fn vect_adj_fft(logn: usize, a: &mut [fxr]) {
+    let hn = 1 << (logn - 1);
+    let n = 1 << logn;
+    for u in hn..n {
+        a[u] = fxr_neg(a[u]);
+    }
+}
+
+pub fn vect_mul_autoadj_fft(logn: usize, a: &mut [fxr], b: &[fxr]) {
+    let hn = 1 << (logn - 1);
+    for u in 0..hn {
+        a[u] = fxr_mul(a[u], b[u]);
+        a[u + hn] = fxr_mul(a[u + hn], b[u]);
+    }
+}
+
+pub fn vect_div_autoadj_fft(logn: usize, a: &mut [fxr], b: &[fxr]) {
+    let hn = 1 << (logn - 1);
+    for u in 0..hn {
+        a[u] = fxr_div(a[u], b[u]);
+        a[u + hn] = fxr_div(a[u + hn], b[u]);
+    }
+}
+
+pub fn vect_norm_fft(logn: usize, d: &mut [fxr], a: &[fxr], b: &[fxr]) {
+    let hn = 1 << (logn - 1);
+    for u in 0..hn {
+        d[u] = fxr_add(
+            fxr_add(fxr_sqr(a[u]), fxr_sqr(a[u + hn])),
+            fxr_add(fxr_sqr(b[u]), fxr_sqr(b[u + hn])),
+        );
+    }
+}
+
+pub fn vect_invnorm_fft(logn: usize, d: &mut [fxr], a: &[fxr], b: &[fxr], e: u32) {
+    let hn = 1 << (logn - 1);
+    let fe: fxr = fxr_of(1i32 << e);
+    for u in 0..hn {
+        let z = fxr_add(
+            fxr_add(fxr_sqr(a[u]), fxr_sqr(a[u + hn])),
+            fxr_add(fxr_sqr(b[u]), fxr_sqr(b[u + hn])));
+        d[u] = fxr_div(fe, z);
+    }
+}
+
+#[inline(always)]
+fn fxr_sqr(x: fxr) -> fxr {
+    let xl = x as u32;
+    let xh: i32 = (x >> 32) as i32;
+    let z0: u64 = (((xl as u64).wrapping_mul(xl as u64)) as u64) >> 32;
+    let z1: u64 = ((xl as i64).wrapping_mul(xh as i64)) as u64;
+    let z3: u64 = (((xh as i64).wrapping_mul(xh as i64)) as u64) << 32;
+    z0.wrapping_add(z1 << 1).wrapping_add(z3)
+}
+
+
+#[inline(always)]
+fn fxr_of(x: i32) -> fxr {
+    (x as fxr) << 32
 }
 
 #[inline(always)]
@@ -95,20 +190,20 @@ fn fxr_neg(x: fxr) -> fxr {
 }
 
 #[inline(always)]
-fn fxc_conj(x: fxc) -> FXC {
-    x.im = fxr_neg(x.im);
-    x
+fn fxc_conj(x: FXC) -> FXC {
+    fxc_c(x.re, fxr_neg(x.im))
 }
 
 #[inline(always)]
-fn fxc_half(x: fxr) -> fxr {
-
+fn fxc_half(x: FXC) -> FXC {
+    fxc_c(fxr_div2e(x.re, 1), fxr_div2e(x.im, 1))
 }
 
 #[inline(always)]
 fn fxr_div2e(x: fxr, n: u32) -> fxr {
     let v = x as i64;
-
+    let i = ((v + ((1i64 << n) >> 1)) >> n) as u64;
+    i
 }
 
 #[inline(always)]
