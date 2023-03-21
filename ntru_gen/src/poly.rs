@@ -146,17 +146,17 @@ pub fn poly_sub_scaled_ntt(logn: usize, F: &mut [u32], Flen: usize, f: &[u32], f
         let p = PRIMES[u].p;
         let p0i = PRIMES[u].p0i;
         let r2 = PRIMES[u].r2;
-        mp_mkgmigm(logn as u32, gm, igm, PRIMES[u].g, PRIMES[u].ig, p, p0i);
+        mp_mkgmigm(logn, gm, igm, PRIMES[u].g, PRIMES[u].ig, p, p0i);
         for v in 0..n {
             t1[v] = mp_set(k[v], p);
         }
-        mp_ntt(logn as u32, t1, gm, p, p0i);
+        mp_ntt(logn, t1, gm, p, p0i);
         let (_, fs) = f.split_at(u << logn);
         let (_, ff) = fk.split_at_mut(u << logn);
         for v in 0..n {
             ff[v] = mp_montymul(mp_montymul(t1[v], fs[v], p, p0i), r2, p, p0i);
         }
-        mp_intt(logn as u32, ff, igm, p, p0i);
+        mp_intt(logn, ff, igm, p, p0i);
     }
     zint_rebuild_crt(fk, tlen, n, 1, true, t1);
     for u in 0..n {
@@ -165,7 +165,7 @@ pub fn poly_sub_scaled_ntt(logn: usize, F: &mut [u32], Flen: usize, f: &[u32], f
 }
 
 
-pub fn poly_sub_kfg_scaled_depth1(logn_top: u32, F: &mut [u32], G: &mut [u32], FGlen: usize, k: &mut [u32], sc: u32, f: &[i8], g: &[i8], tmp: &mut [u32]) {
+pub fn poly_sub_kfg_scaled_depth1(logn_top: usize, F: &mut [u32], G: &mut [u32], FGlen: usize, k: &mut [u32], sc: u32, f: &[i8], g: &[i8], tmp: &mut [u32]) {
     let logn = logn_top - 1;
     let n = 1usize << logn as usize;
     let hn = n >> 1;
@@ -359,11 +359,11 @@ pub fn poly_sub_kfg_scaled_depth1(logn_top: u32, F: &mut [u32], G: &mut [u32], F
 pub fn poly_is_invertible(logn: usize, f: &[i8], p: u32, p0i: u32, s: u32, r: u32, rm: u32, rs: u32, tmp: &mut [u32]) -> bool {
     let n = 1 << logn;
     let (t1, t2) = tmp.split_at_mut(n);
-    mp_mkgm(logn as u32, t1, s, p, p0i);
+    mp_mkgm(logn, t1, s, p, p0i);
     for u in 0..n {
         t2[u] = mp_set(f[u] as i32, p);
     }
-    mp_ntt(logn as u32, t2, t1, p, p0i);
+    mp_ntt(logn, t2, t1, p, p0i);
     let mut b: u32 = 0;
     for u in 0..n {
         let mut x = t2[u];
@@ -379,11 +379,11 @@ pub fn poly_is_invertible(logn: usize, f: &[i8], p: u32, p0i: u32, s: u32, r: u3
 pub fn poly_is_invertible_ext(logn: usize, f: &[i8], r1: u32, r2: u32, p: u32, p0i: u32, s: u32, r1m: u32, r1s: u32, r2m: u32, r2s: u32, tmp: &mut [u32]) -> bool {
     let n = 1 << logn;
     let (t1, t2) = tmp.split_at_mut(n);
-    mp_mkgm(logn as u32, t1, s, p, p0i);
+    mp_mkgm(logn, t1, s, p, p0i);
     for u in 0..n {
         t2[u] = mp_set(f[u] as i32, p);
     }
-    mp_ntt(logn as u32, t2, t1, p, p0i);
+    mp_ntt(logn, t2, t1, p, p0i);
     let mut b: u32 = 0;
     for u in 0..n {
         let x = t2[u];

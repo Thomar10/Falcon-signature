@@ -1,10 +1,11 @@
 #![allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
+    use rand::Rng;
+
     use ntru_gen::fxp::fxr;
     use ntru_gen::poly::{poly_big_to_fixed, poly_big_to_small, poly_max_bitlength, poly_mp_norm, poly_mp_set, poly_mp_set_small, poly_sqnorm, poly_sub_kfg_scaled_depth1, poly_sub_scaled, poly_sub_scaled_ntt};
     use ntru_gen_c::poly::{ntrugen_poly_big_to_fixed, ntrugen_poly_big_to_small, ntrugen_poly_max_bitlength, ntrugen_poly_mp_norm, ntrugen_poly_mp_set, ntrugen_poly_mp_set_small, ntrugen_poly_sqnorm, ntrugen_poly_sub_kfg_scaled_depth1, ntrugen_poly_sub_scaled, ntrugen_poly_sub_scaled_ntt};
-    use rand::Rng;
 
     const P: u32 = 12289;
 
@@ -148,7 +149,7 @@ mod tests {
         unsafe { ntrugen_poly_sub_kfg_scaled_depth1(logn as u32, Fc.as_ptr(), Gc.as_ptr(), 2, kc.as_ptr(), sc, f.as_ptr(), g.as_ptr(), tmpc.as_ptr()) };
         assert_eq!(k, kc);
         assert_eq!(tmp, tmpc);
-        // assert_eq!(F, Fc);
-        // assert_eq!(G, Gc);
+        assert_eq!(F, Fc);
+        assert_eq!(G, Gc);
     }
 }

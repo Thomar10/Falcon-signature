@@ -175,6 +175,12 @@ make_fg_step(const ntru_profile *prof,
 	}
 }
 
+void make_fg_step_test(const ntru_profile *prof,
+	unsigned logn_top, unsigned depth, uint32_t *tmp)
+{
+  make_fg_step(prof, logn_top, depth, tmp);
+}
+
 /*
  * Compute (f,g) at a specified depth, in RNS+NTT notation.
  * Computed values are stored at the start of the provided tmp[] (slen

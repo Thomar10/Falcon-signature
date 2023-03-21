@@ -276,6 +276,15 @@ pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &[u32], neg: u32) {
     }
 }
 
+#[inline(always)]
+pub fn zint_mod_small_signed(d: &[u32], len: usize, stride: usize, p: u32, p0i: u32, r2: u32, rx: u32) -> u32 {
+    if len == 0 {
+        return 0;
+    }
+    let z = zint_mod_small_unsigned(d, len, stride, p, p0i, r2);
+    mp_sub(z, rx & (!(d[(len - 1) * stride] >> 30)).wrapping_add(1), p)
+}
+
 pub fn zint_co_reduce(a: &mut [u32], b: &mut [u32], len: usize, xa: i64, xb: i64, ya: i64, yb: i64) -> u32 {
     let mut cca: i64 = 0;
     let mut ccb: i64 = 0;

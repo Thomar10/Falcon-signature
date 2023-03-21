@@ -21,7 +21,7 @@ pub fn mp_div(x: u32, y: u32, p: u32) -> u32 {
     v & tbmask(b.wrapping_sub(2))
 }
 
-pub fn mp_mkgmigm(logn: u32, gm: &mut [u32], igm: &mut [u32], mut g: u32, mut ig: u32, p: u32, p0i: u32) {
+pub fn mp_mkgmigm(logn: usize, gm: &mut [u32], igm: &mut [u32], mut g: u32, mut ig: u32, p: u32, p0i: u32) {
     let n: usize = 1 << logn as usize;
     for _ in logn..10 {
         g = mp_montymul(g, g, p, p0i);
@@ -44,7 +44,7 @@ pub fn mp_mkgmigm(logn: u32, gm: &mut [u32], igm: &mut [u32], mut g: u32, mut ig
     }
 }
 
-pub fn mp_mkgm(logn: u32, gm: &mut [u32], mut g: u32, p: u32, p0i: u32) {
+pub fn mp_mkgm(logn: usize, gm: &mut [u32], mut g: u32, p: u32, p0i: u32) {
     let n: usize = 1 << logn as usize;
     for _ in logn..10 {
         g = mp_montymul(g, g, p, p0i);
@@ -74,7 +74,7 @@ pub fn mp_mkgm7(gm: &mut [u32], g: u32, p: u32, p0i: u32) {
     }
 }
 
-pub fn mp_mkigm(logn: u32, igm: &mut [u32], mut ig: u32, p: u32, p0i: u32) {
+pub fn mp_mkigm(logn: usize, igm: &mut [u32], mut ig: u32, p: u32, p0i: u32) {
     let n: usize = 1 << logn as usize;
     for _ in logn..10 {
         ig = mp_montymul(ig, ig, p, p0i);
@@ -93,7 +93,7 @@ pub fn mp_mkigm(logn: u32, igm: &mut [u32], mut ig: u32, p: u32, p0i: u32) {
     }
 }
 
-pub fn mp_ntt(logn: u32, a: &mut [u32], gm: &[u32], p: u32, p0i: u32) {
+pub fn mp_ntt(logn: usize, a: &mut [u32], gm: &[u32], p: u32, p0i: u32) {
     if logn == 0 {
         return;
     }
@@ -118,7 +118,7 @@ pub fn mp_ntt(logn: u32, a: &mut [u32], gm: &[u32], p: u32, p0i: u32) {
     }
 }
 
-pub fn mp_intt(logn: u32, a: &mut [u32], igm: &[u32], p: u32, p0i: u32) {
+pub fn mp_intt(logn: usize, a: &mut [u32], igm: &[u32], p: u32, p0i: u32) {
     if logn == 0 {
         return;
     }
@@ -140,6 +140,23 @@ pub fn mp_intt(logn: u32, a: &mut [u32], igm: &[u32], p: u32, p0i: u32) {
             v0 += dt;
         }
         t = dt;
+    }
+}
+
+
+#[inline(always)]
+pub fn mp_rx31(mut e: u32, p: u32, p0i: u32, r2: u32) -> u32 {
+    let mut x = mp_half(r2, p);
+    let mut d = 1;
+    loop {
+        if (e & 1) != 0 {
+            d = mp_montymul(d, x, p, p0i);
+        }
+        e >>= 1;
+        if e == 0 {
+            return d;
+        }
+        x = mp_montymul(x, x, p, p0i);
     }
 }
 
