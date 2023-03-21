@@ -478,36 +478,12 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 		uint32_t Rx = mp_Rx31((unsigned)dlen, p, p0i, R2);
 		uint32_t *xt = Ft + u * n + hn;
 		uint32_t *yt = Gt + u * n + hn;
-#if NTRUGEN_AVX2
-		if (logn >= 4) {
-			__m256i yp = _mm256_set1_epi32(p);
-			__m256i yp0i = _mm256_set1_epi32(p0i);
-			__m256i yR2 = _mm256_set1_epi32(R2);
-			__m256i yRx = _mm256_set1_epi32(Rx);
-			for (size_t v = 0; v < hn; v += 8) {
-				_mm256_storeu_si256((__m256i *)(xt + v),
-					zint_mod_small_signed_x8(Fd + v, dlen,
-						hn, yp, yp0i, yR2, yRx));
-				_mm256_storeu_si256((__m256i *)(yt + v),
-					zint_mod_small_signed_x8(Gd + v, dlen,
-						hn, yp, yp0i, yR2, yRx));
-			}
-		} else {
-			for (size_t v = 0; v < hn; v ++) {
-				xt[v] = zint_mod_small_signed(Fd + v, dlen, hn,
-					p, p0i, R2, Rx);
-				yt[v] = zint_mod_small_signed(Gd + v, dlen, hn,
-					p, p0i, R2, Rx);
-			}
-		}
-#else // NTRUGEN_AVX2
 		for (size_t v = 0; v < hn; v ++) {
 			xt[v] = zint_mod_small_signed(Fd + v, dlen, hn,
 				p, p0i, R2, Rx);
 			yt[v] = zint_mod_small_signed(Gd + v, dlen, hn,
 				p, p0i, R2, Rx);
 		}
-#endif // NTRUGEN_AVX2
 	}
 
 	/*
@@ -725,26 +701,27 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	/*
 	 * We consider only the top rlen words of (f,g).
 	 */
-//	size_t rlen = prof->word_win[depth];
-//	if (rlen > slen) {
-//		rlen = slen;
-//	}
-//	size_t blen = slen - rlen;
-//	uint32_t *ftb = ft + blen * n;
-//	uint32_t *gtb = gt + blen * n;
-//	uint32_t scale_fg = 31 * (uint32_t)blen;
-//	uint32_t scale_FG = 31 * (uint32_t)llen;
-//
-//	uint32_t scale_xf = poly_max_bitlength(logn, ftb, rlen);
-//	uint32_t scale_xg = poly_max_bitlength(logn, gtb, rlen);
-//	uint32_t scale_x = scale_xf;
-//	scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
+	size_t rlen = prof->word_win[depth];
+	if (rlen > slen) {
+		rlen = slen;
+	}
+	size_t blen = slen - rlen;
+	uint32_t *ftb = ft + blen * n;
+	uint32_t *gtb = gt + blen * n;
+	uint32_t scale_fg = 31 * (uint32_t)blen;
+	uint32_t scale_FG = 31 * (uint32_t)llen;
+
+	uint32_t scale_xf = poly_max_bitlength(logn, ftb, rlen);
+	uint32_t scale_xg = poly_max_bitlength(logn, gtb, rlen);
+	uint32_t scale_x = scale_xf;
+	scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
 	uint32_t scale_t = 15 - logn;
-//	scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
-//	uint32_t scdiff = scale_x - scale_t;
-//
-//	poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
-//	poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
+	scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
+	uint32_t scdiff = scale_x - scale_t;
+	printf("%u\n", scdiff);
+
+	poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
+	poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
 	/*
 	 * Compute adj(f)/(f*adj(f) + g*adj(g)) into rt3 (FFT).
@@ -926,44 +903,44 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 //			FGlen --;
 //		}
 //	}
-//
-//	/*
-//	 * Output F is already in the right place; G is in Gt, and must be
-//	 * moved back a bit.
-//	 */
-//	memmove(tmp + slen * n, Gt, slen * n * sizeof *tmp);
-//	Gt = tmp + slen * n;
-//
-//	/*
-//	 * Reduction is done. We test the current solution modulo a single
-//	 * prime.
-//	 * Exception: we cannot do that if depth == 1, since in that case
-//	 * we did not keep (ft,gt). Reduction errors rarely occur at this
-//	 * stage, so we can omit that test (depth-0 test will cover it).
-//	 *
-//	 * If use_sub_ntt != 0, then ft and gt are already in NTT
-//	 * representation.
-//	 */
-//	if (depth == 1) {
-//		return SOLVE_OK;
-//	}
-//
-//	t2 = t1 + n;
-//	uint32_t *t3 = t2 + n;
-//	uint32_t *t4 = t3 + n;
-//	uint32_t p = PRIMES[0].p;
-//	uint32_t p0i = PRIMES[0].p0i;
-//	uint32_t R2 = PRIMES[0].R2;
-//	uint32_t Rx = mp_Rx31(slen, p, p0i, R2);
+
+	/*
+	 * Output F is already in the right place; G is in Gt, and must be
+	 * moved back a bit.
+	 */
+	memmove(tmp + slen * n, Gt, slen * n * sizeof *tmp);
+	Gt = tmp + slen * n;
+
+	/*
+	 * Reduction is done. We test the current solution modulo a single
+	 * prime.
+	 * Exception: we cannot do that if depth == 1, since in that case
+	 * we did not keep (ft,gt). Reduction errors rarely occur at this
+	 * stage, so we can omit that test (depth-0 test will cover it).
+	 *
+	 * If use_sub_ntt != 0, then ft and gt are already in NTT
+	 * representation.
+	 */
+	if (depth == 1) {
+		return SOLVE_OK;
+	}
+
+	t2 = t1 + n;
+	uint32_t *t3 = t2 + n;
+	uint32_t *t4 = t3 + n;
+	uint32_t p = PRIMES[0].p;
+	uint32_t p0i = PRIMES[0].p0i;
+	uint32_t R2 = PRIMES[0].R2;
+	uint32_t Rx = mp_Rx31(slen, p, p0i, R2);
 //	mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
-//	if (use_sub_ntt) {
+	if (use_sub_ntt) {
 //		t1 = ft;
 //		for (size_t u = 0; u < n; u ++) {
 //			t2[u] = zint_mod_small_signed(
 //				Gt + u, slen, n, p, p0i, R2, Rx);
 //		}
 //		mp_NTT(logn, t2, t4, p, p0i);
-//	} else {
+	} else {
 //		for (size_t u = 0; u < n; u ++) {
 //			t1[u] = zint_mod_small_signed(
 //				ft + u, slen, n, p, p0i, R2, Rx);
@@ -972,35 +949,35 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 //		}
 //		mp_NTT(logn, t1, t4, p, p0i);
 //		mp_NTT(logn, t2, t4, p, p0i);
-//	}
-//#if NTRUGEN_AVX2
-//	if (n >= 8) {
-//		__m256i yp = _mm256_set1_epi32(p);
-//		__m256i yp0i = _mm256_set1_epi32(p0i);
-//		for (size_t u = 0; u < n; u += 8) {
-//			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
-//			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
-//			__m256i y3 = mp_montymul_x8(y1, y2, yp, yp0i);
-//			_mm256_storeu_si256((__m256i *)(t3 + u), y3);
-//		}
-//	} else {
-//		for (size_t u = 0; u < n; u ++) {
-//			t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
-//		}
-//	}
-//#else // NTRUGEN_AVX2
-//	for (size_t u = 0; u < n; u ++) {
+	}
+#if NTRUGEN_AVX2
+	if (n >= 8) {
+		__m256i yp = _mm256_set1_epi32(p);
+		__m256i yp0i = _mm256_set1_epi32(p0i);
+		for (size_t u = 0; u < n; u += 8) {
+			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
+			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
+			__m256i y3 = mp_montymul_x8(y1, y2, yp, yp0i);
+			_mm256_storeu_si256((__m256i *)(t3 + u), y3);
+		}
+	} else {
+		for (size_t u = 0; u < n; u ++) {
+			t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
+		}
+	}
+#else // NTRUGEN_AVX2
+	for (size_t u = 0; u < n; u ++) {
 //		t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
-//	}
-//#endif // NTRUGEN_AVX2
-//	if (use_sub_ntt) {
+	}
+#endif // NTRUGEN_AVX2
+	if (use_sub_ntt) {
 //		t1 = gt;
 //		for (size_t u = 0; u < n; u ++) {
 //			t2[u] = zint_mod_small_signed(
 //				Ft + u, slen, n, p, p0i, R2, Rx);
 //		}
 //		mp_NTT(logn, t2, t4, p, p0i);
-//	} else {
+	} else {
 //		for (size_t u = 0; u < n; u ++) {
 //			t1[u] = zint_mod_small_signed(
 //				gt + u, slen, n, p, p0i, R2, Rx);
@@ -1009,41 +986,41 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 //		}
 //		mp_NTT(logn, t1, t4, p, p0i);
 //		mp_NTT(logn, t2, t4, p, p0i);
-//	}
-//	uint32_t rv = mp_montymul(prof->q, 1, p, p0i);
-//#if NTRUGEN_AVX2
-//	if (n >= 8) {
-//		__m256i yp = _mm256_set1_epi32(p);
-//		__m256i yp0i = _mm256_set1_epi32(p0i);
-//		__m256i yrv = _mm256_set1_epi32(rv);
-//		for (size_t u = 0; u < n; u += 8) {
-//			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
-//			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
-//			__m256i y3 = _mm256_loadu_si256((__m256i *)(t3 + u));
-//			__m256i yx = mp_sub_x8(y3,
-//				mp_montymul_x8(y1, y2, yp, yp0i), yp);
-//			if ((uint32_t)_mm256_movemask_epi8(
-//				_mm256_cmpeq_epi32(yx, yrv)) != 0xFFFFFFFF)
-//			{
-//				return SOLVE_ERR_REDUCE;
-//			}
-//		}
-//	} else {
-//		for (size_t u = 0; u < n; u ++) {
-//			uint32_t x = mp_montymul(t1[u], t2[u], p, p0i);
-//			if (mp_sub(t3[u], x, p) != rv) {
-//				return SOLVE_ERR_REDUCE;
-//			}
-//		}
-//	}
-//#else // NTRUGEN_AVX2
-//	for (size_t u = 0; u < n; u ++) {
+	}
+	uint32_t rv = mp_montymul(prof->q, 1, p, p0i);
+#if NTRUGEN_AVX2
+	if (n >= 8) {
+		__m256i yp = _mm256_set1_epi32(p);
+		__m256i yp0i = _mm256_set1_epi32(p0i);
+		__m256i yrv = _mm256_set1_epi32(rv);
+		for (size_t u = 0; u < n; u += 8) {
+			__m256i y1 = _mm256_loadu_si256((__m256i *)(t1 + u));
+			__m256i y2 = _mm256_loadu_si256((__m256i *)(t2 + u));
+			__m256i y3 = _mm256_loadu_si256((__m256i *)(t3 + u));
+			__m256i yx = mp_sub_x8(y3,
+				mp_montymul_x8(y1, y2, yp, yp0i), yp);
+			if ((uint32_t)_mm256_movemask_epi8(
+				_mm256_cmpeq_epi32(yx, yrv)) != 0xFFFFFFFF)
+			{
+				return SOLVE_ERR_REDUCE;
+			}
+		}
+	} else {
+		for (size_t u = 0; u < n; u ++) {
+			uint32_t x = mp_montymul(t1[u], t2[u], p, p0i);
+			if (mp_sub(t3[u], x, p) != rv) {
+				return SOLVE_ERR_REDUCE;
+			}
+		}
+	}
+#else // NTRUGEN_AVX2
+	for (size_t u = 0; u < n; u ++) {
 //		uint32_t x = mp_montymul(t1[u], t2[u], p, p0i);
 //		if (mp_sub(t3[u], x, p) != rv) {
 //			return SOLVE_ERR_REDUCE;
 //		}
-//	}
-//#endif // NTRUGEN_AVX2
+	}
+#endif // NTRUGEN_AVX2
 
 	return SOLVE_OK;
 }

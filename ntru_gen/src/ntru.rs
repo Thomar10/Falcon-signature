@@ -314,26 +314,26 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     let (mut rt3, mut inter_fxr) = rt3.split_at_mut(n);
     let (mut rt4, mut rt1) = inter_fxr.split_at_mut(n);
 
-    // let mut rlen = profile.word_win[depth] as usize;
-    // if rlen > slen {
-    //     rlen = slen;
-    // }
-    // let blen = slen - rlen;
-    // let ftb = ft.split_at_mut(blen * n).1;
-    // let gtb = gt.split_at_mut(blen * n).1;
-    // let scale_fg = 31 * (blen as u32);
-    // let mut scale_FG = 31 * (llen as u32);
-    //
-    // let scale_xf: u32 = poly_max_bitlength(logn, ftb, rlen);
-    // let scale_xg: u32 = poly_max_bitlength(logn, gtb, rlen);
-    // let mut scale_x = scale_xf;
-    // scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
+    let mut rlen = profile.word_win[depth] as usize;
+    if rlen > slen {
+        rlen = slen;
+    }
+    let blen = slen - rlen;
+    let ftb = ft.split_at_mut(blen * n).1;
+    let gtb = gt.split_at_mut(blen * n).1;
+    let scale_fg = 31 * (blen as u32);
+    let mut scale_FG = 31 * (llen as u32);
+
+    let scale_xf: u32 = poly_max_bitlength(logn, ftb, rlen);
+    let scale_xg: u32 = poly_max_bitlength(logn, gtb, rlen);
+    let mut scale_x = scale_xf;
+    scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
     let mut scale_t: u32 = (15 - logn) as u32;
-    // scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
-    // let scdiff = scale_x - scale_t;
-    //
-    // poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
-    // poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
+    scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
+    let scdiff = scale_x - scale_t;
+    println!("{}", scdiff);
+    poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
+    poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
 
     vect_fft(logn, rt3);
@@ -448,27 +448,62 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     //         FGlen -= 1;
     //     }
     // }
-    //
-    // // memmove(tmp + slen * n, Gt, slen * n * sizeof *tmp);
-    // let (Gt, mut inter) = tmp.split_at_mut(slen * n);
-    // let mut t1: &mut [u32] = &mut [];
-    // if depth == 1 {
-    //     return true;
-    // }
 
-    // let p = PRIMES[0].p;
-    // let p0i = PRIMES[0].p0i;
-    // let r2 = PRIMES[0].r2;
-    // let rx = mp_rx31(slen as u32, p, p0i, r2);
-    // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
-    // if use_sub_ntt {
-    //     // t1 is +=  2*n
-    //     let (_, inter) = inter.split_at_mut(2 * llen * n + 2 * slen * n + 2 * n);
-    //     (t1, inter) = inter.split_at_mut(n);
-    // } else {
-    //     let (_, inter) = inter.split_at_mut(2 * llen * n + 2 * slen * n);
-    //     (t1, inter) = inter.split_at_mut(n);
-    // }
+
+    tmp.copy_within(llen * n..llen * n + slen * n, slen * n);
+    if depth == 1 {
+        return true;
+    }
+
+
+    let (Gt, inter) = tmp.split_at_mut(slen * n);
+    let p = PRIMES[0].p;
+    let p0i = PRIMES[0].p0i;
+    let r2 = PRIMES[0].r2;
+    let rx = mp_rx31(slen as u32, p, p0i, r2);
+    if use_sub_ntt {
+        // let (_, inter) = inter.split_at_mut(slen * n + llen * n * 2 + n);
+        // let (t1, inter) = inter.split_at_mut(n);
+        // let (t2, inter) = inter.split_at_mut(n);
+        // let (t3, t4) = inter.split_at_mut(n);
+        // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
+        // for u in 0..n {
+        //     t2[u] = zint_mod_small_signed(
+        //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+        // }
+        // mp_ntt(logn, t2, t4, p, p0i);
+    } else {
+        // let (_, inter) = inter.split_at_mut(llen * n * 2);
+        // let (ft, inter) = inter.split_at_mut(slen * n);
+        // let (t1, inter) = inter.split_at_mut(n);
+        // let (t2, inter) = inter.split_at_mut(n);
+        // let (t3, t4) = inter.split_at_mut(n);
+        // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
+        // for u in 0..n {
+        //     t1[u] = zint_mod_small_signed(
+        //         ft.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+        //     t2[u] = zint_mod_small_signed(
+        //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+        // }
+        // mp_ntt(logn, t1, t4, p, p0i);
+        // mp_ntt(logn, t2, t4, p, p0i);
+    }
+
+    for u in 0..n {
+        // t3[u] = mp_montymul(t1[u], t2[u], p ,p0i);
+    }
+    if use_sub_ntt {
+
+    } else {
+
+    }
+    let rv = mp_montymul(profile.q, 1, p, p0i);
+    for u in 0..n {
+        // let x = mp_montymul(t1[u], t2[u], p, p0i);
+        // if mp_sub(t3[u], x, p) != rv {
+        //     return false;
+        // }
+    }
     // let (t2, inter) = inter.split_at_mut(n);
     // let (t3, t4) = inter.split_at_mut(n);
     //
