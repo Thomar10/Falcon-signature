@@ -1,7 +1,8 @@
+#![allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use ntru_gen::fxp::fxr;
-    use ntru_gen::poly::{poly_big_to_fixed, poly_big_to_small, poly_is_invertible, poly_is_invertible_ext, poly_max_bitlength, poly_mp_norm, poly_mp_set, poly_mp_set_small, poly_sqnorm, poly_sub_kfg_scaled_depth1, poly_sub_scaled, poly_sub_scaled_ntt};
+    use ntru_gen::poly::{poly_big_to_fixed, poly_big_to_small, poly_max_bitlength, poly_mp_norm, poly_mp_set, poly_mp_set_small, poly_sqnorm, poly_sub_kfg_scaled_depth1, poly_sub_scaled, poly_sub_scaled_ntt};
     use ntru_gen_c::poly::{ntrugen_poly_big_to_fixed, ntrugen_poly_big_to_small, ntrugen_poly_max_bitlength, ntrugen_poly_mp_norm, ntrugen_poly_mp_set, ntrugen_poly_mp_set_small, ntrugen_poly_sqnorm, ntrugen_poly_sub_kfg_scaled_depth1, ntrugen_poly_sub_scaled, ntrugen_poly_sub_scaled_ntt};
     use rand::Rng;
 
@@ -113,7 +114,7 @@ mod tests {
     fn poly_sqnorm_test() {
         let logn = 10;
         let mut rng = rand::thread_rng();
-        let mut f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+        let f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
 
         let res = poly_sqnorm(logn, &f);
         let resc = unsafe { ntrugen_poly_sqnorm(logn as u32, f.as_ptr()) };
@@ -125,15 +126,15 @@ mod tests {
         let logn = 2;
         let mut rng = rand::thread_rng();
         let mut F: [u32; 2048] = [0; 2048];
-        let mut Fc: [u32; 2048] = [0; 2048];
+        let Fc: [u32; 2048] = [0; 2048];
         let mut G: [u32; 2048] = [0; 2048];
-        let mut Gc: [u32; 2048] = [0; 2048];
+        let Gc: [u32; 2048] = [0; 2048];
         let mut k: [u32; 2048] = core::array::from_fn(|_| rng.gen::<u32>());
         let kc: [u32; 2048] = k.clone();
         let f: [i8; 2048] = core::array::from_fn(|_| rng.gen::<i8>());
         let g: [i8; 2048] = core::array::from_fn(|_| rng.gen::<i8>());
         let mut tmp: [u32; 10 * 1024] = [0; 10 * 1024];
-        let mut tmpc: [u32; 10 * 1024] = [0; 10 * 1024];
+        let tmpc: [u32; 10 * 1024] = [0; 10 * 1024];
         let sc = 976234;
         poly_sub_kfg_scaled_depth1(logn, &mut F, &mut G, 1, &mut k, sc, &f, &g, &mut tmp);
         unsafe { ntrugen_poly_sub_kfg_scaled_depth1(logn as u32, Fc.as_ptr(), Gc.as_ptr(), 1, kc.as_ptr(), sc, f.as_ptr(), g.as_ptr(), tmpc.as_ptr()) };

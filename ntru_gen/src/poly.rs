@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use crate::fxp::fxr;
 use crate::mp31::{lzcnt, mp_add, mp_half, mp_intt, mp_mkgm, mp_mkgmigm, mp_mkigm, mp_montymul, mp_norm, mp_ntt, mp_set, mp_sub, PRIMES, tbmask};
 use crate::zint31::{zint_add_scaled_mul_small, zint_rebuild_crt, zint_sub_scaled};
