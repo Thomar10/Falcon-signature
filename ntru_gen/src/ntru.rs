@@ -71,12 +71,11 @@ pub fn make_fg_step(profile: &NtruProfile, logn_top: usize, depth: u32, tmp: &mu
     let (_, mut yf) = fd.split_at_mut(hn * slen);
     let (gd, inter2) = inter.split_at_mut(hn * tlen);
     let (_, mut yg) = gd.split_at_mut(hn * slen);
-    let (inter_low, inter_top) = inter2.split_at_mut(2 * n * slen);
-
-    zint_rebuild_crt(inter_low, slen, n, 2, true, inter_top);
     let (gs, inter) = inter2.split_at_mut(n * slen);
     let (fs, inter) = inter.split_at_mut(n * slen);
     let (t1, t2) = inter.split_at_mut(n);
+    zint_rebuild_crt(fs, slen, n, 1, true, t1);
+    zint_rebuild_crt(gs, slen, n, 1, true, t1);
 
     for u in slen..tlen {
         let p = PRIMES[u].p;
