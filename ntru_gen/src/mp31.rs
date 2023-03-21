@@ -134,7 +134,7 @@ pub fn mp_intt(logn: u32, a: &mut [u32], igm: &[u32], p: u32, p0i: u32) {
                 let k2 = k1 + t;
                 let x1 = a[k1];
                 let x2 = a[k2];
-                a[k1] = mp_half(mp_add(a[k2], s, p), p);
+                a[k1] = mp_half(mp_add(x1, x2, p), p);
                 a[k2] = mp_montymul(mp_sub(x1, x2, p), s, p, p0i);
             }
             v0 += dt;
