@@ -317,7 +317,7 @@ pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &[u32], mut ylen
     let mut x_index = sch * stride;
     let mut y_index = 0;
     for _ in sch..xlen {
-        let mut wy;
+        let wy;
         if ylen > 0 {
             wy = y[y_index];
             y_index += stride;

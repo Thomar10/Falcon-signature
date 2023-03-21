@@ -4,8 +4,6 @@ mod tests {
     use ntru_gen_c::fxp::{ntrugen_inner_fxr_div, ntrugen_vect_add, ntrugen_vect_adj_fft, ntrugen_vect_div_autoadj_fft, ntrugen_vect_FFT, ntrugen_vect_iFFT, ntrugen_vect_invnorm_fft, ntrugen_vect_mul_autoadj_fft, ntrugen_vect_mul_fft, ntrugen_vect_mul_realconst, ntrugen_vect_norm_fft, ntrugen_vect_set};
     use rand::Rng;
 
-    const P: u32 = 12289;
-
     #[test]
     fn fxr_div_test() {
         let x: u64 = rand::random();
@@ -42,7 +40,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut d: [fxr; 1024] = [0; 1024];
         let dc: [fxr; 1024] = [0; 1024];
-        let mut f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+        let f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
         vect_set(logn, &mut d, &f);
         unsafe { ntrugen_vect_set(logn as u32, dc.as_ptr(), f.as_ptr()); }
         assert_eq!(d, dc);
@@ -54,7 +52,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut a: [fxr; 1024] = core::array::from_fn(|_| rng.gen::<fxr>());
         let ac: [fxr; 1024] = a.clone();
-        let mut b: [fxr; 1024] = core::array::from_fn(|_| rng.gen::<fxr>());
+        let b: [fxr; 1024] = core::array::from_fn(|_| rng.gen::<fxr>());
         vect_add(logn, &mut a, &b);
         unsafe { ntrugen_vect_add(logn as u32, ac.as_ptr(), b.as_ptr()); }
         assert_eq!(a, ac);

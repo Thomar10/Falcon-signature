@@ -206,8 +206,8 @@ pub fn mp_ninv31(p: u32) -> u32 {
 }
 
 #[inline(always)]
-fn mp_norm(x: u32, p: u32) -> i32 {
-    let w: u32 = x - (p & tbmask((p >> 1) - x));
+pub fn mp_norm(x: u32, p: u32) -> i32 {
+    let w: u32 = x.wrapping_sub(p & tbmask((p >> 1).wrapping_sub(x)));
     w as i32
 }
 
