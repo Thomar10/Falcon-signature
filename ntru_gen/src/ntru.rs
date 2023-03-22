@@ -477,73 +477,95 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
             FGlen -= 1;
         }
     }
-    //
-    //
-    // tmp.copy_within(llen * n..llen * n + slen * n, slen * n);
-    // if depth == 1 {
-    //     return true;
-    // }
-    //
-    //
-    // let (Gt, inter) = tmp.split_at_mut(slen * n);
-    // let p = PRIMES[0].p;
-    // let p0i = PRIMES[0].p0i;
-    // let r2 = PRIMES[0].r2;
-    // let rx = mp_rx31(slen as u32, p, p0i, r2);
-    // if use_sub_ntt {
-    //     // let (_, inter) = inter.split_at_mut(slen * n + llen * n * 2 + n);
-    //     // let (t1, inter) = inter.split_at_mut(n);
-    //     // let (t2, inter) = inter.split_at_mut(n);
-    //     // let (t3, t4) = inter.split_at_mut(n);
-    //     // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
-    //     // for u in 0..n {
-    //     //     t2[u] = zint_mod_small_signed(
-    //     //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
-    //     // }
-    //     // mp_ntt(logn, t2, t4, p, p0i);
-    // } else {
-    //     // let (_, inter) = inter.split_at_mut(llen * n * 2);
-    //     // let (ft, inter) = inter.split_at_mut(slen * n);
-    //     // let (t1, inter) = inter.split_at_mut(n);
-    //     // let (t2, inter) = inter.split_at_mut(n);
-    //     // let (t3, t4) = inter.split_at_mut(n);
-    //     // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
-    //     // for u in 0..n {
-    //     //     t1[u] = zint_mod_small_signed(
-    //     //         ft.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
-    //     //     t2[u] = zint_mod_small_signed(
-    //     //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
-    //     // }
-    //     // mp_ntt(logn, t1, t4, p, p0i);
-    //     // mp_ntt(logn, t2, t4, p, p0i);
-    // }
-    //
-    // for u in 0..n {
-    //     // t3[u] = mp_montymul(t1[u], t2[u], p ,p0i);
-    // }
-    // if use_sub_ntt {
-    //
-    // } else {
-    //
-    // }
-    // let rv = mp_montymul(profile.q, 1, p, p0i);
-    // for u in 0..n {
-    //     // let x = mp_montymul(t1[u], t2[u], p, p0i);
-    //     // if mp_sub(t3[u], x, p) != rv {
-    //     //     return false;
-    //     // }
-    // }
-    // // let (t2, inter) = inter.split_at_mut(n);
-    // // let (t3, t4) = inter.split_at_mut(n);
-    // //
-    // // if use_sub_ntt {} else {
-    // //     for u in 0..n {
-    // //         // t1[u] = zint_mod_small_signed(
-    // //         //     ft, slen, n, p, p0i, r2, rx);
-    // //         // t2[u] = zint_mod_small_signed(
-    // //         //     Gt + u, slen, n, p, p0i, r2, rx);
-    // //     }
-    // // }
+
+
+    tmp.copy_within(llen * n..llen * n + slen * n, slen * n);
+    if depth == 1 {
+        return true;
+    }
+
+    println!("{}", slen);
+    println!("{}", llen);
+    println!("{}", n);
+    println!("{}", (llen - slen));
+
+    println!("{:?}", tmp);
+    let (Ft, inter) = tmp.split_at_mut(slen * n);
+    let (Gt, inter) = inter.split_at_mut(llen * n);
+    let p = PRIMES[0].p;
+    let p0i = PRIMES[0].p0i;
+    let r2 = PRIMES[0].r2;
+    let rx = mp_rx31(slen as u32, p, p0i, r2);
+    if use_sub_ntt {
+        let (_, inter) = inter.split_at_mut((llen - slen) * n);
+        let (ft, inter) = inter.split_at_mut(slen * n + n);
+        let (gt, inter) = inter.split_at_mut(slen * n + n);
+        let (_, inter) = inter.split_at_mut(n);
+        let (t2, inter) = inter.split_at_mut(n);
+        let (t3, t4) = inter.split_at_mut(n);
+        mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
+        for u in 0..n {
+            t2[u] = zint_mod_small_signed(
+                Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+        }
+        mp_ntt(logn, t2, t4, p, p0i);
+        let t1 = ft;
+        for u in 0..n {
+            t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
+        }
+
+        let t1 = gt;
+        for u in 0..n {
+            t2[u] = zint_mod_small_signed(
+                Ft.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+        }
+        mp_ntt(logn, t2, t4, p, p0i);
+
+        let rv = mp_montymul(profile.q, 1, p, p0i);
+        for u in 0..n {
+            let x = mp_montymul(t1[u], t2[u], p, p0i);
+            if mp_sub(t3[u], x, p) != rv {
+                return false;
+            }
+        }
+    } else {
+        let (_, inter) = inter.split_at_mut((llen - slen) * n);
+        let (ft, inter) = inter.split_at_mut(slen * n);
+        let (gt, inter) = inter.split_at_mut(slen *n );
+        let (t1, inter) = inter.split_at_mut(n);
+        let (t2, inter) = inter.split_at_mut(n);
+        let (t3, t4) = inter.split_at_mut(n);
+        mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
+        for u in 0..n {
+            t1[u] = zint_mod_small_signed(
+                ft.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+            t2[u] = zint_mod_small_signed(
+                Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+        }
+        mp_ntt(logn, t1, t4, p, p0i);
+        mp_ntt(logn, t2, t4, p, p0i);
+        for u in 0..n {
+            t3[u] = mp_montymul(t1[u], t2[u], p, p0i);
+        }
+
+        for u in 0..n {
+            t1[u] = zint_mod_small_signed(
+                gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+            t2[u] = zint_mod_small_signed(
+                Ft.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+        }
+        mp_ntt(logn, t1, t4, p, p0i);
+        mp_ntt(logn, t2, t4, p, p0i);
+
+        let rv = mp_montymul(profile.q, 1, p, p0i);
+        for u in 0..n {
+            let x = mp_montymul(t1[u], t2[u], p, p0i);
+            if mp_sub(t3[u], x, p) != rv {
+                return false;
+            }
+        }
+    }
+
 
     true
 }
