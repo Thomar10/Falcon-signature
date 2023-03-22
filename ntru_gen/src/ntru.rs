@@ -312,7 +312,7 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
         (gt, t1) = inter.split_at_mut(slen * n + n);
     }
 
-    let rt3 = bytemuck::cast_slice_mut::<u32, fxr>(t1);
+    let rt3 = bytemuck::pod_align_to_mut::<u32, fxr>(t1).1;
     let (mut rt3, mut inter_fxr) = rt3.split_at_mut(n);
     let (mut rt4, mut rt1) = inter_fxr.split_at_mut(n);
     let mut rlen = profile.word_win[depth] as usize;
@@ -407,7 +407,7 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
         loop {
             (Ft, inter) = tmp.split_at_mut(llen * n);
             (Gt, inter) = inter.split_at_mut(llen * n);
-            let nrt3 = bytemuck::cast_slice_mut::<u32, fxr>(inter);
+            let nrt3 = bytemuck::pod_align_to_mut::<u32, fxr>(inter).1;
             (rt3, inter_fxr) = nrt3.split_at_mut(n);
             (rt4, inter_fxr) = inter_fxr.split_at_mut(n);
             let (rt1, rt2) = inter_fxr.split_at_mut(n);
@@ -476,7 +476,7 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
                 (ft, inter) = inter.split_at_mut(slen * n);
                 (gt, t1) = inter.split_at_mut(slen * n);
             }
-            let rt3 = bytemuck::cast_slice_mut::<u32, fxr>(t1);
+            let rt3 = bytemuck::pod_align_to_mut::<u32, fxr>(t1).1;
             let (mut rt3, mut inter_fxr) = rt3.split_at_mut(n);
             let (mut rt4, mut inter_fxr_rt1) = inter_fxr.split_at_mut(n);
             let (mut rt1, mut inter_fxr) = inter_fxr_rt1.split_at_mut(n);

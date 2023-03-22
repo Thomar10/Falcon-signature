@@ -25,9 +25,9 @@ mod tests {
             let Fc: [i8; 1024] = [0; 1024];
             let resc = unsafe { ntrugen_Falcon_keygen(logn as u32, fc.as_ptr(), gc.as_ptr(), Fc.as_ptr(), Gc.as_ptr(), ntrugen_prng_chacha8_out, &mut contextc, tmpc.as_ptr(), 24 * 1024 + 18) };
             let res = falcon_keygen(logn, &mut f, &mut g, &mut F, &mut G, prng_chacha8_out, &mut context, &mut tmp);
-            assert_eq!(res, resc == 0);
             assert_eq!(f, fc);
             assert_eq!(g, gc);
+            assert_eq!(res, resc == 0);
             //assert_eq!(F, Fc);
             //assert_eq!(G, Gc);
         }

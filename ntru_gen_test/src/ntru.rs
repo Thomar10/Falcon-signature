@@ -8,49 +8,49 @@ mod tests {
     use ntru_gen::ntru::{make_fg_step, NtruProfile, solve_ntru, solve_ntru_deepest, solve_ntru_depth0, solve_ntru_intermediate};
     use ntru_gen_c::ntru::{make_fg_step_test, ntrugen_solve_NTRU, NtruProfileC, solve_NTRU_deepest_test, solve_NTRU_depth0_test, solve_NTRU_intermediate_test};
 
-// #[test]
-    // fn test_make_fg_step() {
-    //     for logn in 8..11 {
-    //         for depth in 0..5 {
-    //             let (profile, profilec) = get_profiles(logn);
-    //             let mut tmp: [u32; 50000] = [0; 50000];
-    //             let tmpc: [u32; 50000] = [0; 50000];
-    //             make_fg_step(&profile, logn + depth, depth as u32, &mut tmp);
-    //             unsafe { make_fg_step_test(&profilec, (logn + depth) as u32, depth as u32, tmpc.as_ptr()); }
-    //             assert_eq!(tmp, tmpc);
-    //         }
-    //     }
-    // }
-    //
-    // #[test]
-    // fn test_solve_ntru_depth0() {
-    //     for logn in 8..11 {
-    //         let (profile, profilec) = get_profiles(logn);
-    //         let mut tmp: [u32; 50000] = [0; 50000];
-    //         let tmpc: [u32; 50000] = [0; 50000];
-    //         let f: [i8; 1024] = [0; 1024];
-    //         let g: [i8; 1024] = [0; 1024];
-    //         let res = solve_ntru_depth0(&profile, logn, &f, &g, &mut tmp);
-    //         let resc = unsafe { solve_NTRU_depth0_test(&profilec, logn as u32, f.as_ptr(), g.as_ptr(), tmpc.as_ptr()) };
-    //         assert_eq!(tmp, tmpc);
-    //         assert_eq!(res, resc == 0);
-    //     }
-    // }
-    //
-    // #[test]
-    // fn test_solve_ntru_deepest() {
-    //     for logn in 8..11 {
-    //         let (profile, profilec) = get_profiles(logn);
-    //         let mut tmp: [u32; 50000] = [0; 50000];
-    //         let tmpc: [u32; 50000] = [0; 50000];
-    //         let f: [i8; 1024] = [0; 1024];
-    //         let g: [i8; 1024] = [0; 1024];
-    //         let res = solve_ntru_deepest(&profile, logn, &f, &g, &mut tmp);
-    //         let resc = unsafe { solve_NTRU_deepest_test(&profilec, logn as u32, f.as_ptr(), g.as_ptr(), tmpc.as_ptr()) };
-    //         assert_eq!(tmp, tmpc);
-    //         assert_eq!(res, resc == 0);
-    //     }
-    // }
+    #[test]
+    fn test_make_fg_step() {
+        for logn in 8..11 {
+            for depth in 0..5 {
+                let (profile, profilec) = get_profiles(logn);
+                let mut tmp: [u32; 50000] = [0; 50000];
+                let tmpc: [u32; 50000] = [0; 50000];
+                make_fg_step(&profile, logn + depth, depth as u32, &mut tmp);
+                unsafe { make_fg_step_test(&profilec, (logn + depth) as u32, depth as u32, tmpc.as_ptr()); }
+                assert_eq!(tmp, tmpc);
+            }
+        }
+    }
+
+    #[test]
+    fn test_solve_ntru_depth0() {
+        for logn in 8..11 {
+            let (profile, profilec) = get_profiles(logn);
+            let mut tmp: [u32; 50000] = [0; 50000];
+            let tmpc: [u32; 50000] = [0; 50000];
+            let f: [i8; 1024] = [0; 1024];
+            let g: [i8; 1024] = [0; 1024];
+            let res = solve_ntru_depth0(&profile, logn, &f, &g, &mut tmp);
+            let resc = unsafe { solve_NTRU_depth0_test(&profilec, logn as u32, f.as_ptr(), g.as_ptr(), tmpc.as_ptr()) };
+            assert_eq!(tmp, tmpc);
+            assert_eq!(res, resc == 0);
+        }
+    }
+
+    #[test]
+    fn test_solve_ntru_deepest() {
+        for logn in 8..11 {
+            let (profile, profilec) = get_profiles(logn);
+            let mut tmp: [u32; 50000] = [0; 50000];
+            let tmpc: [u32; 50000] = [0; 50000];
+            let f: [i8; 1024] = [0; 1024];
+            let g: [i8; 1024] = [0; 1024];
+            let res = solve_ntru_deepest(&profile, logn, &f, &g, &mut tmp);
+            let resc = unsafe { solve_NTRU_deepest_test(&profilec, logn as u32, f.as_ptr(), g.as_ptr(), tmpc.as_ptr()) };
+            assert_eq!(tmp, tmpc);
+            assert_eq!(res, resc == 0);
+        }
+    }
 
     #[test]
     fn test_solve_ntru_intermediate() {

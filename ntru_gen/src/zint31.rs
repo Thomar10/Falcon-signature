@@ -133,8 +133,8 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usiz
     let (v0, inter) = inter.split_at_mut(len);
     let (a, b) = inter.split_at_mut(len);
 
-    a.copy_from_slice(&x);
-    b.copy_from_slice(&y);
+    a.copy_from_slice(&x[..len]);
+    b[..len].copy_from_slice(&y[..len]);
     u0[0] = 1;
     u0[1..len].fill(0);
     v0.fill(0);

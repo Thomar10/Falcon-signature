@@ -371,7 +371,7 @@ pub fn poly_is_invertible(logn: usize, f: &[i8], p: u32, p0i: u32, s: u32, r: u3
 
         let y = (((x as u64) * (rm as u64)) >> rs) as u32;
         x -= r * y;
-        b |= x - 1;
+        b |= x.wrapping_sub(1);
     }
     (1 - (b >> 31)) != 0
 }

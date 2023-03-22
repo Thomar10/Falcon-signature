@@ -32,7 +32,7 @@ pub fn fxr_div(mut x: u64, mut y: u64) -> u64 {
     let b: u64 = 1u64.wrapping_sub((num.wrapping_sub(y as u64)) >> 63);
     q = q.wrapping_add(b);
     sx ^= sy;
-    q = (q ^ (!sx).wrapping_add(1)) + sx;
+    q = (q ^ (!sx).wrapping_add(1)).wrapping_add(sx);
     q
 }
 

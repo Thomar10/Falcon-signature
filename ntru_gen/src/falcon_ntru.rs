@@ -35,7 +35,6 @@ pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &
                 profile = &FALCON_1024;
                 gauss_sample_poly(logn, f, &GAUSS_FALCON_1024, rng, ctx);
                 gauss_sample_poly(logn, g, &GAUSS_FALCON_1024, rng, ctx);
-                return true;
             }
             _ => {
                 todo!("Add 2 - 7 logn")
@@ -72,10 +71,6 @@ pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &
         for u in 0..n {
             sn = fxr_add(sn, fxr_add(fxr_sqr(rt1[u]), fxr_sqr(rt2[u])));
         }
-        println!("{}", sn);
-        println!("{:?}", rt1);
-        println!("{:?}", rt2);
-
         if !fxr_lt(sn, 72251709809335) {
             println!("sn not lt");
             continue;
