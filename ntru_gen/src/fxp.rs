@@ -182,7 +182,7 @@ pub fn fxr_mul2e(x: fxr, n: u32) -> fxr {
 
 
 #[inline(always)]
-fn fxr_sqr(x: fxr) -> fxr {
+pub fn fxr_sqr(x: fxr) -> fxr {
     let xl = x as u32;
     let xh: i32 = (x >> 32) as i32;
     let z0: u64 = (((xl as u64).wrapping_mul(xl as u64)) as u64) >> 32;
@@ -197,7 +197,7 @@ pub fn fxr_round(x: fxr) -> i32 {
 }
 
 #[inline(always)]
-fn fxr_of(x: i32) -> fxr {
+pub fn fxr_of(x: i32) -> fxr {
     (x as fxr) << 32
 }
 
@@ -243,7 +243,12 @@ fn fxr_sub(mut x: fxr, y: fxr) -> fxr {
 }
 
 #[inline(always)]
-fn fxr_add(mut x: fxr, y: fxr) -> fxr {
+pub fn fxr_lt(mut x: fxr, y: fxr) -> bool {
+    (x as i64) < (y as i64)
+}
+
+#[inline(always)]
+pub fn fxr_add(mut x: fxr, y: fxr) -> fxr {
     x = x.wrapping_add(y);
     x
 }

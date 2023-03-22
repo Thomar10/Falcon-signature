@@ -19,9 +19,14 @@ mod tests {
         unsafe { ntrugen_prng_chacha8_init(&mut contextc, seed.as_ptr(), 32); }
         let mut f: [i8; 1024] = [0; 1024];
         let fc: [i8; 1024] = [0; 1024];
-        unsafe { ntrugen_gauss_sample_poly(2, fc.as_ptr(), GAUSS_FALCON_256.as_ptr(), ntrugen_prng_chacha8_out, &contextc) }
-        gauss_sample_poly(2, &mut f, &GAUSS_FALCON_256, prng_chacha8_out, context);
-        assert_eq!(f, fc);
+        unsafe { ntrugen_gauss_sample_poly(10, fc.as_ptr(), GAUSS_FALCON_1024.as_ptr(), ntrugen_prng_chacha8_out, &contextc) }
+        gauss_sample_poly(10, &mut f, &GAUSS_FALCON_1024, prng_chacha8_out, &mut context);
+        assert_eq!(f, fc, "f");
+        let mut g: [i8; 1024] = [0; 1024];
+        let gc: [i8; 1024] = [0; 1024];
+        unsafe { ntrugen_gauss_sample_poly(10, gc.as_ptr(), GAUSS_FALCON_1024.as_ptr(), ntrugen_prng_chacha8_out, &contextc) }
+        gauss_sample_poly(10, &mut g, &GAUSS_FALCON_1024, prng_chacha8_out, &mut context);
+        assert_eq!(g, gc, "g");
     }
 
 

@@ -2,7 +2,7 @@ use bytemuck::cast_slice_mut;
 
 use crate::prng::{NtruPrngChacha8Context, Rng};
 
-pub fn gauss_sample_poly(logn: usize, f: &mut [i8], tab: &[u16], rng: Rng, ctx: NtruPrngChacha8Context) {
+pub fn gauss_sample_poly(logn: usize, f: &mut [i8], tab: &[u16], rng: Rng, ctx: &mut NtruPrngChacha8Context) {
     let n = 1 << logn;
     let kmax: usize = tab[0] as usize;
     let mut pb = PrngBuffer {
@@ -17,7 +17,7 @@ pub fn gauss_sample_poly(logn: usize, f: &mut [i8], tab: &[u16], rng: Rng, ctx: 
             let mut v: u32 = (!(kmax as u32)).wrapping_add(1);
             let x: u32 = prng_buffer_next_u16(&mut pb) as u32;
             for k in 1usize..=(kmax << 1) {
-                v = v.wrapping_add(((tab[k] as u32).wrapping_sub(x)  >> 31 ));
+                v = v.wrapping_add((tab[k] as u32).wrapping_sub(x) >> 31);
             }
             f[j] = v as i32 as i8;
             parity ^= v;
@@ -41,9 +41,9 @@ pub fn prng_buffer_next_u16(pb: &mut PrngBuffer) -> u16 {
 }
 
 
-pub struct PrngBuffer {
+pub struct PrngBuffer<'a> {
     pub buf: [u8; 512],
     pub ptr: usize,
     pub rng: Rng,
-    pub ctx: NtruPrngChacha8Context,
+    pub ctx: &'a mut NtruPrngChacha8Context,
 }

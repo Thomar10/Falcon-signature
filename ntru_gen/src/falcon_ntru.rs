@@ -1,7 +1,100 @@
-use crate::ntru::NtruProfile;
+use crate::fxp::{fxr, fxr_add, fxr_lt, fxr_of, fxr_sqr, vect_adj_fft, vect_fft, vect_ifft, vect_invnorm_fft, vect_mul_autoadj_fft, vect_mul_realconst, vect_set};
+use crate::gauss::gauss_sample_poly;
+use crate::ntru::{NtruProfile, solve_ntru};
+use crate::poly::{poly_is_invertible, poly_sqnorm};
+use crate::prng::{NtruPrngChacha8Context, Rng};
 
-pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &mut [i8], tmp: &mut [u32]) -> bool {
-    true
+pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &mut [i8],
+                     rng: Rng, ctx: &mut NtruPrngChacha8Context, tmp: &mut [u32]) -> bool {
+    if tmp.len() < 7 {
+        return false;
+    }
+    if logn < 2 || logn > 10 {
+        return false;
+    }
+
+    //?? WHAT is this casting shit
+    let tmp_len: usize = 50000;
+    if tmp_len < 24 << logn {
+        return false;
+    }
+    let mut profile: &NtruProfile;
+    loop {
+        match logn {
+            8 => {
+                profile = &FALCON_256;
+                gauss_sample_poly(logn, f, &GAUSS_FALCON_256, rng, ctx);
+                gauss_sample_poly(logn, g, &GAUSS_FALCON_256, rng, ctx);
+            }
+            9 => {
+                profile = &FALCON_512;
+                gauss_sample_poly(logn, f, &GAUSS_FALCON_512, rng, ctx);
+                gauss_sample_poly(logn, g, &GAUSS_FALCON_512, rng, ctx);
+            }
+            10 => {
+                profile = &FALCON_1024;
+                gauss_sample_poly(logn, f, &GAUSS_FALCON_1024, rng, ctx);
+                gauss_sample_poly(logn, g, &GAUSS_FALCON_1024, rng, ctx);
+                return true;
+            }
+            _ => {
+                todo!("Add 2 - 7 logn")
+            }
+        }
+
+        if poly_sqnorm(logn, f) + poly_sqnorm(logn, g) >= 16823 {
+            println!("sq norm");
+            continue;
+        }
+        if !poly_is_invertible(logn, f, 2147465883, 2763744365, 248710,
+        12289, 2863078533, 45, tmp) {
+            println!("not inv :/");
+            continue;
+        }
+        let n = 1 << logn;
+        let rt1 = bytemuck::pod_align_to_mut::<u32, fxr>(tmp).1;
+        let (rt1, inter) = rt1.split_at_mut(n);
+        let (rt2, rt3) = inter.split_at_mut(n);
+        vect_set(logn, rt1, f);
+        vect_set(logn, rt2, g);
+        vect_fft(logn, rt1);
+        vect_fft(logn, rt2);
+        vect_invnorm_fft(logn, rt3, rt1, rt2, 0);
+        vect_adj_fft(logn, rt1);
+        vect_adj_fft(logn, rt2);
+        vect_mul_realconst(logn, rt1, fxr_of(12289));
+        vect_mul_realconst(logn, rt2, fxr_of(12289));
+        vect_mul_autoadj_fft(logn, rt1, rt3);
+        vect_mul_autoadj_fft(logn, rt2, rt3);
+        vect_ifft(logn, rt1);
+        vect_ifft(logn, rt2);
+        let mut sn: fxr = 0;
+        for u in 0..n {
+            sn = fxr_add(sn, fxr_add(fxr_sqr(rt1[u]), fxr_sqr(rt2[u])));
+        }
+        println!("{}", sn);
+        println!("{:?}", rt1);
+        println!("{:?}", rt2);
+
+        if !fxr_lt(sn, 72251709809335) {
+            println!("sn not lt");
+            continue;
+        }
+        if !solve_ntru(profile, logn, f, g, tmp) {
+            println!("solve_ntru");
+            continue;
+        }
+
+        let tF = bytemuck::cast_slice_mut::<u32, i8>(tmp);
+        let (tF, tG) = tF.split_at_mut(n);
+        if F.len() > 0  {
+         F.copy_from_slice(tF);
+        }
+        if G.len() > 0  {
+            G.copy_from_slice(tG);
+        }
+        return true;
+    }
 }
 
 

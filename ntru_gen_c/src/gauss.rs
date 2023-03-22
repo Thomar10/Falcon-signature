@@ -8,6 +8,6 @@ extern "C" {
 }
 
 #[allow(non_camel_case_types)]
-type rng_f = unsafe extern fn(*const NtruPrngChacha8ContextC, *const u8, usize);
+pub type rng_f = unsafe extern fn(*const NtruPrngChacha8ContextC, *const u8, usize);
 
 

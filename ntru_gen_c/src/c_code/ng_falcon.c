@@ -114,6 +114,7 @@ Falcon_keygen(unsigned logn,
 				rng, rng_context);
 			gauss_sample_poly(logn, g, gauss_Falcon_1024,
 				rng, rng_context);
+				return 0;
 			break;
 		default:
 			prof = &SOLVE_Falcon_256;
@@ -174,6 +175,17 @@ Falcon_keygen(unsigned logn,
 			sn = fxr_add(sn,
 				fxr_add(fxr_sqr(rt1[u]), fxr_sqr(rt2[u])));
 		}
+
+		printf("%lu \n", sn);
+		for (int i = 0; i < n; i++) {
+		  printf("%lu, ", rt1[i]);
+		}
+		printf("\n");
+		for (int i = 0; i < n; i++) {
+    		  printf("%lu, ", rt2[i]);
+    		}
+    		printf("\n");
+
 		if (!fxr_lt(sn, fxr_of_scaled32(72251709809335))) {
 			continue;
 		}

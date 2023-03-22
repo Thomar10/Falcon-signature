@@ -17,7 +17,7 @@ pub fn prng_chacha8_init(ctx: &mut NtruPrngChacha8Context, seed: &[u8], mut seed
 
 pub fn prng_chacha8_out(ctx: &mut NtruPrngChacha8Context, mut buf: &mut [u8], mut len: usize) {
     const CW: [u32; 4] = [0xA7C083FE, 0x3320646E, 0x79622d32, 0x6B206574];
-    let mut cc: u64 = 0;
+    let mut cc: u64 = cast_slice_mut::<u8, u64>(&mut ctx.d)[4];
     let mut ctx_u32 = cast_slice_mut::<u8, u32>(&mut ctx.d);
     let out512 = len == 512;
 
