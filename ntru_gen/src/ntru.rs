@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 
+use ntru_gen_c::poly::{ntrugen_poly_big_to_fixed, ntrugen_poly_sub_scaled};
+
 use crate::fxp::{fxr, fxr_div, fxr_neg, fxr_round, vect_add, vect_div_autoadj_fft, vect_fft, vect_ifft, vect_mul2e, vect_mul_fft, vect_norm_fft};
 use crate::mp31::{mp_add, mp_div, mp_intt, mp_mkgm, mp_mkgmigm, mp_mkigm, mp_montymul, mp_norm, mp_ntt, mp_rx31, mp_set, mp_sub, PRIMES, tbmask};
 use crate::poly::{divrev31, poly_big_to_fixed, poly_big_to_small, poly_max_bitlength, poly_mp_norm, poly_mp_set, poly_mp_set_small, poly_sub_kfg_scaled_depth1, poly_sub_scaled, poly_sub_scaled_ntt};
@@ -359,10 +361,6 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     let mut k = bytemuck::cast_slice_mut::<fxr, i32>(rt1);
     let mut t2: &mut [i32] = &mut [];
     (k, t2) = k.split_at_mut(n);
-    let mut rt2 = bytemuck::cast_slice_mut::<i32, fxr>(t2);
-    // if rt2.as_ptr() < rt1.split_at(n).1.as_ptr() {
-    //     rt2 = rt1.split_at_mut(n).1;
-    // }
 
     if use_sub_ntt {
         // We have to reborrow because and IF STATEMENT FUCKES IT UP.
@@ -406,115 +404,146 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     }
 
     let mut FGlen = llen;
-    // loop {
-    //     let (tlen, toff) = divrev31(scale_FG as u32);
-    //     poly_big_to_fixed(logn, rt1,
-    //                       Ft.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
-    //     poly_big_to_fixed(logn, rt2,
-    //                       Gt.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
-    //     vect_fft(logn, rt1);
-    //     vect_fft(logn, rt2);
-    //     vect_mul_fft(logn, rt1, rt3);
-    //     vect_mul_fft(logn, rt2, rt4);
-    //     vect_add(logn, rt2, rt1);
-    //     vect_ifft(logn, rt2);
+
+
+    loop {
+        if use_sub_ntt {
+            (Ft, inter) = tmp.split_at_mut(llen * n);
+            (Gt, inter) = inter.split_at_mut(llen * n);
+            (ft, inter) = inter.split_at_mut(slen * n + n);
+            (gt, t1) = inter.split_at_mut(slen * n + n);
+        } else {
+            (Ft, inter) = tmp.split_at_mut(llen * n);
+            (Gt, inter) = inter.split_at_mut(llen * n);
+            (ft, inter) = inter.split_at_mut(slen * n);
+            (gt, t1) = inter.split_at_mut(slen * n);
+        }
+        let rt3 = bytemuck::cast_slice_mut::<u32, fxr>(t1);
+        let (mut rt3, mut inter_fxr) = rt3.split_at_mut(n);
+        let (mut rt4, mut inter_fxr_rt1) = inter_fxr.split_at_mut(n);
+        let (mut rt1, mut inter_fxr) = inter_fxr_rt1.split_at_mut(n);
+        let (mut rt2, mut inter_fxr) = inter_fxr.split_at_mut(n);
+        let (tlen, toff) = divrev31(scale_FG as u32);
+        // TODO FIX
+        unsafe {
+            ntrugen_poly_big_to_fixed(logn as u32, rt1.as_ptr(),
+                                      Ft.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
+        }
+        unsafe {
+            ntrugen_poly_big_to_fixed(logn as u32, rt2.as_ptr(),
+                                      Gt.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
+        }
+        // poly_big_to_fixed(logn, rt1,
+        //                   Ft.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+        // poly_big_to_fixed(logn, rt2,
+        //                   Gt.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+        vect_fft(logn, rt1);
+        vect_fft(logn, rt2);
+        vect_mul_fft(logn, rt1, rt3);
+        vect_mul_fft(logn, rt2, rt4);
+        vect_add(logn, rt2, rt1);
+        vect_ifft(logn, rt2);
+        let k = bytemuck::cast_slice_mut::<fxr, i32>(rt1);
+        let (k, t2) = k.split_at_mut(n);
+
+        for u in 0..n {
+            k[u] = fxr_round(rt2[u]);
+        }
+
+        let scale_k = scale_FG - scale_fg;
+        if depth == 1 {
+            poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen, bytemuck::cast_slice_mut(k), scale_k as u32, f, g, bytemuck::cast_slice_mut(t2));
+        } else if use_sub_ntt {
+            let k = bytemuck::cast_slice_mut::<fxr, i32>(inter_fxr_rt1);
+            let (k, t2) = k.split_at_mut(n);
+            poly_sub_scaled_ntt(logn, Ft, FGlen, ft, slen,
+                                k, scale_k as u32, bytemuck::cast_slice_mut(t2));
+            poly_sub_scaled_ntt(logn, Gt, FGlen, gt, slen,
+                                k, scale_k as u32, bytemuck::cast_slice_mut(t2));
+        } else {
+            poly_sub_scaled(logn, Ft, FGlen, ft, slen, k, scale_k as u32);
+            poly_sub_scaled(logn, Gt, FGlen, gt, slen, k, scale_k as u32);
+        }
+
+        if scale_FG <= scale_fg {
+            break;
+        }
+        if scale_FG <= (scale_fg + profile.reduce_bits as u32) {
+            scale_FG = scale_fg;
+        } else {
+            scale_FG -= profile.reduce_bits as u32;
+        }
+        while FGlen > slen && 31 * (FGlen - slen) > (scale_FG - scale_fg + 30) as usize {
+            FGlen -= 1;
+        }
+    }
     //
-    //     for u in 0..n {
-    //         k[u] = fxr_round(rt2[u]);
-    //     }
     //
-    //     let scale_k = scale_FG - scale_fg;
-    //     if depth == 1 {
-    //         poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen, bytemuck::cast_slice_mut(k), scale_k as u32, f, g, bytemuck::cast_slice_mut(t2));
-    //     } else if use_sub_ntt {
-    //         poly_sub_scaled_ntt(logn, Ft, FGlen, ft, slen,
-    //                             k, scale_k as u32, bytemuck::cast_slice_mut(t2));
-    //         poly_sub_scaled_ntt(logn, Gt, FGlen, gt, slen,
-    //                             k, scale_k as u32, bytemuck::cast_slice_mut(t2));
-    //     } else {
-    //         poly_sub_scaled(logn, Ft, FGlen, ft, slen, k, scale_k as u32);
-    //         poly_sub_scaled(logn, Gt, FGlen, gt, slen, k, scale_k as u32);
-    //     }
-    //
-    //     if scale_FG <= scale_fg {
-    //         break;
-    //     }
-    //     if scale_FG <= (scale_fg + profile.reduce_bits as u32) {
-    //         scale_FG = scale_fg;
-    //     } else {
-    //         scale_FG -= profile.reduce_bits as u32;
-    //     }
-    //     while FGlen > slen && 31 * (FGlen - slen) > (scale_FG - scale_fg + 30) as usize {
-    //         FGlen -= 1;
-    //     }
+    // tmp.copy_within(llen * n..llen * n + slen * n, slen * n);
+    // if depth == 1 {
+    //     return true;
     // }
-
-
-    tmp.copy_within(llen * n..llen * n + slen * n, slen * n);
-    if depth == 1 {
-        return true;
-    }
-
-
-    let (Gt, inter) = tmp.split_at_mut(slen * n);
-    let p = PRIMES[0].p;
-    let p0i = PRIMES[0].p0i;
-    let r2 = PRIMES[0].r2;
-    let rx = mp_rx31(slen as u32, p, p0i, r2);
-    if use_sub_ntt {
-        // let (_, inter) = inter.split_at_mut(slen * n + llen * n * 2 + n);
-        // let (t1, inter) = inter.split_at_mut(n);
-        // let (t2, inter) = inter.split_at_mut(n);
-        // let (t3, t4) = inter.split_at_mut(n);
-        // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
-        // for u in 0..n {
-        //     t2[u] = zint_mod_small_signed(
-        //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
-        // }
-        // mp_ntt(logn, t2, t4, p, p0i);
-    } else {
-        // let (_, inter) = inter.split_at_mut(llen * n * 2);
-        // let (ft, inter) = inter.split_at_mut(slen * n);
-        // let (t1, inter) = inter.split_at_mut(n);
-        // let (t2, inter) = inter.split_at_mut(n);
-        // let (t3, t4) = inter.split_at_mut(n);
-        // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
-        // for u in 0..n {
-        //     t1[u] = zint_mod_small_signed(
-        //         ft.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
-        //     t2[u] = zint_mod_small_signed(
-        //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
-        // }
-        // mp_ntt(logn, t1, t4, p, p0i);
-        // mp_ntt(logn, t2, t4, p, p0i);
-    }
-
-    for u in 0..n {
-        // t3[u] = mp_montymul(t1[u], t2[u], p ,p0i);
-    }
-    if use_sub_ntt {
-
-    } else {
-
-    }
-    let rv = mp_montymul(profile.q, 1, p, p0i);
-    for u in 0..n {
-        // let x = mp_montymul(t1[u], t2[u], p, p0i);
-        // if mp_sub(t3[u], x, p) != rv {
-        //     return false;
-        // }
-    }
-    // let (t2, inter) = inter.split_at_mut(n);
-    // let (t3, t4) = inter.split_at_mut(n);
     //
-    // if use_sub_ntt {} else {
-    //     for u in 0..n {
-    //         // t1[u] = zint_mod_small_signed(
-    //         //     ft, slen, n, p, p0i, r2, rx);
-    //         // t2[u] = zint_mod_small_signed(
-    //         //     Gt + u, slen, n, p, p0i, r2, rx);
-    //     }
+    //
+    // let (Gt, inter) = tmp.split_at_mut(slen * n);
+    // let p = PRIMES[0].p;
+    // let p0i = PRIMES[0].p0i;
+    // let r2 = PRIMES[0].r2;
+    // let rx = mp_rx31(slen as u32, p, p0i, r2);
+    // if use_sub_ntt {
+    //     // let (_, inter) = inter.split_at_mut(slen * n + llen * n * 2 + n);
+    //     // let (t1, inter) = inter.split_at_mut(n);
+    //     // let (t2, inter) = inter.split_at_mut(n);
+    //     // let (t3, t4) = inter.split_at_mut(n);
+    //     // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
+    //     // for u in 0..n {
+    //     //     t2[u] = zint_mod_small_signed(
+    //     //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+    //     // }
+    //     // mp_ntt(logn, t2, t4, p, p0i);
+    // } else {
+    //     // let (_, inter) = inter.split_at_mut(llen * n * 2);
+    //     // let (ft, inter) = inter.split_at_mut(slen * n);
+    //     // let (t1, inter) = inter.split_at_mut(n);
+    //     // let (t2, inter) = inter.split_at_mut(n);
+    //     // let (t3, t4) = inter.split_at_mut(n);
+    //     // mp_mkgm(logn, t4, PRIMES[0].g, p, p0i);
+    //     // for u in 0..n {
+    //     //     t1[u] = zint_mod_small_signed(
+    //     //         ft.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+    //     //     t2[u] = zint_mod_small_signed(
+    //     //         Gt.split_at_mut(u).1, slen, n, p, p0i, r2, rx);
+    //     // }
+    //     // mp_ntt(logn, t1, t4, p, p0i);
+    //     // mp_ntt(logn, t2, t4, p, p0i);
     // }
+    //
+    // for u in 0..n {
+    //     // t3[u] = mp_montymul(t1[u], t2[u], p ,p0i);
+    // }
+    // if use_sub_ntt {
+    //
+    // } else {
+    //
+    // }
+    // let rv = mp_montymul(profile.q, 1, p, p0i);
+    // for u in 0..n {
+    //     // let x = mp_montymul(t1[u], t2[u], p, p0i);
+    //     // if mp_sub(t3[u], x, p) != rv {
+    //     //     return false;
+    //     // }
+    // }
+    // // let (t2, inter) = inter.split_at_mut(n);
+    // // let (t3, t4) = inter.split_at_mut(n);
+    // //
+    // // if use_sub_ntt {} else {
+    // //     for u in 0..n {
+    // //         // t1[u] = zint_mod_small_signed(
+    // //         //     ft, slen, n, p, p0i, r2, rx);
+    // //         // t2[u] = zint_mod_small_signed(
+    // //         //     Gt + u, slen, n, p, p0i, r2, rx);
+    // //     }
+    // // }
 
     true
 }

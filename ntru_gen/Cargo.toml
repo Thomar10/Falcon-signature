@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 bytemuck = "1.13.0"
+ntru_gen_c = { path = "../ntru_gen_c" }

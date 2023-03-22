@@ -108,7 +108,7 @@ pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: 
     }
 }
 
-pub fn poly_sub_scaled(logn: usize, F: &mut [u32], Flen: usize, f: &[u32], flen: usize, k: &[i32], sc: u32) {
+pub fn poly_sub_scaled(logn: usize, F: &mut [u32], mut Flen: usize, f: &[u32], flen: usize, k: &[i32], sc: u32) {
     if flen == 0 {
         return;
     }
@@ -117,17 +117,19 @@ pub fn poly_sub_scaled(logn: usize, F: &mut [u32], Flen: usize, f: &[u32], flen:
         return;
     }
     let n = 1 << logn;
+    let F = F.split_at_mut((sch as usize) << logn).1;
     let mut x_index = 0;
+    Flen -= sch as usize;
     for u in 0..n {
         let mut kf = -k[u];
-        let (_, x) = F.split_at_mut(u + x_index);
+        let mut x = F.split_at_mut(u).1;
         for v in 0..n {
             zint_add_scaled_mul_small(x, Flen, f.split_at(v).1, flen, n, kf, 0, scl);
             if u + v == n - 1 {
-                x_index = 0;
+                x = F;
                 kf = -kf;
             } else {
-                x_index += 1;
+                x = x.split_at_mut(1).1;
             }
         }
     }
@@ -152,7 +154,8 @@ pub fn poly_sub_scaled_ntt(logn: usize, F: &mut [u32], Flen: usize, f: &[u32], f
         let (_, fs) = f.split_at(u << logn);
         let (_, ff) = fk.split_at_mut(u << logn);
         for v in 0..n {
-            ff[v] = mp_montymul(mp_montymul(t1[v], fs[v], p, p0i), r2, p, p0i);
+            ff[v] = mp_montymul(mp_montymul(t1[v],
+                                            fs[v], p, p0i), r2, p, p0i);
         }
         mp_intt(logn, ff, igm, p, p0i);
     }

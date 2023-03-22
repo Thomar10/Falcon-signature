@@ -193,7 +193,7 @@ fn fxr_sqr(x: fxr) -> fxr {
 
 #[inline(always)]
 pub fn fxr_round(x: fxr) -> i32 {
-    ((x + 0x80000000) >> 32) as i32
+    ((x.wrapping_add(0x80000000)) >> 32) as i32
 }
 
 #[inline(always)]
