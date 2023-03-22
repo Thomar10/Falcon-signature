@@ -7,6 +7,7 @@ mod fxp;
 mod ntru;
 mod falcon_ntru;
 mod prng;
+mod gauss;
 
 
 fn main() {

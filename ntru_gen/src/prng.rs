@@ -1,5 +1,7 @@
 use bytemuck::cast_slice_mut;
 
+pub type Rng = fn(&mut NtruPrngChacha8Context, &mut [u8], usize);
+
 pub fn prng_chacha8_init(ctx: &mut NtruPrngChacha8Context, seed: &[u8], mut seed_len: usize) {
     if seed_len > 32 {
         seed_len = 32;
