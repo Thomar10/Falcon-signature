@@ -313,12 +313,12 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     let rt3 = bytemuck::cast_slice_mut::<u32, fxr>(t1);
     let (mut rt3, mut inter_fxr) = rt3.split_at_mut(n);
     let (mut rt4, mut rt1) = inter_fxr.split_at_mut(n);
-
     let mut rlen = profile.word_win[depth] as usize;
     if rlen > slen {
         rlen = slen;
     }
     let blen = slen - rlen;
+
     let ftb = ft.split_at_mut(blen * n).1;
     let gtb = gt.split_at_mut(blen * n).1;
     let scale_fg = 31 * (blen as u32);
@@ -327,11 +327,11 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     let scale_xf: u32 = poly_max_bitlength(logn, ftb, rlen);
     let scale_xg: u32 = poly_max_bitlength(logn, gtb, rlen);
     let mut scale_x = scale_xf;
-    scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf - scale_xg);
+    scale_x ^= (scale_xf ^ scale_xg) & tbmask(scale_xf.wrapping_sub(scale_xg));
     let mut scale_t: u32 = (15 - logn) as u32;
-    scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
-    let scdiff = scale_x - scale_t;
-    println!("{}", scdiff);
+    scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x.wrapping_sub(scale_t));
+    let scdiff = scale_x.wrapping_sub(scale_t);
+
     poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
     poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
@@ -405,7 +405,7 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
         gt[..(slen + 1) * n].copy_from_slice(&tn[..(slen + 1) * n]);
     }
 
-    // let mut FGlen = llen;
+    let mut FGlen = llen;
     // loop {
     //     let (tlen, toff) = divrev31(scale_FG as u32);
     //     poly_big_to_fixed(logn, rt1,
@@ -439,12 +439,12 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     //     if scale_FG <= scale_fg {
     //         break;
     //     }
-    //     if scale_FG <= (scale_fg + profile.reduce_bits as usize) {
+    //     if scale_FG <= (scale_fg + profile.reduce_bits as u32) {
     //         scale_FG = scale_fg;
     //     } else {
-    //         scale_FG -= profile.reduce_bits as usize;
+    //         scale_FG -= profile.reduce_bits as u32;
     //     }
-    //     while FGlen > slen && 31 * (FGlen - slen) > scale_FG - scale_fg + 30 {
+    //     while FGlen > slen && 31 * (FGlen - slen) > (scale_FG - scale_fg + 30) as usize {
     //         FGlen -= 1;
     //     }
     // }

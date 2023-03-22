@@ -718,7 +718,6 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	uint32_t scale_t = 15 - logn;
 	scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x - scale_t);
 	uint32_t scdiff = scale_x - scale_t;
-	printf("%u\n", scdiff);
 
 	poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
 	poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);

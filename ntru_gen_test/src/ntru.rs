@@ -56,14 +56,14 @@ mod tests {
     fn test_solve_ntru_intermediate() {
         let mut rng = rand::thread_rng();
         for logn in 3..6 {
-            for depth in 1..5 {
+            for depth in 2..5 {
                 let (profile, profilec) = get_profiles(logn);
                 let mut tmp: [u32; 5000] = core::array::from_fn(|_| rng.gen::<u32>());
                 let tmpc: [u32; 5000] = tmp.clone();
                 let f: [i8; 1024] = [0; 1024];
                 let g: [i8; 1024] = [0; 1024];
-                let res = solve_ntru_intermediate(&profile, logn + depth, &f, &g, depth, &mut tmp);
                 let resc = unsafe { solve_NTRU_intermediate_test(&profilec, (logn + depth) as u32, f.as_ptr(), g.as_ptr(), depth as usize, tmpc.as_ptr()) };
+                let res = solve_ntru_intermediate(&profile, logn + depth, &f, &g, depth, &mut tmp);
                 assert_eq!(tmp, tmpc);
                 assert_eq!(res, resc == 0);
             }

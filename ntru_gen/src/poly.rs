@@ -82,8 +82,6 @@ pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: 
     let t0 = ((sch.wrapping_sub(1)) as u32) & 0xFFFFFF;
     let t1 = sch & 0xFFFFFF;
     let t2 = ((sch.wrapping_add(1)) as u32) & 0xFFFFFF;
-
-
     let mut f_index = 0;
     for u in 0..n {
         let mut w0: u32 = 0;
@@ -100,7 +98,7 @@ pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: 
         let ws = (!(f[((len - 1) << logn) + f_index] >> 30)).wrapping_add(1) >> 1;
         w0 |= ws & (!((((len as u32).wrapping_sub(sch)) >> 31) as u32)).wrapping_add(1);
         w1 |= ws & (!((((len as u32).wrapping_sub(sch.wrapping_sub(1))) >> 31) as u32)).wrapping_add(1);
-        w2 |= ws & (!((((len as u32).wrapping_sub(sch.wrapping_sub(2))) >> 31) as u32)).wrapping_add(1);
+        w2 |= ws;
 
         w2 |= ((w2 & 0x40000000) as u32) << 1;
         let xl: u32 = (w0 >> (scl - 1)) | (w1 << (32 - scl));
