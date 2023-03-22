@@ -11,10 +11,10 @@ mod tests {
 
     #[test]
     fn falcon_ntru_test() {
-        for logn in 10..11 {
+        for logn in 8..11 {
             let (mut context, mut contextc) = get_contexts();
-            let mut tmp: [u32; 24 * 1024 + 18] = [0; 24 * 1024 + 18];
-            let tmpc: [u32; 24 * 1024 + 18] = [0; 24 * 1024 + 18];
+            let mut tmp: [u32; 24 * 1024 + 26] = [0; 24 * 1024 + 26];
+            let tmpc: [u32; 24 * 1024 + 26] = [0; 24 * 1024 + 26];
             let mut f: [i8; 1024] = [0; 1024];
             let fc: [i8; 1024] = [0; 1024];
             let mut g: [i8; 1024] = [0; 1024];

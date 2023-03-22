@@ -132,6 +132,7 @@ Falcon_keygen(unsigned logn,
 		 * less than 1.17*sqrt(q)).
 		 */
 		if ((poly_sqnorm(logn, f) + poly_sqnorm(logn, g)) >= 16823) {
+				printf("sq norm c \n");
 			continue;
 		}
 
@@ -145,6 +146,7 @@ Falcon_keygen(unsigned logn,
 			2147465883, 2763744365, 248710,
 			12289, 2863078533, 45, tt32))
 		{
+				printf("not inv\n");
 			continue;
 		}
 
@@ -176,6 +178,7 @@ Falcon_keygen(unsigned logn,
 		}
 
 		if (!fxr_lt(sn, fxr_of_scaled32(72251709809335))) {
+		printf("not lt\n");
 			continue;
 		}
 
@@ -187,6 +190,9 @@ Falcon_keygen(unsigned logn,
 #endif
 
 		int err = solve_NTRU(prof, logn, f, g, tt32);
+		if (err != 0) {
+				printf("solve ntru\n");
+				}
 		switch (err) {
 		case SOLVE_OK:
 #if NTRUGEN_STATS
@@ -207,7 +213,8 @@ Falcon_keygen(unsigned logn,
 		default:
 			continue;
 		}
-
+    		printf("done c\n");
+    		printf("\n");
 		/*
 		 * Return the computed F and G.
 		 */
