@@ -5,8 +5,8 @@ mod tests {
     use rand::Rng;
 
     use ntru_gen::falcon_ntru::{FALCON_1024, FALCON_256, FALCON_512};
-    use ntru_gen::ntru::{make_fg_step, NtruProfile, solve_ntru_deepest, solve_ntru_depth0, solve_ntru_intermediate};
-    use ntru_gen_c::ntru::{make_fg_step_test, NtruProfileC, solve_NTRU_deepest_test, solve_NTRU_depth0_test, solve_NTRU_intermediate_test};
+    use ntru_gen::ntru::{make_fg_step, NtruProfile, solve_ntru, solve_ntru_deepest, solve_ntru_depth0, solve_ntru_intermediate};
+    use ntru_gen_c::ntru::{make_fg_step_test, ntrugen_solve_NTRU, NtruProfileC, solve_NTRU_deepest_test, solve_NTRU_depth0_test, solve_NTRU_intermediate_test};
 
 // #[test]
     // fn test_make_fg_step() {
@@ -69,11 +69,21 @@ mod tests {
             }
         }
     }
-    //
-    // #[test]
-    // fn solve_ntru_test() {
-    //     assert_eq!(1, 1);
-    // }
+
+    #[test]
+    fn solve_ntru_test() {
+        for logn in 2..11 {
+            let (profile, profilec) = get_profiles(logn);
+            let mut tmp: [u32; 50000] = [0; 50000];
+            let tmpc: [u32; 50000] = [0; 50000];
+            let f: [i8; 1024] = [0; 1024];
+            let g: [i8; 1024] = [0; 1024];
+            let res = solve_ntru(&profile, logn, &f, &g, &mut tmp);
+            let resc = unsafe { ntrugen_solve_NTRU(&profilec, logn  as u32, f.as_ptr(), g.as_ptr(), tmpc.as_ptr()) };
+            assert_eq!(tmp, tmpc);
+            assert_eq!(res, resc == 0);
+        }
+    }
 
     pub fn get_profiles(logn: usize) -> (NtruProfile, NtruProfileC) {
         if logn == 8 {

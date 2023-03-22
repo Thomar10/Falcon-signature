@@ -1,5 +1,10 @@
 use crate::ntru::NtruProfile;
 
+pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &mut [i8], tmp: &mut [u32]) -> bool {
+    true
+}
+
+
 pub const FALCON_256: NtruProfile = NtruProfile {
     q: 12289,
     min_logn: 2,
