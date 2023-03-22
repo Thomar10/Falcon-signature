@@ -56,9 +56,7 @@ mod tests {
     fn test_solve_ntru_intermediate() {
         let mut rng = rand::thread_rng();
         for logn in 3..6 {
-            for depth in 2..5 {
-        //         let logn = 4;
-        //         let depth = 3;
+            for depth in 1..5 {
                 let (profile, profilec) = get_profiles(logn);
                 let mut tmp: [u32; 5000] = core::array::from_fn(|_| rng.gen::<u32>());
                 let tmpc: [u32; 5000] = tmp.clone();
