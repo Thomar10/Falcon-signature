@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use ntru_gen_c::poly::{ntrugen_poly_big_to_fixed, ntrugen_poly_sub_scaled};
+use ntru_gen_c::poly::{ntrugen_poly_big_to_fixed, ntrugen_poly_sub_kfg_scaled_depth1, ntrugen_poly_sub_scaled};
 
 use crate::fxp::{fxr, fxr_div, fxr_neg, fxr_round, vect_add, vect_div_autoadj_fft, vect_fft, vect_ifft, vect_mul2e, vect_mul_fft, vect_norm_fft};
 use crate::mp31::{mp_add, mp_div, mp_intt, mp_mkgm, mp_mkgmigm, mp_mkigm, mp_montymul, mp_norm, mp_ntt, mp_rx31, mp_set, mp_sub, PRIMES, tbmask};
@@ -334,8 +334,10 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x.wrapping_sub(scale_t));
     let scdiff = scale_x.wrapping_sub(scale_t);
 
-    poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
-    poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
+    unsafe { ntrugen_poly_big_to_fixed(logn as u32, rt3.as_ptr(), ftb.as_ptr(), rlen, scdiff); }
+    unsafe { ntrugen_poly_big_to_fixed(logn as u32, rt4.as_ptr(), gtb.as_ptr(), rlen, scdiff); }
+    //poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
+    //poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
 
     vect_fft(logn, rt3);
@@ -349,12 +351,6 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
         rt4[u] = fxr_div(rt4[u], rt1[u]);
         rt4[u + hn] = fxr_div(fxr_neg(rt4[u + hn]), rt1[u]);
     }
-
-    //    let (mut Ft, inter) = tmp.split_at_mut(llen * n);
-    //     let (mut Gt, mut inter) = inter.split_at_mut(llen * n);
-    //     let (mut ft, intergt) = inter.split_at_mut(slen * n);
-    //     let (mut gt, mut t1) = intergt.split_at_mut(slen * n);
-    //     let (Fd, Gd) = t1.split_at_mut(dlen * hn);
 
     if depth == 1 {
         tmp.copy_within(2 * llen * n + 2 * slen * n..2 * llen * n + 2 * slen * n + 4 * n, 2 * llen * n);
@@ -402,53 +398,71 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     }
 
     let mut FGlen = llen;
-
     if depth == 1 {
         loop {
             (Ft, inter) = tmp.split_at_mut(llen * n);
             (Gt, inter) = inter.split_at_mut(llen * n);
-            let nrt3 = bytemuck::pod_align_to_mut::<u32, fxr>(inter).1;
+            let nrt3 = unsafe { inter.align_to_mut::<fxr>().1 };
+            //println!("nrt3 {:?}", nrt3);
             (rt3, inter_fxr) = nrt3.split_at_mut(n);
             (rt4, inter_fxr) = inter_fxr.split_at_mut(n);
             let (rt1, rt2) = inter_fxr.split_at_mut(n);
             let (tlen, toff) = divrev31(scale_FG as u32);
-            unsafe {
-                ntrugen_poly_big_to_fixed(logn as u32, rt1.as_ptr(),
-                                          Ft.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
-            }
-            unsafe {
-                ntrugen_poly_big_to_fixed(logn as u32, rt2.as_ptr(),
-                                          Gt.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
-            }
-            // poly_big_to_fixed(logn, rt1,
-            //                   Ft.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
-            // poly_big_to_fixed(logn, rt2,
-            //                   Gt.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+            println!("rt1 {:?}", rt1);
+            println!("rt2 {:?}", rt2);
+            println!("rt3 {:?}", rt3);
+            println!("rt4 {:?}", rt4);
+
             vect_fft(logn, rt1);
             vect_fft(logn, rt2);
             vect_mul_fft(logn, rt1, rt3);
             vect_mul_fft(logn, rt2, rt4);
             vect_add(logn, rt2, rt1);
             vect_ifft(logn, rt2);
-
-
-            let mut k = bytemuck::cast_slice_mut::<fxr, i32>(rt1);
-            let mut t2: &mut [i32] = &mut [];
-            (k, t2) = k.split_at_mut(n);
-            for u in 0..n {
-                k[u] = fxr_round(rt2[u]);
+            /*unsafe {
+                ntrugen_poly_big_to_fixed(logn as u32, rt1.as_ptr(),
+                                          Ft.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
             }
+            unsafe {
+                ntrugen_poly_big_to_fixed(logn as u32, rt2.as_ptr(),
+                                          Gt.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
+            }*/
+            // poly_big_to_fixed(logn, rt1,
+            //                   Ft.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+            // poly_big_to_fixed(logn, rt2,
+            //                   Gt.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+
+
+
+            //let mut k = bytemuck::cast_slice_mut::<fxr, i32>(rt1);
+            //let (k, t2) = k.split_at_mut(n);
+
+            //for u in 0..n {
+            //    k[u] = fxr_round(rt2[u]);
+            //}
             // Sadly we have to reborrow such that t2 is big enough
             (Ft, inter) = tmp.split_at_mut(llen * n);
             (Gt, inter) = inter.split_at_mut(llen * n);
-            let nrt3 = bytemuck::cast_slice_mut::<u32, fxr>(inter);
+            let nrt3 = bytemuck::pod_align_to_mut::<u32, fxr>(inter).1;
             (rt3, inter_fxr) = nrt3.split_at_mut(n);
             (rt4, inter_fxr) = inter_fxr.split_at_mut(n);
             let mut k = bytemuck::cast_slice_mut::<fxr, i32>(inter_fxr);
             let mut t2: &mut [i32] = &mut [];
             (k, t2) = k.split_at_mut(n);
             let scale_k = scale_FG - scale_fg;
-            poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen, bytemuck::cast_slice_mut(k), scale_k as u32, f, g, bytemuck::cast_slice_mut(t2));
+            //let k1 = bytemuck::cast_slice_mut(k);
+            //let slice_mut = bytemuck::cast_slice_mut(t2);
+            //println!("k2 {:?}", k1);
+            //println!("{:?}", slice_mut);
+            //if depth == 1 && i == 3 {
+            //    println!("{:?}", Ft);
+            //    println!("{:?}", Gt);
+            //    return true;
+            //}
+            //unsafe {
+            //    ntrugen_poly_sub_kfg_scaled_depth1(logn_top as u32, Ft.as_ptr(), Gt.as_ptr(), FGlen, k1.as_ptr(), scale_k as u32, f.as_ptr(), g.as_ptr(), slice_mut.as_ptr())
+            //}
+            //poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen, k1, scale_k as u32, f, g, bytemuck::cast_slice_mut(t2));
 
             if scale_FG <= scale_fg {
                 break;
@@ -458,10 +472,10 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
             } else {
                 scale_FG -= profile.reduce_bits as u32;
             }
-            while FGlen > slen && 31 * (FGlen - slen) > (scale_FG - scale_fg + 30) as usize {
+            while FGlen > slen
+                && 31 * (FGlen - slen) > (scale_FG - scale_fg + 30) as usize {
                 FGlen -= 1;
             }
-
         }
     } else {
         loop {
@@ -536,7 +550,9 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     }
 
 
-    tmp.copy_within(llen * n..llen * n + slen * n, slen * n);
+
+
+    //tmp.copy_within(llen * n..llen * n + slen * n, slen * n);
     if depth == 1 {
         return true;
     }
@@ -583,7 +599,7 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     } else {
         let (_, inter) = inter.split_at_mut((llen - slen) * n);
         let (ft, inter) = inter.split_at_mut(slen * n);
-        let (gt, inter) = inter.split_at_mut(slen *n );
+        let (gt, inter) = inter.split_at_mut(slen * n);
         let (t1, inter) = inter.split_at_mut(n);
         let (t2, inter) = inter.split_at_mut(n);
         let (t3, t4) = inter.split_at_mut(n);
@@ -753,16 +769,22 @@ pub fn solve_ntru(profile: &NtruProfile, logn: usize, f: &[i8], g: &[i8], tmp: &
     let n = 1 << logn;
 
     if !solve_ntru_deepest(profile, logn, f, g, tmp) {
+        panic!(":O");
         return false;
     }
     let mut depth = logn;
-    while depth > 0 {
+    return true;
+    while depth > 1 {
         depth -= 1;
         if !solve_ntru_intermediate(profile, logn, f, g, depth, tmp) {
-            return false;
+            //return false;
+        }
+        if depth == 2 {
+            return true;
         }
     }
     if !solve_ntru_depth0(profile, logn, f, g, tmp) {
+        panic!(":O");
         return false;
     }
     let (tmpp, inter) = tmp.split_at_mut(2 * n);
@@ -770,9 +792,11 @@ pub fn solve_ntru(profile: &NtruProfile, logn: usize, f: &[i8], g: &[i8], tmp: &
     let (F, G) = inter.split_at_mut(n);
     let lim = profile.coeff_FG_limit[logn];
     if !poly_big_to_small(logn, F, tmpp, lim as i32) {
+        panic!(":O");
         return false;
     }
     if !poly_big_to_small(logn, G, tmpp.split_at_mut(n).1, lim as i32) {
+        panic!(":O");
         return false;
     }
     tmp.copy_within(2 * n..4 * n, 0);

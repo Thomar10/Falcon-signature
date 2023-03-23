@@ -77,16 +77,18 @@ pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &
         }
         if !solve_ntru(profile, logn, f, g, tmp) {
             println!("solve_ntru");
-            continue;
+            panic!(":/");
+            //continue;
         }
 
         let tF = bytemuck::cast_slice_mut::<u32, i8>(tmp);
         let (tF, tG) = tF.split_at_mut(n);
+        //TODO REMOVE SLICE THING FOR F AND G
         if F.len() > 0  {
-         F.copy_from_slice(tF);
+         F[..n].copy_from_slice(tF);
         }
         if G.len() > 0  {
-            G.copy_from_slice(tG);
+            G[..n].copy_from_slice(&tG[..n]);
         }
         return true;
     }

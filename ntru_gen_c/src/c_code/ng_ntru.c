@@ -427,7 +427,7 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	 */
 	if (depth < prof->min_save_fg[logn_top]) {
 		make_fg_intermediate(prof, logn_top, f, g, depth, fgt);
-	} else {
+			} else {
 		uint32_t *sav_fg = tmp + ((size_t)6 << logn_top);
 		for (unsigned d = prof->min_save_fg[logn_top];
 			d <= depth; d ++)
@@ -901,20 +901,47 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 		 */
 		uint32_t tlen, toff;
 		DIVREM31(tlen, toff, scale_FG);
+				 if (depth == 1) {
+         printf("rt1\n");
+        for (int i = 0; i < n; i ++) {
+           printf("%lu, ", rt1[i]);
+         }
+         printf("\n");
+
+    		         printf("rt2\n");
+                 for (int i = 0; i < n; i ++) {
+                    printf("%lu, ", rt2[i]);
+                  }
+                  printf("\n");
+
+             		         printf("rt3\n");
+                         for (int i = 0; i < n; i ++) {
+                            printf("%lu, ", rt3[i]);
+                          }
+                          printf("\n");
+
+                     		         printf("rt4\n");
+                                 for (int i = 0; i < n; i ++) {
+                                    printf("%lu, ", rt4[i]);
+                                  }
+                                  printf("\n");
+              }
+
+        vect_FFT(logn, rt1);
+          vect_FFT(logn, rt2);
+          vect_mul_fft(logn, rt1, rt3);
+          vect_mul_fft(logn, rt2, rt4);
+          vect_add(logn, rt2, rt1);
+          vect_iFFT(logn, rt2);
+    		 if (depth != 1) {
 		poly_big_to_fixed(logn, rt1,
 			Ft + tlen * n, FGlen - tlen, scale_x + toff);
 		poly_big_to_fixed(logn, rt2,
 			Gt + tlen * n, FGlen - tlen, scale_x + toff);
 
-		/*
-		 * rt2 <- (F*adj(f) + G*adj(g)) / (f*adj(f) + g*adj(g))
-		 */
-		vect_FFT(logn, rt1);
-		vect_FFT(logn, rt2);
-		vect_mul_fft(logn, rt1, rt3);
-		vect_mul_fft(logn, rt2, rt4);
-		vect_add(logn, rt2, rt1);
-		vect_iFFT(logn, rt2);
+    		/*
+    		 * rt2 <- (F*adj(f) + G*adj(g)) / (f*adj(f) + g*adj(g))
+    		 */
 
 		/*
 		 * k <- round(rt2)
@@ -922,6 +949,9 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 		for (size_t u = 0; u < n; u ++) {
 			k[u] = fxr_round(rt2[u]);
 		}
+    		 }
+
+
 
 		/*
 		 * (f,g) are scaled by scale_fg + scale_x
@@ -930,8 +960,38 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 		 */
 		uint32_t scale_k = scale_FG - scale_fg;
 		if (depth == 1) {
-			poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen,
-				(uint32_t *)k, scale_k, f, g, t2);
+		/*   printf("k \n");
+		    for (int i = 0; i < 20; i ++) {
+                      printf("%u, ", ((uint32_t *)k)[i]);
+                    }
+                    printf("\n");
+        printf("t2 \n");
+        		    for (int i = 0; i < 20; i ++) {
+                              printf("%u, ", t2[i]);
+                            }
+                            printf("\n");
+						   if (depth == 1 && i == 3) {
+    				      for (int i = 0; i < 20; i ++) {
+    				        printf("%u, ", Ft[i]);
+    				      }
+                 printf("\n");
+                 for (int i = 0; i < 20; i ++) {
+                  printf("%u, ", Gt[i]);
+                }
+                printf("\n");
+               for (int i = 0; i < 20; i ++) {
+                  printf("%u, ", ((uint32_t *)k)[i]);
+                }
+                printf("\n");
+               for (int i = 0; i < 20; i ++) {
+                  printf("%u, ", t2[i]);
+                }
+                printf("\n");
+                 printf("inter stop\n");
+                 return 0;
+               } */
+			//poly_sub_kfg_scaled_depth1(logn_top, Ft, Gt, FGlen,
+			//	(uint32_t *)k, scale_k, f, g, t2);
 		} else if (use_sub_ntt) {
 			poly_sub_scaled_ntt(logn, Ft, FGlen, ft, slen,
 				k, scale_k, t2);
@@ -941,7 +1001,6 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 			poly_sub_scaled(logn, Ft, FGlen, ft, slen, k, scale_k);
 			poly_sub_scaled(logn, Gt, FGlen, gt, slen, k, scale_k);
 		}
-
 		/*
 		 * We now assume that F and G have shrunk by at least
 		 * reduce_bits (profile-dependent). We adjust FGlen accordinly.
@@ -965,7 +1024,7 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	 * Output F is already in the right place; G is in Gt, and must be
 	 * moved back a bit.
 	 */
-	memmove(tmp + slen * n, Gt, slen * n * sizeof *tmp);
+	//memmove(tmp + slen * n, Gt, slen * n * sizeof *tmp);
 	Gt = tmp + slen * n;
 
 	/*
@@ -1464,10 +1523,14 @@ solve_NTRU(const ntru_profile *restrict prof, unsigned logn,
 		return err;
 	}
 	unsigned depth = logn;
+	return 0;
 	while (depth -- > 1) {
 		err = solve_NTRU_intermediate(prof, logn, f, g, depth, tmp);
-		if (err != SOLVE_OK) {
-			return err;
+		//if (err != SOLVE_OK) {
+		//	return err;
+		//}
+		if (depth == 2) {
+		return 0;
 		}
 	}
 	err = solve_NTRU_depth0(prof, logn, f, g, tmp);

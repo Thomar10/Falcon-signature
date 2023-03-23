@@ -88,6 +88,10 @@ Falcon_keygen(unsigned logn,
 		return -1;
 	}
 
+  printf("%u \n", tt32[0]);
+  printf("%u \n", tt32[0]);
+  printf("%u \n", tt32[0]);
+  return 0;
 	const ntru_profile *prof;
 	for (;;) {
 		/*
@@ -189,7 +193,8 @@ Falcon_keygen(unsigned logn,
 		stats_solve_attempt ++;
 #endif
 
-		int err = solve_NTRU(prof, logn, f, g, tt32);
+    solve_NTRU(prof, logn, f, g, tt32);
+		int err = 0;//solve_NTRU(prof, logn, f, g, tt32);
 		if (err != 0) {
 				printf("solve ntru\n");
 				}
