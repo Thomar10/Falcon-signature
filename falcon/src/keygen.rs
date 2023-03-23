@@ -913,10 +913,10 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
     // Now the more tricky, gs overflows into gm! take a copy of gm and give that, recopy the result as gm_copy is mutated.
     let (_, gs) = data.split_at_mut((hn * tlen * 2) + n * slen);
     let copy_size = 2 * slen;
-    //let mut gm_copy = vec![0; copy_size];
-    //gm_copy.copy_from_slice(&gs[n * slen..n * slen + copy_size]);
-    //zint_rebuild_CRT(gs, slen, slen, n as u64, true, &mut gm_copy);
-    //gs[n * slen..n * slen + copy_size].clone_from_slice(&gm_copy);
+    let mut gm_copy = vec![0; copy_size];
+    gm_copy.copy_from_slice(&gs[n * slen..n * slen + copy_size]);
+    zint_rebuild_CRT(gs, slen, slen, n as u64, true, &mut gm_copy);
+    gs[n * slen..n * slen + copy_size].clone_from_slice(&gm_copy);
 
     // Split arrays back to 'normal'
     let (fd, inter) = data.split_at_mut(hn * tlen);
@@ -1150,11 +1150,11 @@ pub fn solve_ntru_intermediate(logn_top: u32, f: &[i8], g: &[i8], depth: u32, tm
     let (Ft, inter) = tmp.split_at_mut(2 * llen * n);
     let (_, t1) = inter.split_at_mut(2 * slen * n);
     zint_rebuild_CRT(Ft, llen, llen, n as u64, true, t1);
-    //let mut gm_copy = vec![0; llen];
-    //gm_copy.clone_from_slice(&tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen]);
+    let mut gm_copy = vec![0; llen];
+    gm_copy.clone_from_slice(&tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen]);
     let (_, Gt) = tmp.split_at_mut(llen * n);
-    //zint_rebuild_CRT(Gt, llen, llen, n as u64, true, gm_copy.as_mut_slice());
-    //tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen].clone_from_slice(&gm_copy);
+    zint_rebuild_CRT(Gt, llen, llen, n as u64, true, gm_copy.as_mut_slice());
+    tmp[2 * slen * n + 2 * llen * n..2 * slen * n + 2 * llen * n + llen].clone_from_slice(&gm_copy);
 
     let (Ft, inter) = tmp.split_at_mut(llen * n);
     let (Gt, inter) = inter.split_at_mut(llen * n);

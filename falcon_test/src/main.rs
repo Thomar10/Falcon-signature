@@ -1,3 +1,5 @@
+extern crate core;
+
 use falcon::fpr::{fpr_add, fpr_of, fpr_rint, fpr_sub};
 
 mod katrng;

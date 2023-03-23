@@ -409,7 +409,7 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_sign_tree() {
         for _ in 0..100 {
-            const LOGN: usize = 4;
+            const LOGN: usize = 9;
             const N: usize = 1 << LOGN;
 
             const BUFFER_SIZE: usize = 8192 * 8;
@@ -444,11 +444,13 @@ mod tests {
             let mut tmp_keygen: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
             keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, LOGN as u32, &mut tmp_keygen);
 
-            const EXKLENGTH: usize = (LOGN + 40) << LOGN;
+            const EXKLENGTH: usize = 7168; //((LOGN + 40) << LOGN) / 2;
             let mut expanded_key: [fpr; EXKLENGTH] = [0; EXKLENGTH];
 
             expand_privkey(&mut expanded_key, &mut f, &mut g, &mut F, &mut G, LOGN as u32, &mut tmp_key);
 
+            //println!("{:?}", expanded_key);
+            //assert_eq!(1, 0);
             //let mut expanded_key: [fpr; EXKLENGTH - 1] = [0; EXKLENGTH - 1];
             //expanded_key.clone_from(<&[fpr; 703]>::try_from(&expanded_key_extra[1..]).unwrap());
 
