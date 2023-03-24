@@ -13,11 +13,6 @@ pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &
         return false;
     }
 
-    //?? WHAT is this casting shit
-    let tmp_len: usize = 50000;
-    if tmp_len < 24 << logn {
-        return false;
-    }
     let mut profile: &NtruProfile;
     loop {
         match logn {
@@ -42,12 +37,10 @@ pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &
         }
 
         if poly_sqnorm(logn, f) + poly_sqnorm(logn, g) >= 16823 {
-            println!("sq norm");
             continue;
         }
         if !poly_is_invertible(logn, f, 2147465883, 2763744365, 248710,
         12289, 2863078533, 45, tmp) {
-            println!("not inv :/");
             continue;
         }
         let n = 1 << logn;
@@ -72,18 +65,14 @@ pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &
             sn = fxr_add(sn, fxr_add(fxr_sqr(rt1[u]), fxr_sqr(rt2[u])));
         }
         if !fxr_lt(sn, 72251709809335) {
-            println!("sn not lt");
             continue;
         }
         if !solve_ntru(profile, logn, f, g, tmp) {
-            println!("solve_ntru");
-            panic!(":/");
-            //continue;
+            continue;
         }
 
         let tF = bytemuck::cast_slice_mut::<u32, i8>(tmp);
         let (tF, tG) = tF.split_at_mut(n);
-        //TODO REMOVE SLICE THING FOR F AND G
         if F.len() > 0  {
          F[..n].copy_from_slice(tF);
         }

@@ -11,12 +11,11 @@ mod tests {
 
     #[test]
     fn falcon_ntru_test() {
-        //for logn in 8..11 {
-        let logn = 8;
+        for logn in 8..11 {
             let (mut context, mut contextc) = get_contexts();
 
-            let mut tmp: [u32; 24 * 1024 + 26] = Vec::from_iter(0..(24 * 1024 + 26)).try_into().unwrap();
-            let tmpc: [u32; 24 * 1024 + 26] = Vec::from_iter(0..(24 * 1024 + 26)).try_into().unwrap();
+            let mut tmp: [u32; 24 * 1024 + 24] = Vec::from_iter(0..(24 * 1024 + 24)).try_into().unwrap();
+            let tmpc: [u32; 24 * 1024 + 24] = Vec::from_iter(0..(24 * 1024 + 24)).try_into().unwrap();
             let mut f: [i8; 1024] = [0; 1024];
             let fc: [i8; 1024] = [0; 1024];
             let mut g: [i8; 1024] = [0; 1024];
@@ -26,15 +25,14 @@ mod tests {
             let mut F: [i8; 1024] = [0; 1024];
             let Fc: [i8; 1024] = [0; 1024];
             let resc = unsafe { ntrugen_Falcon_keygen(logn as u32, fc.as_ptr(), gc.as_ptr(), Fc.as_ptr(), Gc.as_ptr(), ntrugen_prng_chacha8_out, &mut contextc, tmpc.as_ptr(), 24 * 1024 + 18) };
-            let res = true; //falcon_keygen(logn, &mut f, &mut g, &mut F, &mut G, prng_chacha8_out, &mut context, &mut tmp);
+            let res = falcon_keygen(logn, &mut f, &mut g, &mut F, &mut G, prng_chacha8_out, &mut context, &mut tmp);
             assert_eq!(tmp, tmpc);
             assert_eq!(f, fc);
             assert_eq!(g, gc);
             assert_eq!(res, resc == 0);
-            //assert_eq!(F, Fc);
-            //assert_eq!(G, Gc);
-            assert_eq!(1,0);
-        //}
+            assert_eq!(F, Fc);
+            assert_eq!(G, Gc);
+        }
     }
 
     pub fn get_contexts() -> (NtruPrngChacha8Context, NtruPrngChacha8ContextC) {
