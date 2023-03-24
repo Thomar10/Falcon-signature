@@ -49,7 +49,7 @@ pub fn zint_norm_zero(x: &mut [u32], len: usize, xstride: usize, p: &[u32]) {
         bb = p[u] & 1;
 
         let mut cc: u32 = wp.wrapping_sub(wx);
-        cc = ((!cc).wrapping_add(1) >> 31) | (!(cc >> 31)).wrapping_add(1);
+        cc = (cc.wrapping_neg() >> 31) | (cc >> 31).wrapping_neg();
 
         r |= cc & ((r & 1).wrapping_sub(1));
     }
@@ -106,7 +106,7 @@ pub fn zint_rebuild_crt(xx: &mut [u32], xlen: usize, n: usize, num_sets: usize, 
 
 pub fn zint_negate(a: &mut [u32], len: usize, ctl: u32) {
     let mut cc = ctl;
-    let m = (!ctl).wrapping_add(1) >> 1;
+    let m = ctl.wrapping_neg() >> 1;
     for u in 0..len {
         let mut aw;
         aw = a[u];
@@ -181,7 +181,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usiz
         let mut fg0 = 1;
         let mut fg1: u64 = 1 << 32;
         for _ in 0..31 {
-            let a_odd = (!(xa & 1)).wrapping_add(1);
+            let a_odd = (xa & 1).wrapping_neg();
             let mut dx = xa.wrapping_sub(xb);
             dx = ((dx as i64) >> 63) as u64;
             let swap = a_odd & dx;
@@ -219,7 +219,7 @@ pub fn zint_bezout(u: &mut [u32], v: &mut [u32], x: &[u32], y: &[u32], len: usiz
         r |= b[j];
     }
     r |= (x[0] & y[0] & 1) ^ 1;
-    (1 - ((r | (!r).wrapping_add(1)) >> 31)) != 0
+    (1 - ((r | r.wrapping_neg()) >> 31)) != 0
 }
 
 
@@ -262,8 +262,8 @@ pub fn zint_finish_mod(a: &mut [u32], len: usize, m: &[u32], neg: u32) {
     }
 
 
-    let xm = (!neg).wrapping_add(1) >> 1;
-    let ym = (!(neg | (1 - cc))).wrapping_add(1);
+    let xm = neg.wrapping_neg() >> 1;
+    let ym = (neg | (1 - cc)).wrapping_neg();
     cc = neg;
     for u in 0..len {
         let (mut aw, mw): (u32, u32);
@@ -282,7 +282,7 @@ pub fn zint_mod_small_signed(d: &[u32], len: usize, stride: usize, p: u32, p0i: 
         return 0;
     }
     let z = zint_mod_small_unsigned(d, len, stride, p, p0i, r2);
-    mp_sub(z, rx & (!(d[(len - 1) * stride] >> 30)).wrapping_add(1), p)
+    mp_sub(z, rx & (d[(len - 1) * stride] >> 30).wrapping_neg(), p)
 }
 
 pub fn zint_co_reduce(a: &mut [u32], b: &mut [u32], len: usize, xa: i64, xb: i64, ya: i64, yb: i64) -> u32 {
@@ -320,7 +320,7 @@ pub fn zint_add_scaled_mul_small(x: &mut [u32], xlen: usize, y: &[u32], mut ylen
     if ylen == 0 {
         return;
     }
-    let ysign = (!(y[stride * (ylen - 1)] >> 30)).wrapping_add(1) >> 1;
+    let ysign = (y[stride * (ylen - 1)] >> 30).wrapping_neg() >> 1;
     tw = 0;
     cc = 0;
     let mut x_index = sch * stride;
@@ -351,7 +351,7 @@ pub fn zint_sub_scaled(x: &mut [u32], xlen: usize, y: &[u32], ylen: usize, strid
         return;
     }
 
-    let ysign: u32 = (!(y[stride * (ylen - 1)] >> 30)).wrapping_add(1) >> 1;
+    let ysign: u32 = (y[stride * (ylen - 1)] >> 30).wrapping_neg() >> 1;
     let mut tw = 0;
     let mut cc = 0;
     let mut x_index = sch * stride;

@@ -47,7 +47,7 @@ pub fn poly_max_bitlength(logn: usize, f: &[u32], flen: usize) -> u32 {
     let mut tk: u32 = 0;
     let mut f_index = 0;
     for _ in 0..n {
-        let m = (!(f[((flen - 1) << logn) + f_index] >> 30)).wrapping_add(1) & 0x7FFFFFFF;
+        let m = (f[((flen - 1) << logn) + f_index] >> 30).wrapping_neg() & 0x7FFFFFFF;
         let mut c = 0;
         let mut ck = 0;
         for v in 0..flen {
@@ -302,7 +302,7 @@ pub fn poly_sub_kfg_scaled_depth1(logn_top: usize, F: &mut [u32], G: &mut [u32],
         mp_intt(logn, Gu, t1, p, p0i);
         if (u + 1) < FGlen {
             mp_intt(logn, k, t1, p, p0i);
-            scv = 1u32 << ((!sc).wrapping_add(1) & 31);
+            scv = 1u32 << (sc.wrapping_neg() & 31);
             let mut m = sc >> 5;
             while m > 0 {
                 scv = mp_montymul(scv, 1, p, p0i);
@@ -336,7 +336,7 @@ pub fn poly_sub_kfg_scaled_depth1(logn_top: usize, F: &mut [u32], G: &mut [u32],
             let y = mp_montymul(
                 mp_sub(x1, x0m1, p1), s, p1, p1_0i);
             let mut z: u64 = (x0 as u64) + (p0 as u64) * (y as u64);
-            z = z.wrapping_sub(pp & (!((hpp.wrapping_sub(z)) >> 63)).wrapping_add(1));
+            z = z.wrapping_sub(pp & ((hpp.wrapping_sub(z)) >> 63).wrapping_neg());
             F[u] = (z & 0x7FFFFFFF) as u32;
             F[u + n] = ((z >> 31) & 0x7FFFFFFF) as u32;
         }
@@ -347,7 +347,7 @@ pub fn poly_sub_kfg_scaled_depth1(logn_top: usize, F: &mut [u32], G: &mut [u32],
             let y = mp_montymul(
                 mp_sub(x1, x0m1, p1), s, p1, p1_0i);
             let mut z = (x0 as u64) + (p0 as u64) * (y as u64);
-            z = z.wrapping_sub(pp & (!((hpp.wrapping_sub(z)) >> 63)).wrapping_add(1));
+            z = z.wrapping_sub(pp & ((hpp.wrapping_sub(z)) >> 63).wrapping_neg());
             G[u] = (z & 0x7FFFFFFF) as u32;
             G[u + n] = ((z >> 31) & 0x7FFFFFFF) as u32;
         }

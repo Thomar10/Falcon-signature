@@ -4,7 +4,7 @@ pub fn mp_div(x: u32, y: u32, p: u32) -> u32 {
     let mut u = x;
     let mut v = 0;
     for _ in 0..62 {
-        let a_odd: u32 = (!(a & 1)).wrapping_add(1);
+        let a_odd: u32 = (a & 1).wrapping_neg();
         let swap: u32 = tbmask(a.wrapping_sub(b)) & a_odd;
         let t1 = swap & (a ^ b);
         a ^= t1;
@@ -162,7 +162,7 @@ pub fn mp_rx31(mut e: u32, p: u32, p0i: u32, r2: u32) -> u32 {
 
 #[inline(always)]
 fn mp_r(p: u32) -> u32 {
-    (!(p << 1)).wrapping_add(1)
+    (p << 1).wrapping_neg()
 }
 
 #[inline(always)]
@@ -210,7 +210,7 @@ pub fn lzcnt(mut x: u32) -> u32 {
 
 #[inline(always)]
 pub fn mp_half(a: u32, p: u32) -> u32 {
-    a.wrapping_add(p & (!(a & 1)).wrapping_add(1)) >> 1
+    a.wrapping_add(p & (a & 1).wrapping_neg()) >> 1
 }
 
 pub fn mp_ninv31(p: u32) -> u32 {
@@ -219,7 +219,7 @@ pub fn mp_ninv31(p: u32) -> u32 {
     y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
     y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
     y = y.wrapping_mul(2u32.wrapping_sub(p.wrapping_mul(y)));
-    (!y).wrapping_add(1)
+    y.wrapping_neg()
 }
 
 #[inline(always)]

@@ -10,29 +10,29 @@ pub struct FXC {
 
 pub fn fxr_div(mut x: u64, mut y: u64) -> u64 {
     let mut sx = x >> 63;
-    x = (x ^ (!sx).wrapping_add(1)) + sx;
+    x = (x ^ sx.wrapping_neg()) + sx;
     let sy = y >> 63;
-    y = (y ^ (!sy).wrapping_add(1)) + sy;
+    y = (y ^ sy.wrapping_neg()) + sy;
 
     let mut q: u64 = 0;
     let mut num: u64 = x >> 31;
     for i in (33..=63).rev() {
         let b = 1 - (num.wrapping_sub(y as u64) >> 63);
         q |= b << i;
-        num -= y & (!b).wrapping_add(1);
+        num -= y & b.wrapping_neg();
         num <<= 1;
         num |= (x >> (i - 33)) & 1;
     }
     for i in (0..=32).rev() {
         let b = 1 - (num.wrapping_sub(y as u64) >> 63);
         q |= b << i;
-        num -= y & (!b).wrapping_add(1);
+        num -= y & b.wrapping_neg();
         num <<= 1;
     }
     let b: u64 = 1u64.wrapping_sub((num.wrapping_sub(y as u64)) >> 63);
     q = q.wrapping_add(b);
     sx ^= sy;
-    q = (q ^ (!sx).wrapping_add(1)).wrapping_add(sx);
+    q = (q ^ sx.wrapping_neg()).wrapping_add(sx);
     q
 }
 
@@ -203,7 +203,7 @@ pub fn fxr_of(x: i32) -> fxr {
 
 #[inline(always)]
 pub fn fxr_neg(x: fxr) -> fxr {
-    (!x).wrapping_add(1)
+    x.wrapping_neg()
 }
 
 #[inline(always)]

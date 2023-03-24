@@ -12,7 +12,7 @@ pub fn gauss_sample_poly(logn: usize, f: &mut [i8], tab: &[u16], rng: Rng, ctx: 
     loop {
         let mut parity: u32 = 0;
         for j in 0..n {
-            let mut v: u32 = (!(kmax as u32)).wrapping_add(1);
+            let mut v: u32 = (kmax as u32).wrapping_neg();
             let x: u32 = prng_buffer_next_u16(&mut pb) as u32;
             for k in 1usize..=(kmax << 1) {
                 v = v.wrapping_add((tab[k] as u32).wrapping_sub(x) >> 31);
