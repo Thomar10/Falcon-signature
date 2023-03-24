@@ -4,7 +4,7 @@ use ntru_gen_c::poly::{ntrugen_poly_big_to_fixed};
 
 use crate::fxp::{fxr, fxr_div, fxr_neg, fxr_round, vect_add, vect_div_autoadj_fft, vect_fft, vect_ifft, vect_mul2e, vect_mul_fft, vect_norm_fft};
 use crate::mp31::{mp_add, mp_div, mp_intt, mp_mkgm, mp_mkgmigm, mp_mkigm, mp_montymul, mp_norm, mp_ntt, mp_rx31, mp_set, mp_sub, PRIMES, tbmask};
-use crate::poly::{divrev31, poly_big_to_fixed, poly_big_to_small, poly_max_bitlength, poly_mp_norm, poly_mp_set, poly_mp_set_small, poly_sub_kfg_scaled_depth1, poly_sub_scaled, poly_sub_scaled_ntt};
+use crate::poly::{divrev31, poly_big_to_fixed,  poly_big_to_small, poly_max_bitlength, poly_mp_norm, poly_mp_set, poly_mp_set_small, poly_sub_kfg_scaled_depth1, poly_sub_scaled, poly_sub_scaled_ntt};
 use crate::zint31::{zint_bezout, zint_mod_small_signed, zint_mul_small, zint_rebuild_crt};
 
 const MIN_LOGN_FGNTT: usize = 4;
@@ -330,11 +330,8 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
     scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x.wrapping_sub(scale_t));
     let scdiff = scale_x.wrapping_sub(scale_t);
 
-    unsafe { ntrugen_poly_big_to_fixed(logn as u32, rt3.as_ptr(), ftb.as_ptr(), rlen, scdiff); }
-    unsafe { ntrugen_poly_big_to_fixed(logn as u32, rt4.as_ptr(), gtb.as_ptr(), rlen, scdiff); }
-    //poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
-    //poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
-
+    poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
+    poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
     vect_fft(logn, rt3);
     vect_fft(logn, rt4);
@@ -406,19 +403,11 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
         let (rt1, inter_fxr) = inter_fxr_rt1.split_at_mut(n);
         let (rt2, _) = inter_fxr.split_at_mut(n);
         let (tlen, toff) = divrev31(scale_FG as u32);
-        // TODO FIX
-        unsafe {
-            ntrugen_poly_big_to_fixed(logn as u32, rt1.as_ptr(),
-                                      Ft.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
-        }
-        unsafe {
-            ntrugen_poly_big_to_fixed(logn as u32, rt2.as_ptr(),
-                                      Gt.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
-        }
-        // poly_big_to_fixed(logn, rt1,
-        //                   Ft.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
-        // poly_big_to_fixed(logn, rt2,
-        //                   Gt.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+        poly_big_to_fixed(logn, rt1,
+                          Ft.split_at_mut(((tlen as usize) * n)).1, FGlen - tlen as usize, scale_x + toff);
+        poly_big_to_fixed(logn, rt2,
+                          Gt.split_at_mut(((tlen as usize) * n)).1, FGlen - tlen as usize, scale_x + toff);
+
         vect_fft(logn, rt1);
         vect_fft(logn, rt2);
         vect_mul_fft(logn, rt1, rt3);
@@ -544,14 +533,21 @@ pub fn solve_ntru_intermediate_depth1(profile: &NtruProfile, logn_top: usize, f:
     let logn = logn_top - 1;
     let n = 1 << logn;
     let hn = n >> 1;
+    let depth = 1;
+    let slen: usize = profile.max_bl_small[depth] as usize;
+    let llen: usize = profile.max_bl_large[depth] as usize;
+    let dlen: usize = profile.max_bl_small[depth + 1] as usize;
 
-    let slen: usize = profile.max_bl_small[1] as usize;
-    let llen: usize = profile.max_bl_large[1] as usize;
-    let dlen: usize = profile.max_bl_small[2] as usize;
 
-
-    make_fg_intermediate(profile, logn_top, f, g, 1, tmp.split_at_mut(dlen * hn * 2).1);
-
+    if depth < profile.min_save_fg[logn_top] as usize {
+        make_fg_intermediate(profile, logn_top, f, g, depth as u32, tmp.split_at_mut(dlen * hn * 2).1);
+    } else {
+        let mut sav_fg_index = (6 << logn_top) as usize;
+        for d in profile.min_save_fg[logn_top]..=(depth as u16) {
+            sav_fg_index -= (profile.max_bl_small[d as usize] as usize) << (logn_top + 1 - d as usize);
+        }
+        tmp.copy_within(sav_fg_index..sav_fg_index + 2 * slen * n, 2 * dlen * hn);
+    }
     tmp.copy_within(2 * dlen * hn..2 * dlen * hn + 2 * n * slen, 2 * llen * n);
     tmp.copy_within(0..2 * dlen * hn, 2 * llen * n + 2 * slen * n);
     let (mut Ft, inter) = tmp.split_at_mut(llen * n);
@@ -656,12 +652,8 @@ pub fn solve_ntru_intermediate_depth1(profile: &NtruProfile, logn_top: usize, f:
     let mut scale_t: u32 = (15 - logn) as u32;
     scale_t ^= (scale_t ^ scale_x) & tbmask(scale_x.wrapping_sub(scale_t));
     let scdiff = scale_x.wrapping_sub(scale_t);
-
-    unsafe { ntrugen_poly_big_to_fixed(logn as u32, rt3.as_ptr(), ftb.as_ptr(), rlen, scdiff); }
-    unsafe { ntrugen_poly_big_to_fixed(logn as u32, rt4.as_ptr(), gtb.as_ptr(), rlen, scdiff); }
-    //poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
-    //poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
-
+    poly_big_to_fixed(logn, rt3, ftb, rlen, scdiff);
+    poly_big_to_fixed(logn, rt4, gtb, rlen, scdiff);
 
     vect_fft(logn, rt3);
     vect_fft(logn, rt4);
@@ -675,12 +667,10 @@ pub fn solve_ntru_intermediate_depth1(profile: &NtruProfile, logn_top: usize, f:
         rt4[u + hn] = fxr_div(fxr_neg(rt4[u + hn]), rt1[u]);
     }
 
-
     tmp.copy_within(2 * llen * n + 2 * slen * n..2 * llen * n + 2 * slen * n + 4 * n, 2 * llen * n);
 
-
     let mut FGlen = llen;
-
+    // let mut i = 0;
     loop {
         (Ft, inter) = tmp.split_at_mut(llen * n);
         (Gt, inter) = inter.split_at_mut(llen * n);
@@ -689,20 +679,10 @@ pub fn solve_ntru_intermediate_depth1(profile: &NtruProfile, logn_top: usize, f:
         (rt4, inter_fxr) = inter_fxr.split_at_mut(n);
         let (rt1, rt2) = inter_fxr.split_at_mut(n);
         let (tlen, toff) = divrev31(scale_FG as u32);
-
-
-        unsafe {
-            ntrugen_poly_big_to_fixed(logn as u32, rt1.as_ptr(),
-                                      Ft.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
-        }
-        unsafe {
-            ntrugen_poly_big_to_fixed(logn as u32, rt2.as_ptr(),
-                                      Gt.split_at_mut(((tlen as usize) * n) as usize).1.as_ptr(), FGlen - tlen as usize, scale_x + toff)
-        }
-        // poly_big_to_fixed(logn, rt1,
-        //                   Ft.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
-        // poly_big_to_fixed(logn, rt2,
-        //                   Gt.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+        poly_big_to_fixed(logn, rt1,
+                          Ft.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
+        poly_big_to_fixed(logn, rt2,
+                          Gt.split_at_mut(((tlen as usize) * n) as usize).1, FGlen - tlen as usize, scale_x + toff);
         vect_fft(logn, rt1);
         vect_fft(logn, rt2);
         vect_mul_fft(logn, rt1, rt3);
@@ -886,7 +866,7 @@ pub fn solve_ntru(profile: &NtruProfile, logn: usize, f: &[i8], g: &[i8], tmp: &
         }
     }
     if !solve_ntru_intermediate_depth1(profile, logn, f, g, tmp) {
-        return false;
+        return true;
     }
     if !solve_ntru_depth0(profile, logn, f, g, tmp) {
         return false;

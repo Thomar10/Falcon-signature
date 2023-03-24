@@ -70,41 +70,39 @@ pub fn poly_max_bitlength(logn: usize, f: &[u32], flen: usize) -> u32 {
 pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: u32) {
     let n = 1 << logn;
     if len == 0 {
-        d.fill(0);
+        d[..n].fill(0);
         return;
     }
 
     let (mut sch, mut scl) = divrev31(sc);
     let z: u32 = (scl.wrapping_sub(1)) >> 31;
     sch = sch.wrapping_sub(z);
-    scl |= 31 & (!z).wrapping_add(1);
-
-    let t0 = ((sch.wrapping_sub(1)) as u32) & 0xFFFFFF;
+    scl |= 31 & z.wrapping_neg();
+    let t0 = (((sch.wrapping_sub(1)) & 0xFFFFFF) as u32);
     let t1 = sch & 0xFFFFFF;
-    let t2 = ((sch.wrapping_add(1)) as u32) & 0xFFFFFF;
-    let mut f_index = 0;
+    let t2 = (((sch.wrapping_add(1)) & 0xFFFFFF) as u32);
     for u in 0..n {
+        let (_, f) = f.split_at(u);
         let mut w0: u32 = 0;
         let mut w1: u32 = 0;
         let mut w2: u32 = 0;
         for v in 0..len {
-            let w = f[(v << logn) + f_index];
-            let t = (v as u32) & 0xFFFFFF;
-            w0 |= w & (!(((t ^ t0).wrapping_sub(1)) >> 31) as u32).wrapping_add(1);
-            w1 |= w & (!(((t ^ t1).wrapping_sub(1)) >> 31) as u32).wrapping_add(1);
-            w2 |= w & (!(((t ^ t2).wrapping_sub(1)) >> 31) as u32).wrapping_add(1);
+            let w = f[(v << logn)];
+            let t = (v & 0xFFFFFF) as u32;
+            w0 |= w & ((((t ^ t0).wrapping_sub(1)) >> 31) as u32).wrapping_neg();
+            w1 |= w & ((((t ^ t1).wrapping_sub(1)) >> 31) as u32).wrapping_neg();
+            w2 |= w & ((((t ^ t2).wrapping_sub(1)) >> 31) as u32).wrapping_neg();
         }
+        let ws = (f[((len - 1) << logn)] >> 30).wrapping_neg() >> 1;
+        w0 |= ws & ((((len as u32).wrapping_sub(sch)) >> 31) as u32).wrapping_neg();
+        w1 |= ws & (((len as u32).wrapping_sub(sch).wrapping_sub(1) as u32) >> 31).wrapping_neg();
+        w2 |= ws & (((len as u32).wrapping_sub(sch).wrapping_sub(2) as u32) >> 31).wrapping_neg();
 
-        let ws = (!(f[((len - 1) << logn) + f_index] >> 30)).wrapping_add(1) >> 1;
-        w0 |= ws & (!((((len as u32).wrapping_sub(sch)) >> 31) as u32)).wrapping_add(1);
-        w1 |= ws & (!((((len as u32).wrapping_sub(sch.wrapping_sub(1))) >> 31) as u32)).wrapping_add(1);
-        w2 |= ws;
 
         w2 |= ((w2 & 0x40000000) as u32) << 1;
         let xl: u32 = (w0 >> (scl - 1)) | (w1 << (32 - scl));
         let xh: u32 = (w1 >> scl) | (w2 << (31 - scl));
         d[u] = (xl as u64) | ((xh as u64) << 32);
-        f_index += 1;
     }
 }
 
