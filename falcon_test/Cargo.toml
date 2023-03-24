@@ -13,6 +13,7 @@ bytemuck = "1.13.0"
 criterion = "0.4.0"
 falcon = { path = "../falcon" }
 falcon_c = { path = "../falcon_c" }
+ntru_gen = { path = "../ntru_gen" }
 
 [[bench]]
 name = "keygen_bench"
