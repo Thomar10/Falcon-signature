@@ -1,7 +1,5 @@
 #![allow(non_snake_case)]
 
-use ntru_gen_c::poly::{ntrugen_poly_big_to_fixed};
-
 use crate::fxp::{fxr, fxr_div, fxr_neg, fxr_round, vect_add, vect_div_autoadj_fft, vect_fft, vect_ifft, vect_mul2e, vect_mul_fft, vect_norm_fft};
 use crate::mp31::{mp_add, mp_div, mp_intt, mp_mkgm, mp_mkgmigm, mp_mkigm, mp_montymul, mp_norm, mp_ntt, mp_rx31, mp_set, mp_sub, PRIMES, tbmask};
 use crate::poly::{divrev31, poly_big_to_fixed,  poly_big_to_small, poly_max_bitlength, poly_mp_norm, poly_mp_set, poly_mp_set_small, poly_sub_kfg_scaled_depth1, poly_sub_scaled, poly_sub_scaled_ntt};
@@ -404,9 +402,9 @@ pub fn solve_ntru_intermediate(profile: &NtruProfile, logn_top: usize, f: &[i8],
         let (rt2, _) = inter_fxr.split_at_mut(n);
         let (tlen, toff) = divrev31(scale_FG as u32);
         poly_big_to_fixed(logn, rt1,
-                          Ft.split_at_mut(((tlen as usize) * n)).1, FGlen - tlen as usize, scale_x + toff);
+                          Ft.split_at_mut((tlen as usize) * n).1, FGlen - tlen as usize, scale_x + toff);
         poly_big_to_fixed(logn, rt2,
-                          Gt.split_at_mut(((tlen as usize) * n)).1, FGlen - tlen as usize, scale_x + toff);
+                          Gt.split_at_mut((tlen as usize) * n).1, FGlen - tlen as usize, scale_x + toff);
 
         vect_fft(logn, rt1);
         vect_fft(logn, rt2);

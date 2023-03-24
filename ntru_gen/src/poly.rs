@@ -78,9 +78,9 @@ pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: 
     let z: u32 = (scl.wrapping_sub(1)) >> 31;
     sch = sch.wrapping_sub(z);
     scl |= 31 & z.wrapping_neg();
-    let t0 = (((sch.wrapping_sub(1)) & 0xFFFFFF) as u32);
+    let t0 = (sch.wrapping_sub(1) & 0xFFFFFF) as u32;
     let t1 = sch & 0xFFFFFF;
-    let t2 = (((sch.wrapping_add(1)) & 0xFFFFFF) as u32);
+    let t2 = (sch.wrapping_add(1) & 0xFFFFFF) as u32;
     for u in 0..n {
         let (_, f) = f.split_at(u);
         let mut w0: u32 = 0;
