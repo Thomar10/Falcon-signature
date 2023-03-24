@@ -2,8 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
-
     use ntru_gen::falcon_ntru::{FALCON_1024, FALCON_256, FALCON_512, GAUSS_FALCON_1024, GAUSS_FALCON_256, GAUSS_FALCON_512};
     use ntru_gen::gauss::gauss_sample_poly;
     use ntru_gen::ntru::{make_fg_intermediate, make_fg_step, NtruProfile, solve_ntru, solve_ntru_deepest, solve_ntru_depth0, solve_ntru_intermediate};
@@ -88,8 +86,6 @@ mod tests {
 
     #[test]
     fn test_solve_ntru_intermediate() {
-        let mut rng = rand::thread_rng();
-        //for logn in 2..10 {
         let logn = 10;
         let depth = 1;
         let (profile, profilec) = get_profiles(logn);
@@ -108,7 +104,6 @@ mod tests {
         assert_eq!(tmp, tmpc);
         assert_eq!(res, resc == 0);
     }
-    //}
 
     #[test]
     fn solve_ntru_test() {
@@ -146,8 +141,6 @@ mod tests {
         if logn <= 8 {
             return (FALCON_256, NtruProfileC {
                 q: 12289,
-                min_logn: 2,
-                max_logn: 8,
                 max_bl_small: [1, 1, 2, 3, 4, 8, 14, 27, 53, 104, 207],
                 max_bl_large: [1, 2, 3, 6, 11, 21, 40, 78, 155, 308],
                 word_win: [1, 1, 2, 2, 2, 3, 3, 4, 5, 7],
@@ -158,8 +151,6 @@ mod tests {
         } else if logn == 9 {
             return (FALCON_512, NtruProfileC {
                 q: 12289,
-                min_logn: 9,
-                max_logn: 9,
                 max_bl_small: [1, 1, 2, 3, 4, 8, 14, 27, 53, 104, 207],
                 max_bl_large: [1, 2, 3, 6, 11, 21, 40, 78, 155, 308],
                 word_win: [1, 1, 2, 2, 2, 3, 3, 4, 5, 7],
@@ -170,8 +161,6 @@ mod tests {
         } else {
             (FALCON_1024, NtruProfileC {
                 q: 12289,
-                min_logn: 10,
-                max_logn: 10,
                 max_bl_small: [1, 1, 2, 3, 4, 8, 14, 27, 53, 104, 207],
                 max_bl_large: [1, 2, 3, 6, 11, 21, 40, 78, 155, 308],
                 word_win: [1, 1, 2, 2, 2, 3, 3, 4, 5, 7],

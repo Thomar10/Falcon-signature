@@ -14,8 +14,6 @@ extern "C" {
 #[repr(C)]
 pub struct NtruProfileC {
     pub q: u32,
-    pub min_logn: u32,
-    pub max_logn: u32,
     pub max_bl_small: [u16; 11],
     pub max_bl_large: [u16; 10],
     pub word_win: [u16; 10],

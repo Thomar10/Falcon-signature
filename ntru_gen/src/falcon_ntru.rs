@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 use crate::fxp::{fxr, fxr_add, fxr_lt, fxr_of, fxr_sqr, vect_adj_fft, vect_fft, vect_ifft, vect_invnorm_fft, vect_mul_autoadj_fft, vect_mul_realconst, vect_set};
 use crate::gauss::gauss_sample_poly;
 use crate::ntru::{NtruProfile, solve_ntru};
@@ -86,8 +87,6 @@ pub fn falcon_keygen(logn: usize, f: &mut [i8], g: &mut [i8], F: &mut [i8], G: &
 
 pub const FALCON_256: NtruProfile = NtruProfile {
     q: 12289,
-    min_logn: 2,
-    max_logn: 8,
     max_bl_small: [1, 1, 2, 3, 4, 8, 14, 27, 53, 104, 207],
     max_bl_large: [1, 2, 3, 6, 11, 21, 40, 78, 155, 308],
     word_win: [1, 1, 2, 2, 2, 3, 3, 4, 5, 7],
@@ -98,8 +97,6 @@ pub const FALCON_256: NtruProfile = NtruProfile {
 
 pub const FALCON_512: NtruProfile = NtruProfile {
     q: 12289,
-    min_logn: 9,
-    max_logn: 9,
     max_bl_small: [1, 1, 2, 3, 4, 8, 14, 27, 53, 104, 207],
     max_bl_large: [1, 2, 3, 6, 11, 21, 40, 78, 155, 308],
     word_win: [1, 1, 2, 2, 2, 3, 3, 4, 5, 7],
@@ -110,8 +107,6 @@ pub const FALCON_512: NtruProfile = NtruProfile {
 
 pub const FALCON_1024: NtruProfile = NtruProfile {
     q: 12289,
-    min_logn: 10,
-    max_logn: 10,
     max_bl_small: [1, 1, 2, 3, 4, 8, 14, 27, 53, 104, 207],
     max_bl_large: [1, 2, 3, 6, 11, 21, 40, 78, 155, 308],
     word_win: [1, 1, 2, 2, 2, 3, 3, 4, 5, 7],

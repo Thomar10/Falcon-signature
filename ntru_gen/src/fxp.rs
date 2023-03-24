@@ -243,7 +243,7 @@ fn fxr_sub(mut x: fxr, y: fxr) -> fxr {
 }
 
 #[inline(always)]
-pub fn fxr_lt(mut x: fxr, y: fxr) -> bool {
+pub fn fxr_lt(x: fxr, y: fxr) -> bool {
     (x as i64) < (y as i64)
 }
 

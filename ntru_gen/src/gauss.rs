@@ -1,5 +1,3 @@
-use bytemuck::cast_slice_mut;
-
 use crate::prng::{NtruPrngChacha8Context, Rng};
 
 pub fn gauss_sample_poly(logn: usize, f: &mut [i8], tab: &[u16], rng: Rng, ctx: &mut NtruPrngChacha8Context) {

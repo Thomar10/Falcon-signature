@@ -118,7 +118,6 @@ pub fn poly_sub_scaled(logn: usize, F: &mut [u32], mut Flen: usize, f: &[u32], f
     }
     let n = 1 << logn;
     let F = F.split_at_mut((sch as usize) << logn).1;
-    let mut x_index = 0;
     Flen -= sch as usize;
     for u in 0..n {
         let mut kf = -k[u];

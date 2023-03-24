@@ -4,7 +4,7 @@
 mod tests {
     use rand::Rng;
 
-    use ntru_gen::falcon_ntru::{GAUSS_FALCON_1024, GAUSS_FALCON_256};
+    use ntru_gen::falcon_ntru::GAUSS_FALCON_1024;
     use ntru_gen::gauss::gauss_sample_poly;
     use ntru_gen::prng::{NtruPrngChacha8Context, prng_chacha8_init, prng_chacha8_out};
     use ntru_gen_c::gauss::ntrugen_gauss_sample_poly;

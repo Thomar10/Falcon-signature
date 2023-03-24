@@ -2,8 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
-
     use ntru_gen::falcon_ntru::falcon_keygen;
     use ntru_gen::prng::{NtruPrngChacha8Context, prng_chacha8_out};
     use ntru_gen_c::falcon_ntru::ntrugen_Falcon_keygen;
