@@ -14,8 +14,8 @@ mod tests {
         for logn in 8..11 {
             let (mut context, mut contextc) = get_contexts();
 
-            let mut tmp: [u32; 24 * 1024 + 24] = Vec::from_iter(0..(24 * 1024 + 24)).try_into().unwrap();
-            let tmpc: [u32; 24 * 1024 + 24] = Vec::from_iter(0..(24 * 1024 + 24)).try_into().unwrap();
+            let mut tmp: [u32; 24 * 1024] = Vec::from_iter(0..(24 * 1024)).try_into().unwrap();
+            let tmpc: [u32; 24 * 1024] = Vec::from_iter(0..(24 * 1024)).try_into().unwrap();
             let mut f: [i8; 1024] = [0; 1024];
             let fc: [i8; 1024] = [0; 1024];
             let mut g: [i8; 1024] = [0; 1024];
