@@ -398,7 +398,7 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	 *    input: 2 * hn * max_bl_small[depth + 1]
 	 */
 
-	unsigned logn = logn_top - depth;
+  unsigned logn = logn_top - depth;
 	size_t n = (size_t)1 << logn;
 	size_t hn = n >> 1;
 
@@ -427,7 +427,7 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 	 */
 	if (depth < prof->min_save_fg[logn_top]) {
 		make_fg_intermediate(prof, logn_top, f, g, depth, fgt);
-			} else {
+	} else {
 		uint32_t *sav_fg = tmp + ((size_t)6 << logn_top);
 		for (unsigned d = prof->min_save_fg[logn_top];
 			d <= depth; d ++)
@@ -901,25 +901,27 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 		 */
 		uint32_t tlen, toff;
 		DIVREM31(tlen, toff, scale_FG);
-    poly_big_to_fixed(logn, rt1,
-      Ft + tlen * n, FGlen - tlen, scale_x + toff);
-    poly_big_to_fixed(logn, rt2,
-      Gt + tlen * n, FGlen - tlen, scale_x + toff);
-       vect_FFT(logn, rt1);
-         vect_FFT(logn, rt2);
-         vect_mul_fft(logn, rt1, rt3);
-         vect_mul_fft(logn, rt2, rt4);
-         vect_add(logn, rt2, rt1);
-         vect_iFFT(logn, rt2);
-          /*
-           * k <- round(rt2)
-           */
-          for (size_t u = 0; u < n; u ++) {
-            k[u] = fxr_round(rt2[u]);
-          }
+		poly_big_to_fixed(logn, rt1,
+			Ft + tlen * n, FGlen - tlen, scale_x + toff);
+		poly_big_to_fixed(logn, rt2,
+			Gt + tlen * n, FGlen - tlen, scale_x + toff);
 
+		/*
+		 * rt2 <- (F*adj(f) + G*adj(g)) / (f*adj(f) + g*adj(g))
+		 */
+		vect_FFT(logn, rt1);
+		vect_FFT(logn, rt2);
+		vect_mul_fft(logn, rt1, rt3);
+		vect_mul_fft(logn, rt2, rt4);
+		vect_add(logn, rt2, rt1);
+		vect_iFFT(logn, rt2);
 
-
+		/*
+		 * k <- round(rt2)
+		 */
+		for (size_t u = 0; u < n; u ++) {
+			k[u] = fxr_round(rt2[u]);
+		}
 
 		/*
 		 * (f,g) are scaled by scale_fg + scale_x
@@ -939,6 +941,7 @@ solve_NTRU_intermediate(const ntru_profile *restrict prof,
 			poly_sub_scaled(logn, Ft, FGlen, ft, slen, k, scale_k);
 			poly_sub_scaled(logn, Gt, FGlen, gt, slen, k, scale_k);
 		}
+
 		/*
 		 * We now assume that F and G have shrunk by at least
 		 * reduce_bits (profile-dependent). We adjust FGlen accordinly.
