@@ -57,3 +57,60 @@ pub fn secure_or<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
     }
     z
 }
+
+pub fn secure_non_zero<const ORDER: usize>(x: &[fpr], bits: i32, boolean: bool) -> [fpr; ORDER] {
+    let mut t = [0; ORDER];
+    if !boolean {
+        // convert to boolean
+    } else {
+        for i in 0..ORDER {
+            t[i] = x[i];
+        }
+    }
+    let mut length = bits / 2;
+    let mut l = [0; ORDER];
+    let mut r = [0; ORDER];
+    while length > 1 {
+        for i in 0..ORDER {
+            l[i] = t[i] >> length;
+            r[i] = t[i] & ((1 << length) - 1);
+            t[i] = secure_or(l, r);
+            length = length / 2;
+        }
+    }
+    for i in 0..ORDER {
+        t[i] = t[i] & 1;
+    }
+    t
+}
+
+pub fn secure_neg<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
+    let mut z = [0; ORDER];
+    for i in 0..ORDER - 1 {
+        z[i] = x[i];
+    }
+    z[ORDER - 1] = x[ORDER - 1].wrapping_neg();
+    z
+}
+
+pub fn secure_xor<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
+    let mut z = [0; ORDER];
+    for i in 0..ORDER {
+        z[i] = x[i] ^ y[i];
+    }
+    z
+}
+
+pub fn secure_ursh<const ORDER: usize>(x: &[fpr], n: &[i8]) -> [fpr; ORDER] {
+    let mut n_shift = [0; ORDER];
+
+    n_shift//z
+}
+
+pub fn secure_rhs_const<const ORDER: usize>(x: &[fpr], c: i32) -> [fpr; ORDER] {
+    let mut z = [0; ORDER];
+    for i in 0..ORDER {
+        z[i] = x[i] >> c;
+    }
+    z
+}

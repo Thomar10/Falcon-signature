@@ -1,8 +1,9 @@
 use float_cmp::approx_eq;
-use rand::{Rng, thread_rng};
+use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
-use falcon_masked::fpr_masked_deep::{secure_and, secure_or};
+use falcon::fpr::fpr_ursh;
+use falcon_masked::fpr_masked_deep::{secure_and, secure_neg, secure_non_zero, secure_or, secure_ursh};
 
 #[test]
 fn fpr_or_test() {
@@ -27,6 +28,42 @@ fn fpr_and_test() {
         let (xx, _) = reconstruct(&add_shares, &shares_y);
 
         check_eq_fpr(xx, x & y);
+    }
+}
+
+#[test]
+fn fpr_neg_test() {
+    for _ in 0..100 {
+        let mut shares_x = [0; 2];
+        let mut shares_y = [0; 2];
+        let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+        let neg_shares = secure_neg::<2>(&shares_x);
+        let (xx, _) = reconstruct(&neg_shares, &shares_y);
+        println!("{}", xx);
+        println!("{}", x.wrapping_neg());
+
+        check_eq_fpr(xx, x.wrapping_neg());
+    }
+}
+
+#[test]
+fn fpr_ursh_test() {
+    let mut rng = thread_rng();
+    for _ in 0..100 {
+        for n in 0..64 {
+            let mut shares_x = [0; 2];
+            let mut shares_y = [0; 2];
+            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
+            let share:i8 = rng.gen_range(0..64);
+            let n_share = (n - share) & 63;
+            let neg_shares = secure_non_zero::<2>(&shares_x, true);
+            let (xx, _) = reconstruct(&neg_shares, &shares_y);
+            println!("{}", xx);
+            println!("{}", fpr_ursh(x, n as i32));
+            println!("n {}", n);
+
+            check_eq_fpr(xx, fpr_ursh(x, n as i32));
+        }
     }
 }
 
