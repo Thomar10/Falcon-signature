@@ -3,7 +3,46 @@ use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr, fpr_mul, fpr_ursh};
-use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_neg, secure_non_zero, secure_or, secure_ursh};
+use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_mul, secure_neg, secure_non_zero, secure_or, secure_ursh};
+
+#[test]
+fn mul_fpr_test() {
+    let mut rng = thread_rng();
+    // for _ in 0..1000 {
+    let x = 4632960176511116236; //create_random_fpr(); //4632960176511116236;
+    let y = 4585281154125860864; //create_random_fpr(); // 4585281154125860864;
+    let expected = fpr_mul(x, y);
+
+    let mut sharex: u64 = rng.gen_range(0..2);
+    let x_sign = (x >> 63);
+    let s_sharex: [u64; 2] = [(x_sign as u64) ^ sharex, sharex];
+    let share_ex: i16 = random();
+    let x_exp = (x >> 52) & 0x7FF;
+    let mut e_sharex: [i16; 2] = [((x_exp) as i16).wrapping_sub(share_ex), share_ex];
+    let share_mx: i64 = rng.gen_range(0..18014398509481983);
+    let x_man = x & 0xFFFFFFFFFFFFF;
+    let mut m_sharex: [i128; 2] = [((x_man) as i128).wrapping_sub(share_mx as i128), share_mx as i128];
+    // println!("s {}", x_sign);
+    // println!("e {}", x_exp);
+    // println!("m {}", x_man);
+    // println!("rs {}", s_sharex[0] ^s_sharex[1]);
+    // println!("re {}", e_sharex[0].wrapping_add(e_sharex[1]));
+    // println!("rm {}", m_sharex[0].wrapping_add(m_sharex[1]));
+    // println!("x {}", (x_sign << 63) | (x_exp << 52) | x_man);
+
+    let mut sharey: u64 = rng.gen_range(0..2);
+    let s_sharey: [u64; 2] = [((y >> 63) as u64) ^ sharey, sharey];
+    let share_ey: i16 = random();
+    let mut e_sharey: [i16; 2] = [(((y >> 52) & 0x7FF) as i16).wrapping_sub(share_ey), share_ey];
+    let share_my: i64 = rng.gen_range(0..18014398509481983);
+    let mut m_sharey: [i128; 2] = [((y & 0xFFFFFFFFFFFFF) as i128).wrapping_sub(share_my as i128), share_my as i128];
+
+    let result: [fpr; 2] = secure_mul(&s_sharex, &mut e_sharex, &mut m_sharex, &s_sharey, &mut e_sharey, &mut m_sharey);
+    println!("expected {}", fpr_to_double(expected));
+    println!("got {}", fpr_to_double(result[0] ^ result[1]));
+    check_eq_fpr(expected, result[0] ^ result[1]);
+    // }
+}
 
 #[test]
 fn fpr_test() {

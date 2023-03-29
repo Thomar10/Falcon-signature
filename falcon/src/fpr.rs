@@ -216,7 +216,6 @@ pub fn fpr_mul(x: fpr, y: fpr) -> fpr {
     let (xu, yu, mut w, mut zu, zv): (u64, u64, u64, u64, u64);
     let (x0, x1, y0, y1, z0, mut z1, mut z2): (u32, u32, u32, u32, u32, u32, u32);
     let (ex, ey, d, e, s): (i32, i32, i32, i32, i32);
-
     xu = (x & (((1 as u64) << 52) - 1)) | ((1 as u64) << 52);
     yu = (y & (((1 as u64) << 52) - 1)) | ((1 as u64) << 52);
 
@@ -238,7 +237,6 @@ pub fn fpr_mul(x: fpr, y: fpr) -> fpr {
     z2 += z1 >> 25;
     z1 &= 0x01FFFFFF;
     zu += z2 as u64;
-
     zu |= (((z0 | z1) + 0x01FFFFFF) >> 25) as u64;
 
     zv = (zu >> 1) | (zu & 1);
