@@ -529,7 +529,7 @@ pub fn fpr_sqr(x: fpr) -> fpr {
  * (2^54 to 2^55-1).
  */
 #[inline(always)]
-fn fpr(s: i32, mut e: i32, mut m: u64) -> fpr {
+pub fn fpr(s: i32, mut e: i32, mut m: u64) -> fpr {
     let mut x: u64;
     let mut t: u32;
     let f: u32;
