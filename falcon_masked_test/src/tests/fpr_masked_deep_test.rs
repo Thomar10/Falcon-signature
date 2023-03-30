@@ -8,9 +8,11 @@ use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_mul, secure_
 #[test]
 fn mul_fpr_test() {
     let mut rng = thread_rng();
-    // for _ in 0..1000 {
-    let x = 4632960176511116236; //create_random_fpr(); //4632960176511116236;
-    let y = 4585281154125860864; //create_random_fpr(); // 4585281154125860864;
+    for _ in 0..1000 {
+    let x = create_random_fpr(); //4632960176511116236;
+    let y = 13856490279627090700; //create_random_fpr(); // 4585281154125860864;
+    println!("x {}", x);
+    println!("y {}", y);
     let expected = fpr_mul(x, y);
 
     let mut sharex: u64 = rng.gen_range(0..2);
@@ -22,32 +24,26 @@ fn mul_fpr_test() {
     let share_mx: i64 = rng.gen_range(0..18014398509481983);
     let x_man = x & 0xFFFFFFFFFFFFF;
     let mut m_sharex: [i128; 2] = [((x_man) as i128).wrapping_sub(share_mx as i128), share_mx as i128];
-    // println!("s {}", x_sign);
-    // println!("e {}", x_exp);
-    // println!("m {}", x_man);
-    // println!("rs {}", s_sharex[0] ^s_sharex[1]);
-    // println!("re {}", e_sharex[0].wrapping_add(e_sharex[1]));
-    // println!("rm {}", m_sharex[0].wrapping_add(m_sharex[1]));
-    // println!("x {}", (x_sign << 63) | (x_exp << 52) | x_man);
+
 
     let mut sharey: u64 = rng.gen_range(0..2);
     let s_sharey: [u64; 2] = [((y >> 63) as u64) ^ sharey, sharey];
     let share_ey: i16 = random();
     let mut e_sharey: [i16; 2] = [(((y >> 52) & 0x7FF) as i16).wrapping_sub(share_ey), share_ey];
     let share_my: i64 = rng.gen_range(0..18014398509481983);
-    let mut m_sharey: [i128; 2] = [((y & 0xFFFFFFFFFFFFF) as i128).wrapping_sub(share_my as i128), share_my as i128];
-
+    let y_man = (y & 0xFFFFFFFFFFFFF);
+    let mut m_sharey: [i128; 2] = [(y_man as i128).wrapping_sub(share_my as i128), share_my as i128];
     let result: [fpr; 2] = secure_mul(&s_sharex, &mut e_sharex, &mut m_sharex, &s_sharey, &mut e_sharey, &mut m_sharey);
     println!("expected {}", fpr_to_double(expected));
     println!("got {}", fpr_to_double(result[0] ^ result[1]));
     check_eq_fpr(expected, result[0] ^ result[1]);
-    // }
+    }
 }
 
 #[test]
 fn fpr_test() {
     let mut rng = thread_rng();
-    for _ in 0..1000 {
+    for _ in 0..10000 {
         let (s, e, z) = fpr_mul_test(create_random_fpr(), create_random_fpr());
 
         let expected = fpr(s, e, z);
@@ -58,6 +54,38 @@ fn fpr_test() {
         let share: i64 = rng.gen_range(0..18014398509481983);
         let mut z_share = [(z as i64) ^ share, share];
         let result: [fpr; 2] = secure_fpr(&s_share, &mut e_share, &mut z_share);
+        println!("expected {}", fpr_to_double(expected));
+        println!("got {}", fpr_to_double(result[0] ^ result[1]));
+        check_eq_fpr(expected, result[0] ^ result[1]);
+    }
+}
+
+#[test]
+fn fpr_test2() {
+    for _ in 0..1000 {
+        let (s, e, z) = (1, -47, 31513121540324152);
+        let expected = fpr(s, e, z);
+        let s_share: [u64; 2] = [0, 1];
+        let mut e_share: [i16; 2] = [-15010, 14963];
+        let mut z_share = [55249731794911175, 48339284658128127];
+        let result: [fpr; 2] = secure_fpr(&s_share, &mut e_share, &mut z_share);
+        println!("expected {}", fpr_to_double(expected));
+        println!("got {}", fpr_to_double(result[0] ^ result[1]));
+        check_eq_fpr(expected, result[0] ^ result[1]);
+    }
+}
+
+#[test]
+fn fpr_test3() {
+    for _ in 0..1000 {
+        let (s, e, z) = (0, -43, 16251135920610578);
+        let expected = fpr(s, e, z);
+        let s_share: [u64; 2] = [1, 1];
+        let mut e_share: [i16; 2] = [-14433, 14390];
+        let mut z_share = [34770256359083929, 18642285226283659];
+        let result: [fpr; 2] = secure_fpr(&s_share, &mut e_share, &mut z_share);
+        println!("expected {}", fpr_to_double(expected));
+        println!("got {}", fpr_to_double(result[0] ^ result[1]));
         check_eq_fpr(expected, result[0] ^ result[1]);
     }
 }

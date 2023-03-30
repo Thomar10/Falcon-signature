@@ -206,35 +206,21 @@ pub fn secure_mul<const ORDER: usize>(sx: &[u64], ex: &mut [i16], mx: &mut [i128
     let mut e = [0; ORDER];
     e[0] = ex[0].wrapping_add(ey[0]).wrapping_sub(2100);
     e[1] = ex[1].wrapping_add(ey[1]);
-
+    let mut mxx: [i128; ORDER] = [0; ORDER];
+    mxx[0] = mx[0] + 4503599627370496;
+    mxx[1] = mx[1];
+    let mut myy: [i128; ORDER] = [0; ORDER];
+    myy[0] = my[0] + 4503599627370496;
+    myy[1] = my[1];
     let mut p: [i128; ORDER] = [0; ORDER];
-    let mut r: [[i128; ORDER]; ORDER] = [[0; ORDER]; ORDER];
-    for i in 0..ORDER {
-        for j in (i + 1)..ORDER {
-            r[i][j] = random();
-            r[j][i] = (r[i][j] + mx[i] * my[j]) + mx[j] * my[i];
-        }
-    }
-    for i in 0..ORDER {
-        p[i] = mx[i] * my[i];
-        for j in 0..(i.saturating_sub(1)) {
-            p[i] = p[i] + r[i][j];
-        }
-        for j in (i + 1)..ORDER {
-            p[i] = p[i] - r[i][j];
-        }
-    }
+    p[0] = mxx[0] * myy[0];
+    p[1] = mxx[1] * myy[1] + mxx[1] * myy[0] + mxx[0] * myy[1];
     p[0] = a2b_u128(p[0], p[1]);
-    println!("p0: {:0>106b}", p[0]);
-    println!("p1: {:0>106b}", p[1]);
-    let mut b: [u64; ORDER] = secure_non_zero(&[(p[0] & 0x7FFFFFFFFFFFF) as u64,
-        ((p[1] & 0x7FFFFFFFFFFFF) >> 50) as u64], 50, true);
+    let mut b: [u64; ORDER] = secure_non_zero(&[p[0] as u64, p[1] as u64], 51, true);
     let mut z: [u64; ORDER] = [0; ORDER];
-    // mask for 54 bits = 0x3FFFFFFFFFFFFF
+    println!("b {}", b[0] ^ b[1]);
     z[0] = (p[0] >> 51) as u64;
     z[1] = (p[1] >> 51) as u64;
-
-    // mask for 54 bits = 0x3FFFFFFFFFFFFF
     let mut zd: [i64; ORDER] = [0; ORDER];
     zd[0] = (((p[0] >> 50) as u64) ^ z[0]) as i64;
     zd[1] = (((p[1] >> 50) as u64) ^ z[1]) as i64;
@@ -242,14 +228,14 @@ pub fn secure_mul<const ORDER: usize>(sx: &[u64], ex: &mut [i16], mx: &mut [i128
     let mut w: [i64; ORDER] = [0; ORDER];
     w[0] = ((p[0] >> 105) & 1) as i64;
     w[1] = ((p[1] >> 105) & 1) as i64;
-    let zd: [i64; ORDER] = secure_and_i64(&zd, &[-w[0], -w[1]]);
+    let zd: [i64; ORDER] = secure_and_i64(&zd, &[w[0], w[1]]);
 
     for i in 0..ORDER {
         z[i] = z[i] ^ zd[i] as u64;
     }
-    println!("b {}", b[0] ^ b[1]);
-    let z: [u64; ORDER] = secure_or(&z, &b);
-
+    println!("z {:055b}", (z[0] as i64) ^ (z[1] as i64));
+    // let z: [u64; ORDER] = secure_or(&z, &[b);
+    println!("z {:055b}", (z[0] as i64) ^ (z[1] as i64));
     w[0] = b2a(w[0], w[1]);
     for i in 0..ORDER {
         e[i] = e[i] + w[i] as i16;
@@ -257,12 +243,19 @@ pub fn secure_mul<const ORDER: usize>(sx: &[u64], ex: &mut [i16], mx: &mut [i128
     let bx: [fpr; ORDER] = secure_non_zero(&[ex[0] as u64, ex[1] as u64], 16, false);
     let by: [fpr; ORDER] = secure_non_zero(&[ex[0] as u64, ex[1] as u64], 16, false);
     let d: [fpr; ORDER] = secure_and(&bx, &by);
+    println!("d {:055b}", (d[0] as i64) ^ (d[1] as i64));
     let z: [fpr; ORDER] = secure_and(&z, &[!d[0], d[1]]);
-    // println!("s {}", s[0] ^ s[1]);
-    // println!("e {}", e[0].wrapping_add(e[1]));
-    println!("z {}", (z[0] & 0x7FFFFFFFFFFFFF) ^ (z[1] & 0x7FFFFFFFFFFFFF));
-    println!("z {:0>55b}", (z[0] & 0x7FFFFFFFFFFFFF) ^ (z[1] & 0x7FFFFFFFFFFFFF));
-    secure_fpr(&s, &mut e, &mut [z[0] as i64, (z[1] as i64)])
+    println!("z {:055b}", (z[0] as i64) ^ (z[1] as i64));
+    println!("s {}", s[0] ^ s[1]);
+    println!("e {}", e[0].wrapping_add(e[1]));
+    println!("z {}", (z[0] as i64) ^ (z[1] as i64));
+    println!("{} and {}", z[0], z[0]  as i64);
+    // println!("{:055b} and {:055b}", z[0], z[0]  as i64);
+    println!("{} and {}", z[1] , z[1]  as i64);
+    println!("{} and {}", e[0] , e[1] );
+    println!("{} and {}", s[0] , s[1] );
+    // println!("{:055b} and {:055b}", z[1], z[1] as i64);
+    secure_fpr(&s, &mut e, &mut [(z[0] & 0xFFFFFFFFFFFFFF) as i64, ((z[1] & 0xFFFFFFFFFFFFFF) as i64)])
 }
 
 pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &mut [i64]) -> [fpr; ORDER] {
@@ -272,17 +265,21 @@ pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &mut [i64]) -
     e1[0] = e[0].wrapping_add(1076) as i64;
     e1[0] = a2b_e(e1[0] as i16, e[1]) as i64;
     e1[1] = e[1] as i64;
-    b[0] = !(e1[0] >> 15) as i64;
-    b[1] = (e1[1] >> 15) as i64;
+    b[0] = ((e1[0] >> 15) & 1) as i64;
+    b[1] = !((e1[1] >> 15) & 1) as i64;
     let z: [i64; ORDER] = secure_and_i64(&z, &b);
-    for i in 0..ORDER {
-        b[i] = -(z[i] >> 54);
-    }
+    // println!("z {} and {}", z[0] ^z[1], e1[0] ^e1[1]);
+    b[0] = -(z[0] >> 54);
+    b[1] = -(z[1] >> 54);
     let mut e: [i64; ORDER] = secure_and_i64(&e1, &b);
     e = secure_add(e[0], (z[0] >> 54) & 1, e[1], (z[1] >> 54) & 1);
+    println!("s {}", s[0] ^ s[1]);
+    println!("e {}", e[0] ^ e[1]);
+    println!("z {}", z[0] ^ z[1]);
     for i in 0..ORDER {
         x[i] = (((s[i] << 63) as i64) | ((e[i] & 0x7FF) << 52) | ((z[i] & 0x3FFFFFFFFFFFFF) >> 2)) as u64
     }
+    println!("x {}", x[0] ^x[1]);
     let mut f: [i64; ORDER] = secure_or_i64(&[z[0] & 1, z[1] & 1], &[(z[0] >> 2) & 1, (z[1] >> 2) & 1]);
     f = secure_and_i64(&f, &[(z[0] >> 1) & 1, (z[1] >> 1) & 1]);
     let xx: [i64; ORDER] = secure_add(x[0] as i64, f[0], x[1] as i64, f[1]);
