@@ -252,10 +252,6 @@ pub fn fpr_mul(x: fpr, y: fpr) -> fpr {
 
     d = ((ex + 0x7FF) & (ey + 0x7FF)) >> 11;
     zu &= (!d as u64).wrapping_add(1);
-    println!("zu {:055b}", zu);
-    println!("e {}", e);
-    println!("zu {}", zu);
-    println!("calling fpr");
     fpr(s, e, zu)
 }
 
@@ -534,21 +530,13 @@ pub fn fpr(s: i32, mut e: i32, mut m: u64) -> fpr {
 
     e += 1076;
     t = (e as u32) >> 31;
-    println!("t {}", t);
     m &= (t as u64).wrapping_sub(1);
-    println!("m {}", m);
     t = (m >> 54) as u32;
-    println!("t {}", t);
     e &= -(t as i32);
 
-    println!("s {}", s);
-    println!("e {}", e);
-    println!("m {}", m);
     x = (((s as u64) << 63) | (m >> 2)).wrapping_add((e as u32 as u64) << 52);
-    println!("x {}", x);
-    println!("x {:064b}", x);
-    // f = m as u32 & 7;
-    // x += ((0xC8u32 >> f) & 1) as u64;
+    f = m as u32 & 7;
+    x += ((0xC8u32 >> f) & 1) as u64;
     x
 }
 
