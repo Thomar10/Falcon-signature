@@ -4,15 +4,32 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use rand::prelude::*;
 
 use falcon::falcon::fpr;
-use falcon::fpr::fpr_mul;
-use falcon_masked::fpr_masked_deep::secure_mul;
+use falcon::fpr::{fpr_mul, fpr_norm64};
+use falcon_masked::fpr_masked_deep::{secure_fpr_norm, secure_mul};
 
 pub fn fpr_unmasked_mul(c: &mut Criterion) {
     let x = create_random_fpr();
     let y = create_random_fpr();
-    c.bench_function("fpr unmasked", |b| b.iter(|| fpr_mul(x, y)));
+    c.bench_function("fpr unmasked mul", |b| b.iter(|| fpr_mul(x, y)));
 }
 
+pub fn fpr_unmasked_norm(c: &mut Criterion) {
+    let mut rng = StdRng::seed_from_u64(42);
+    let x: u64 = rng.next_u64();
+    let e: i16 = (rng.next_u32() >> 16) as i16;
+    c.bench_function("fpr unmasked norm", |b| b.iter(|| fpr_norm64(x, e as i32)));
+}
+
+pub fn fpr_masked_norm(c: &mut Criterion) {
+    let mut rng = StdRng::seed_from_u64(42);
+    let x: u64 = rng.next_u64();
+    let share_x: u64 = rng.next_u64();
+    let x_share: [u64; 2] = [x ^ share_x, share_x];
+    let e: i16 = (rng.next_u32() >> 16) as i16;
+    let share_e: i16 = (rng.next_u32() >> 16) as i16;
+    let e_share: [i16; 2] = [(e as i16).wrapping_sub(share_e), share_e];
+    c.bench_function("fpr masked norm", |b| b.iter(|| secure_fpr_norm::<2>(&x_share, &e_share)));
+}
 
 pub fn fpr_masked_mul(c: &mut Criterion) {
     let x = create_random_fpr();
@@ -37,7 +54,7 @@ pub fn fpr_masked_mul(c: &mut Criterion) {
     let mut m_sharey: [i128; 2] = [(y_man as i128).wrapping_sub(share_my as i128), share_my as i128];
 
 
-    c.bench_function("fpr masked ", |b|
+    c.bench_function("fpr masked mul", |b|
         b.iter(|| secure_mul::<2>(&s_sharex, &mut e_sharex, &mut m_sharex, &s_sharey, &mut e_sharey, &mut m_sharey)));
 }
 
@@ -47,5 +64,5 @@ pub fn create_random_fpr() -> fpr {
     return f64::to_bits(random);
 }
 
-criterion_group!(benches, fpr_unmasked_mul, fpr_masked_mul);
+criterion_group!(benches, fpr_unmasked_mul, fpr_masked_mul, fpr_unmasked_norm, fpr_masked_norm);
 criterion_main!(benches);
