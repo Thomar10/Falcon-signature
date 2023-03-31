@@ -69,54 +69,35 @@ pub fn fpr_norm64(mut m: u64, mut e: i32) -> (fpr, i32) {
     let mut nt: u32;
     e -= 63;
 
-    // println!("et {}", e);
     nt = (m >> 32) as u32;
     nt = (nt | (!nt).wrapping_add( 1)) >> 31;
-    println!("ntt {}", nt);
     m ^= (m ^ (m << 32)) & (nt as u64).wrapping_sub(1);
-    // println!("nt5 {}", nt);
     e += (nt << 5) as i32;
-    // println!("et {}", e);
 
     nt = (m >> 48) as u32;
     nt = (nt | (!nt).wrapping_add( 1)) >> 31;
-    println!("ntt {}", nt);
     m ^= (m ^ (m << 16)) & (nt as u64).wrapping_sub(1);
-    // println!("nt4 {}", nt);
     e += (nt << 4) as i32;
-    // println!("et {}", e);
 
     nt = (m >> 56) as u32;
     nt = (nt | (!nt).wrapping_add( 1)) >> 31;
-    println!("ntt {}", nt);
     m ^= (m ^ (m << 8)) & (nt as u64).wrapping_sub(1);
-    // println!("nt3 {}", nt);
     e += (nt << 3) as i32;
-    // println!("et {}", e);
 
     nt = (m >> 60) as u32;
     nt = (nt | (!nt).wrapping_add( 1)) >> 31;
-    println!("ntt {}", nt);
     m ^= (m ^ (m << 4)) & (nt as u64).wrapping_sub(1);
-    // println!("nt2 {}", nt);
     e += (nt << 2) as i32;
-    // println!("et {}", e);
 
     nt = (m >> 62) as u32;
     nt = (nt | (!nt).wrapping_add( 1)) >> 31;
-    println!("ntt {}", nt);
     m ^= (m ^ (m << 2)) & (nt as u64).wrapping_sub(1);
-    // println!("nt1 {}", nt);
     e += (nt << 1) as i32;
-    // println!("et {}", e);
 
     nt = (m >> 63) as u32;
     nt = (nt | (!nt).wrapping_add( 1)) >> 31;
-    println!("ntt {}", nt);
     m ^= (m ^ (m << 1)) & (nt as u64).wrapping_sub(1);
-    // println!("nt {}", nt);
     e += nt as i32;
-    // println!("et {}", e);
     (m, e)
 }
 

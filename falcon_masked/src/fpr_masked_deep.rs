@@ -133,6 +133,13 @@ pub fn secure_non_zero<const ORDER: usize>(x: &[fpr], bits: i32, boolean: bool) 
     let mut length = bits / 2;
     let mut l: [fpr; ORDER] = [0; ORDER];
     let mut r: [fpr; ORDER] = [0; ORDER];
+    // if bits == 1 {
+    //     let mut t = secure_or(&t, &t);
+    //     for i in 0..ORDER {
+    //         t[i] = t[i] & 1;
+    //     }
+    //     return t;
+    // }
     while length >= 1 {
         for i in 0..ORDER {
             l[i] = t[i] >> length;
@@ -323,7 +330,6 @@ pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16]) -> ([fpr; ORD
     let mut x: [u64; ORDER] = [0; ORDER];
     e[0] = ee[0].wrapping_sub(63);
     e[1] = ee[1];
-    // println!("e {}", e[0].wrapping_add(e[1]));
     x[0] = xx[0];
     x[1] = xx[1];
     let mut j: i32 = 5;
@@ -336,27 +342,22 @@ pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16]) -> ([fpr; ORD
             t[i] = x[i] << (64 - rsh);
             t[i] = t[i] ^ x[i];
         }
-        let mut nt: u32 = ((n[0]) ^ (n[1])) as u32;
-        nt = (nt | nt.wrapping_neg()) >> 31;
-        // let mut b: [fpr; ORDER] = secure_non_zero(&n, (64 - rsh) as i32, true);
-        // let mut bb: [i64; ORDER] = [0; ORDER];
-        // bb[0] = -(b[0] as i64);
-        // bb[1] = -(b[1] as i64);
-        // bb[0] = !bb[0];
-        println!("bbb {}", nt);
-        // let t: [fpr; ORDER] = secure_and(&t, &[bb[0] as u64, bb[1] as u64]);
-        // for i in 0..ORDER {
-        //     x[i] = x[i] ^ t[i];
-        // }
 
-        // b[0] = b2a_i64(b[0] as i64, b[1] as i64) as u64;
-        // println!("bb{} {}", j, bb[0] + bb[1]);
-        e[0] = e[0] + ((nt as i16) << j);
-        e[1] = e[1] + (0 << j);
-        // for i in 0..ORDER {
-        //     e[i] = e[i] + ((b[i] as i16) << j);
-        // }
-        // println!("e {}", e[0].wrapping_add(e[1]));
+        let mut b: [fpr; ORDER] = secure_non_zero(&n, (64 - rsh) as i32, true);
+        let mut bb: [i64; ORDER] = [0; ORDER];
+        bb[0] = -(b[0] as i64);
+        bb[1] = -(b[1] as i64);
+        bb[0] = !bb[0];
+
+        let t: [fpr; ORDER] = secure_and(&t, &[bb[0] as u64, bb[1] as u64]);
+        for i in 0..ORDER {
+            x[i] = x[i] ^ t[i];
+        }
+
+        b[0] = b2a_i64(b[0] as i64, b[1] as i64) as u64;
+        for i in 0..ORDER {
+            e[i] = e[i] + ((b[i] as i16) << j);
+        }
         j = j.wrapping_sub(1);
     }
     (x, e)

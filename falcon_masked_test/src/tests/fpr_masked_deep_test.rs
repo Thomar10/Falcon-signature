@@ -88,8 +88,8 @@ fn fpr_norm() {
         let e_share: [i16; 2] = [(e as i16).wrapping_sub(share_e), share_e];
         let (xx, ee) = secure_fpr_norm::<2>(&x_share, &e_share);
         let (exp_x, exp_e) = fpr_norm64(x, e as i32);
+        assert_eq!(exp_x, xx[0] ^xx[1], "x");
         assert_eq!(exp_e, (ee[0].wrapping_add(ee[1])) as i32, "e");
-        // assert_eq!(exp_x, xx[0] ^xx[1], "x");
     }
 }
 
