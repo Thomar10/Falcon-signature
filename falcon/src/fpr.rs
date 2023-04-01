@@ -132,15 +132,27 @@ pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
 
     m = fpr_ulsh(1, cc) - 1;
     yu |= (yu & m) + m;
+    println!("yu {}", yu);
     println!("cc {}", cc);
     yu = fpr_ursh(yu, cc);
     println!("yu {}", yu);
-    xu = xu.wrapping_add(yu.wrapping_sub((yu << 1) & (!((sx ^ sy) as u64)).wrapping_add(1)));
+    let sign = (!((sx ^ sy) as u64)).wrapping_add(1);
+    println!("sign {}", sign);
+    let yus = (yu << 1);
+    println!("yus {}", yus);
+    let and = yus & sign;
+    println!("and {}", and);
+    let value = yu.wrapping_sub(and);
+    println!("y? {}", value);
+    println!("xu {}", xu);
+    println!("s {}", sx);
+    println!("yu {}", yu);
+    xu = xu.wrapping_add(value);
 
 
-
+    println!("xu {}", xu);
     (xu, ex) = fpr_norm64(xu, ex);
-
+    println!("xu {}", xu);
     xu |= (((xu as u32) & 0x1FF) + 0x1FF) as u64;
     xu >>= 9;
     ex += 9;
