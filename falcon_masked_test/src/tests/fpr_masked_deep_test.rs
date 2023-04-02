@@ -3,7 +3,7 @@ use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr, fpr_add, fpr_mul, fpr_norm64, fpr_ursh};
-use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_ursh, secure_mul, secure_mul_test, secure_neg, secure_non_zero, secure_or, secure_ursh};
+use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_add2, secure_fpr_norm, secure_fpr_ursh, secure_mul, secure_mul_test, secure_neg, secure_non_zero, secure_or, secure_ursh};
 
 #[test]
 fn mul_fpr_test() {
@@ -110,7 +110,7 @@ fn fpr_ursh_test() {
 
 #[test]
 fn secure_fpr_add_test() {
-    for _ in 0..100 {
+    for _ in 0..1000 {
         let x = create_random_fpr();
         println!("x {}", fpr_to_double(x));
         let x_share = create_random_fpr();
@@ -120,10 +120,11 @@ fn secure_fpr_add_test() {
         let x_mask: [fpr; 2] = [x ^ x_share, x_share];
         let y_mask: [fpr; 2] = [y ^ y_share, y_share];
         let expected = fpr_add(x, y);
-        let result:[fpr; 2] = secure_fpr_add(&x_mask, &y_mask);
+        let result:[fpr; 2] = secure_fpr_add2(&x_mask, &y_mask);
         println!("expected {}", fpr_to_double(expected));
         println!("got {}", fpr_to_double(result[0] ^ result[1]));
         check_eq_fpr(expected, result[0] ^ result[1]);
+        println!();
     }
 }
 

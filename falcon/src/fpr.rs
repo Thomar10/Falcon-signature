@@ -105,23 +105,29 @@ pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
     let (mut m, mut xu, mut yu, za): (u64, u64, u64, u64);
     let cs: u32;
     let (mut ex, mut ey, sx, sy, mut cc): (i32, i32, i32, i32, i32);
-
+    //println!("x {}", x);
+    //println!("y {}", y);
     m = (1 << 63) - 1;
     za = (x & m).wrapping_sub(y & m);
+    println!("za {}", za);
     cs = (za >> 63) as u32 | ((1u32 - ((!za).wrapping_add(1) >> 63) as u32) & (x >> 63) as u32);
     m = (x ^ y) & (!(cs as u64)).wrapping_add(1);
     x ^= m;
     y ^= m;
 
+    println!("xx {}", x);
+    println!("yy {}", y);
     ex = (x >> 52) as i32;
     sx = ex >> 11;
     ex &= 0x7FF;
+    //println!("ex {}", ex);
     m = (((ex + 0x7FF) >> 11) as u64) << 52;
     xu = ((x & ((1u64 << 52) - 1)) | m) << 3;
     ex -= 1078;
     ey = (y >> 52) as i32;
     sy = ey >> 11;
     ey &= 0x7FF;
+    //println!("ey {}", ey);
     m = (((ey + 0x7FF) >> 11) as u64) << 52;
     yu = ((y & ((1u64 << 52) - 1)) | m) << 3;
     ey -= 1078;
@@ -132,27 +138,30 @@ pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
 
     m = fpr_ulsh(1, cc) - 1;
     yu |= (yu & m) + m;
-    println!("yu {}", yu);
-    println!("cc {}", cc);
+    //println!("yu {}", yu);
+    //println!("cc {}", cc);
     yu = fpr_ursh(yu, cc);
-    println!("yu {}", yu);
+    //println!("yu {}", yu);
     let sign = (!((sx ^ sy) as u64)).wrapping_add(1);
-    println!("sign {}", sign);
+    //println!("sign {}", sign);
     let yus = (yu << 1);
-    println!("yus {}", yus);
+    //println!("yus {}", yus);
     let and = yus & sign;
-    println!("and {}", and);
+    //println!("and {}", and);
     let value = yu.wrapping_sub(and);
-    println!("y? {}", value);
-    println!("xu {}", xu);
-    println!("s {}", sx);
-    println!("yu {}", yu);
+    //println!("y? {}", value);
+    //println!("xu {}", xu);
+    //println!("s {}", sx);
+    //println!("yu {}", yu);
+    //println!("value {}", value);
+    //println!("xu {}", xu);
     xu = xu.wrapping_add(value);
+    //println!("xu {}", xu);
 
 
-    println!("xu {}", xu);
+    //println!("xu {}", xu);
     (xu, ex) = fpr_norm64(xu, ex);
-    println!("xu {}", xu);
+    //println!("xu {}", xu);
     xu |= (((xu as u32) & 0x1FF) + 0x1FF) as u64;
     xu >>= 9;
     ex += 9;
