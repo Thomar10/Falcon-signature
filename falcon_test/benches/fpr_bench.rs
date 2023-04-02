@@ -4,8 +4,36 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use rand::prelude::*;
 
 use falcon::falcon::fpr;
+use falcon::fft::fft;
 use falcon::fpr::{fpr_add, fpr_mul, fpr_norm64, fpr_sub};
+use falcon_masked::fft_masked::fft as mfft;
+use falcon_masked::fft_masked_deep::secure_fft;
 use falcon_masked::fpr_masked_deep::{secure_fpr_add, secure_fpr_norm, secure_fpr_sub, secure_mul};
+
+pub fn fft_unmasked(c: &mut Criterion) {
+    const LOGN: usize = 10;
+    const SIZE: usize = 1 << LOGN;
+    let mut x: [fpr; SIZE] = create_random_fpr_array::<SIZE>();
+    c.bench_function("fft_unmasked unmasked add", |b| b.iter(|| fft(&mut x, LOGN as u32)));
+}
+
+pub fn fft_fpr_masked(c: &mut Criterion) {
+    const LOGN: usize = 10;
+    const SIZE: usize = 1 << LOGN;
+    let mut x: [[fpr; 2]; SIZE] = create_random_masked_fpr_array::<SIZE, 2>();
+    c.bench_function("fft masked fpr", |b| b.iter(|| {
+        secure_fft::<2>(&mut x, LOGN as u32);
+    }));
+}
+
+pub fn better_fft_fpr_masked(c: &mut Criterion) {
+    const LOGN: usize = 10;
+    const SIZE: usize = 1 << LOGN;
+    let mut x: [[fpr; 2]; SIZE] = create_random_masked_better_fpr_array::<SIZE, 2>();
+    c.bench_function("fft masked fpr better", |b| b.iter(|| {
+        mfft(&mut x, LOGN as u32);
+    }));
+}
 
 pub fn fpr_unmasked_add(c: &mut Criterion) {
     let x = create_random_fpr();
@@ -80,11 +108,46 @@ pub fn fpr_masked_mul(c: &mut Criterion) {
         b.iter(|| secure_mul::<2>(&x_mask, &y_mask)));
 }
 
+pub fn create_random_fpr_array<const SIZE: usize>() -> [fpr; SIZE] {
+    let mut array: [fpr; SIZE] = [0; SIZE];
+    for i in 0..SIZE {
+        array[i] = create_random_fpr();
+    }
+    array
+}
+
+pub fn create_random_masked_fpr_array<const SIZE: usize, const ORDER: usize>() -> [[fpr; ORDER]; SIZE] {
+    let mut array: [[fpr; ORDER]; SIZE] = [[0; ORDER]; SIZE];
+    for i in 0..SIZE {
+        let mut val: [fpr; ORDER] = [0; ORDER];
+        let value = create_random_fpr();
+        let mask = create_random_fpr();
+        val[0] = value;
+        val[1] = value ^ mask;
+        array[i] = val;
+    }
+    array
+}
+
+pub fn create_random_masked_better_fpr_array<const SIZE: usize, const ORDER: usize>() -> [[fpr; ORDER]; SIZE] {
+    let mut array: [[fpr; ORDER]; SIZE] = [[0; ORDER]; SIZE];
+    for i in 0..SIZE {
+        let mut val: [fpr; ORDER] = [0; ORDER];
+        let value = create_random_fpr();
+        let mask = create_random_fpr();
+        val[0] = value;
+        val[1] = fpr_sub(value, mask);
+        array[i] = val;
+    }
+    array
+}
+
 pub fn create_random_fpr() -> fpr {
     let mut rng = StdRng::seed_from_u64(42);
     let random: f64 = rng.gen_range(-100f64..100f64);
     return f64::to_bits(random);
 }
 
-criterion_group!(benches, fpr_unmasked_mul, fpr_masked_mul, fpr_unmasked_norm, fpr_masked_norm, fpr_unmasked_add, fpr_masked_add, fpr_unmasked_sub, fpr_masked_sub);
+criterion_group!(benches, fpr_unmasked_mul, fpr_masked_mul, fpr_unmasked_norm, fpr_masked_norm, fpr_unmasked_add,
+    fpr_masked_add, fpr_unmasked_sub, fpr_masked_sub, better_fft_fpr_masked, fft_fpr_masked, fft_unmasked);
 criterion_main!(benches);
