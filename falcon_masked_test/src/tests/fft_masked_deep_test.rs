@@ -23,8 +23,8 @@ fn fpc_add_test() {
         let (expected_re, expected_im) = fpc_add(x_re, x_im, y_re, y_im);
         let (result_re, result_im) =
             secure_fpc_add::<2>(&x_re_mask, &x_im_mask, &y_re_mask, &y_im_mask);
-        assert_eq!(expected_re, result_re[0] ^ result_re[1]);
-        assert_eq!(expected_im, result_im[0] ^ result_im[1]);
+        check_eq_fpr(expected_re, result_re[0] ^ result_re[1]);
+        check_eq_fpr(expected_im, result_im[0] ^ result_im[1]);
     }
 }
 
@@ -71,8 +71,8 @@ fn fpc_sub_test() {
         let (expected_re, expected_im) = fpc_sub(x_re, x_im, y_re, y_im);
         let (result_re, result_im) =
             secure_fpc_sub::<2>(&x_re_mask, &x_im_mask, &y_re_mask, &y_im_mask);
-        assert_eq!(expected_re, result_re[0] ^ result_re[1]);
-        assert_eq!(expected_im, result_im[0] ^ result_im[1]);
+        check_eq_fpr(expected_re, result_re[0] ^ result_re[1]);
+        check_eq_fpr(expected_im, result_im[0] ^ result_im[1]);
     }
 }
 
