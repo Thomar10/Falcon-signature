@@ -2,73 +2,24 @@ use float_cmp::approx_eq;
 use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
-use falcon::fpr::{fpr, fpr_add, fpr_mul, fpr_norm64, fpr_ursh};
-use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_mul, secure_mul_test, secure_neg, secure_or, secure_ursh};
+use falcon::fpr::{fpr, fpr_add, fpr_mul, fpr_norm64, fpr_sub, fpr_ursh};
+use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_sub, secure_mul, secure_neg, secure_or, secure_ursh};
 
 #[test]
 fn mul_fpr_test() {
-    let mut rng = thread_rng();
-    for _ in 0..100 {
+    for _ in 0..10000 {
         let x = create_random_fpr();
+        let x_share = create_random_fpr();
         let y = create_random_fpr();
+        let y_share = create_random_fpr();
+        let x_mask: [fpr; 2] = [x ^ x_share, x_share];
+        let y_mask: [fpr; 2] = [y ^ y_share, y_share];
         let expected = fpr_mul(x, y);
-
-        let sharex: u64 = rng.gen_range(0..2);
-        let x_sign = x >> 63;
-        let s_sharex: [u64; 2] = [(x_sign as u64) ^ sharex, sharex];
-        let share_ex: i16 = random();
-        let x_exp = (x >> 52) & 0x7FF;
-        let mut e_sharex: [i16; 2] = [((x_exp) as i16).wrapping_sub(share_ex), share_ex];
-        let share_mx: i64 = rng.gen_range(0..18014398509481983);
-        let x_man = x & 0xFFFFFFFFFFFFF;
-        let mut m_sharex: [i128; 2] = [((x_man) as i128).wrapping_sub(share_mx as i128), share_mx as i128];
-
-
-        let sharey: u64 = rng.gen_range(0..2);
-        let s_sharey: [u64; 2] = [((y >> 63) as u64) ^ sharey, sharey];
-        let share_ey: i16 = random();
-        let mut e_sharey: [i16; 2] = [(((y >> 52) & 0x7FF) as i16).wrapping_sub(share_ey), share_ey];
-        let share_my: i64 = rng.gen_range(0..18014398509481983);
-        let y_man = y & 0xFFFFFFFFFFFFF;
-        let mut m_sharey: [i128; 2] = [(y_man as i128).wrapping_sub(share_my as i128), share_my as i128];
-        let result: [fpr; 2] = secure_mul(&s_sharex, &mut e_sharex, &mut m_sharex, &s_sharey, &mut e_sharey, &mut m_sharey);
+        let result: [fpr; 2] = secure_mul(&x_mask, &y_mask);
         check_eq_fpr(expected, result[0] ^ result[1]);
     }
 }
 
-
-#[test]
-fn mul_fpr_test2() {
-    let mut rng = thread_rng();
-    for _ in 0..100 {
-        let x = create_random_fpr();
-        let y = create_random_fpr();
-        let (s, e, z) = fpr_mul_test(x, y);
-
-        let sharex: u64 = rng.gen_range(0..2);
-        let x_sign = x >> 63;
-        let s_sharex: [u64; 2] = [(x_sign as u64) ^ sharex, sharex];
-        let share_ex: i16 = random();
-        let x_exp = (x >> 52) & 0x7FF;
-        let mut e_sharex: [i16; 2] = [((x_exp) as i16).wrapping_sub(share_ex), share_ex];
-        let share_mx: i64 = rng.gen_range(0..18014398509481983);
-        let x_man = x & 0xFFFFFFFFFFFFF;
-        let mut m_sharex: [i128; 2] = [((x_man) as i128).wrapping_sub(share_mx as i128), share_mx as i128];
-
-
-        let sharey: u64 = rng.gen_range(0..2);
-        let s_sharey: [u64; 2] = [((y >> 63) as u64) ^ sharey, sharey];
-        let share_ey: i16 = random();
-        let mut e_sharey: [i16; 2] = [(((y >> 52) & 0x7FF) as i16).wrapping_sub(share_ey), share_ey];
-        let share_my: i64 = rng.gen_range(0..18014398509481983);
-        let y_man = y & 0xFFFFFFFFFFFFF;
-        let mut m_sharey: [i128; 2] = [(y_man as i128).wrapping_sub(share_my as i128), share_my as i128];
-        let (ss, ee, zz) = secure_mul_test::<2>(&s_sharex, &mut e_sharex, &mut m_sharex, &s_sharey, &mut e_sharey, &mut m_sharey);
-        assert_eq!(s, (ss[0] ^ ss[1]) as i32);
-        assert_eq!(e, (ee[0].wrapping_add(ee[1])) as i32);
-        assert_eq!(z, (zz[0] ^ zz[1]) as u64);
-    }
-}
 
 #[test]
 fn fpr_norm() {
@@ -100,6 +51,21 @@ fn fpr_ursh_test() {
         let xx = secure_ursh::<2>(&x_share, &n_share);
         let expected = fpr_ursh(x, n as i32);
         assert_eq!(expected, xx[0] ^ xx[1]);
+    }
+}
+
+#[test]
+fn secure_fpr_sub_test() {
+    for _ in 0..1000 {
+        let x = create_random_fpr();
+        let x_share = create_random_fpr();
+        let y = create_random_fpr();
+        let y_share = create_random_fpr();
+        let x_mask: [fpr; 2] = [x ^ x_share, x_share];
+        let y_mask: [fpr; 2] = [y ^ y_share, y_share];
+        let expected = fpr_sub(x, y);
+        let result: [fpr; 2] = secure_fpr_sub(&x_mask, &y_mask);
+        check_eq_fpr(expected, result[0] ^ result[1]);
     }
 }
 
