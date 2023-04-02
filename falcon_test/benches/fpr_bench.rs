@@ -4,8 +4,25 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use rand::prelude::*;
 
 use falcon::falcon::fpr;
-use falcon::fpr::{fpr_mul, fpr_norm64};
-use falcon_masked::fpr_masked_deep::{secure_fpr_norm, secure_mul};
+use falcon::fpr::{fpr_add, fpr_mul, fpr_norm64};
+use falcon_masked::fpr_masked_deep::{secure_fpr_add, secure_fpr_norm, secure_mul};
+
+pub fn fpr_unmasked_add(c: &mut Criterion) {
+    let x = create_random_fpr();
+    let y = create_random_fpr();
+    c.bench_function("fpr unmasked add", |b| b.iter(|| fpr_add(x, y)));
+}
+
+pub fn fpr_masked_add(c: &mut Criterion) {
+    let x = create_random_fpr();
+    let x_share = create_random_fpr();
+    let y = create_random_fpr();
+    let y_share = create_random_fpr();
+    let x_mask: [fpr; 2] = [x ^ x_share, x_share];
+    let y_mask: [fpr; 2] = [y ^ y_share, y_share];
+    c.bench_function("fpr masked add", |b| b.iter(|| secure_fpr_add::<2>(&x_mask, &y_mask)));
+}
+
 
 pub fn fpr_unmasked_mul(c: &mut Criterion) {
     let x = create_random_fpr();
@@ -64,5 +81,5 @@ pub fn create_random_fpr() -> fpr {
     return f64::to_bits(random);
 }
 
-criterion_group!(benches, fpr_unmasked_mul, fpr_masked_mul, fpr_unmasked_norm, fpr_masked_norm);
+criterion_group!(benches, fpr_unmasked_mul, fpr_masked_mul, fpr_unmasked_norm, fpr_masked_norm, fpr_masked_add, fpr_unmasked_add);
 criterion_main!(benches);
