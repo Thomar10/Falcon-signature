@@ -21,32 +21,32 @@ pub static FPR_INVERSE_OF_Q: fpr = 4545632735260551042;
 pub static FPR_INV_2SQRSIGMA0: fpr = 4594603506513722306;
 
 pub static FPR_INV_SIGMA: [fpr; 11] = [
-0,  /* unused */
-4574611497772390042,
-4574501679055810265,
-4574396282908341804,
-4574245855758572086,
-4574103865040221165,
-4573969550563515544,
-4573842244705920822,
-4573721358406441454,
-4573606369665796042,
-4573496814039276259
+    0, /* unused */
+    4574611497772390042,
+    4574501679055810265,
+    4574396282908341804,
+    4574245855758572086,
+    4574103865040221165,
+    4573969550563515544,
+    4573842244705920822,
+    4573721358406441454,
+    4573606369665796042,
+    4573496814039276259
 ];
 
 #[allow(dead_code)]
 pub static FPR_SIGMA_MIN: [fpr; 11] = [
-0,  /* unused */
-4607707126469777035,
-4607777455861499430,
-4607846828256951418,
-4607949175006100261,
-4608049571757433526,
-4608148125896792003,
-4608244935301382692,
-4608340089478362016,
-4608433670533905013,
-4608525754002622308
+    0, /* unused */
+    4607707126469777035,
+    4607777455861499430,
+    4607846828256951418,
+    4607949175006100261,
+    4608049571757433526,
+    4608148125896792003,
+    4608244935301382692,
+    4608340089478362016,
+    4608433670533905013,
+    4608525754002622308
 ];
 
 static C: [u64; 13] = [
@@ -70,32 +70,32 @@ pub fn fpr_norm64(mut m: u64, mut e: i32) -> (fpr, i32) {
     e -= 63;
 
     nt = (m >> 32) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 32)) & (nt as u64).wrapping_sub(1);
     e += (nt << 5) as i32;
 
     nt = (m >> 48) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 16)) & (nt as u64).wrapping_sub(1);
     e += (nt << 4) as i32;
 
     nt = (m >> 56) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 8)) & (nt as u64).wrapping_sub(1);
     e += (nt << 3) as i32;
 
     nt = (m >> 60) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 4)) & (nt as u64).wrapping_sub(1);
     e += (nt << 2) as i32;
 
     nt = (m >> 62) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 2)) & (nt as u64).wrapping_sub(1);
     e += (nt << 1) as i32;
 
     nt = (m >> 63) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 1)) & (nt as u64).wrapping_sub(1);
     e += nt as i32;
     (m, e)
@@ -105,29 +105,22 @@ pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
     let (mut m, mut xu, mut yu, za): (u64, u64, u64, u64);
     let cs: u32;
     let (mut ex, mut ey, sx, sy, mut cc): (i32, i32, i32, i32, i32);
-    //println!("x {}", x);
-    //println!("y {}", y);
     m = (1 << 63) - 1;
     za = (x & m).wrapping_sub(y & m);
-    println!("za {}", za);
     cs = (za >> 63) as u32 | ((1u32 - ((!za).wrapping_add(1) >> 63) as u32) & (x >> 63) as u32);
     m = (x ^ y) & (!(cs as u64)).wrapping_add(1);
     x ^= m;
     y ^= m;
 
-    println!("xx {}", x);
-    println!("yy {}", y);
     ex = (x >> 52) as i32;
     sx = ex >> 11;
     ex &= 0x7FF;
-    //println!("ex {}", ex);
     m = (((ex + 0x7FF) >> 11) as u64) << 52;
     xu = ((x & ((1u64 << 52) - 1)) | m) << 3;
     ex -= 1078;
     ey = (y >> 52) as i32;
     sy = ey >> 11;
     ey &= 0x7FF;
-    //println!("ey {}", ey);
     m = (((ey + 0x7FF) >> 11) as u64) << 52;
     yu = ((y & ((1u64 << 52) - 1)) | m) << 3;
     ey -= 1078;
@@ -138,30 +131,15 @@ pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
 
     m = fpr_ulsh(1, cc) - 1;
     yu |= (yu & m) + m;
-    //println!("yu {}", yu);
-    //println!("cc {}", cc);
     yu = fpr_ursh(yu, cc);
-    //println!("yu {}", yu);
     let sign = (!((sx ^ sy) as u64)).wrapping_add(1);
-    //println!("sign {}", sign);
     let yus = (yu << 1);
-    //println!("yus {}", yus);
     let and = yus & sign;
-    //println!("and {}", and);
     let value = yu.wrapping_sub(and);
-    //println!("y? {}", value);
-    //println!("xu {}", xu);
-    //println!("s {}", sx);
-    //println!("yu {}", yu);
-    //println!("value {}", value);
-    //println!("xu {}", xu);
     xu = xu.wrapping_add(value);
-    //println!("xu {}", xu);
 
 
-    //println!("xu {}", xu);
     (xu, ex) = fpr_norm64(xu, ex);
-    //println!("xu {}", xu);
     xu |= (((xu as u32) & 0x1FF) + 0x1FF) as u64;
     xu >>= 9;
     ex += 9;
@@ -361,7 +339,7 @@ pub fn fpr_div(x: fpr, y: fpr) -> fpr {
         i += 1;
     }
 
-    q |= (xu | ((!xu) .wrapping_add(1))) >> 63;
+    q |= (xu | ((!xu).wrapping_add(1))) >> 63;
 
     q2 = (q >> 1) | (q & 1);
     w = q >> 55;
@@ -437,7 +415,7 @@ pub fn fpr_rint(x: fpr) -> i64 {
     let (s, dd, f): (u32, u32, u32);
 
 
-    m = ((((x << 10) as u64) | ((1 as u64) << 62))  & (((1 as u64) << 63) - 1)) as u64;
+    m = ((((x << 10) as u64) | ((1 as u64) << 62)) & (((1 as u64) << 63) - 1)) as u64;
     e = 1085 - (((x >> 52) as i32) & 0x7FF);
 
 

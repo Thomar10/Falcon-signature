@@ -120,7 +120,7 @@ fn secure_fpr_add_test() {
         let x_mask: [fpr; 2] = [x ^ x_share, x_share];
         let y_mask: [fpr; 2] = [y ^ y_share, y_share];
         let expected = fpr_add(x, y);
-        let result:[fpr; 2] = secure_fpr_add2(&x_mask, &y_mask);
+        let result:[fpr; 2] = secure_fpr_add(&x_mask, &y_mask);
         println!("expected {}", fpr_to_double(expected));
         println!("got {}", fpr_to_double(result[0] ^ result[1]));
         check_eq_fpr(expected, result[0] ^ result[1]);
