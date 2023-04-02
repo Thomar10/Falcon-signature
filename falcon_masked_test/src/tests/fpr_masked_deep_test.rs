@@ -3,7 +3,7 @@ use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr, fpr_add, fpr_mul, fpr_norm64, fpr_ursh};
-use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_ursh, secure_mul, secure_mul_test, secure_neg, secure_or, secure_ursh};
+use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_mul, secure_mul_test, secure_neg, secure_or, secure_ursh};
 
 #[test]
 fn mul_fpr_test() {
@@ -96,8 +96,8 @@ fn fpr_ursh_test() {
         let x_share: [u64; 2] = [x ^ share_x, share_x];
         let n: i8 = rng.gen_range(0..64);
         let share_n: i8 = rng.gen_range(0..64);
-        let n_share: [i8; 2] = [n.wrapping_sub(share_n), share_n];
-        let xx = secure_fpr_ursh::<2>(&x_share, &n_share);
+        let n_share: [i8; 2] = [n ^ share_n, share_n];
+        let xx = secure_ursh::<2>(&x_share, &n_share);
         let expected = fpr_ursh(x, n as i32);
         assert_eq!(expected, xx[0] ^ xx[1]);
     }

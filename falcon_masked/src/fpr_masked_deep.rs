@@ -229,6 +229,18 @@ fn b2a_i64(x: i64, r: i64) -> i64 {
     a ^ t
 }
 
+fn b2ai6(x: i8, r: i8) -> i8 {
+    let randomi6: i8 = random();
+    let mut gamma: i8 = randomi6 >> 2;
+    let mut t = x ^ gamma;
+    t = t.wrapping_sub(gamma);
+    t = t ^ x;
+    gamma = gamma ^ r;
+    let mut a = x ^ gamma;
+    a = a.wrapping_sub(gamma);
+    a ^ t
+}
+
 fn b2a(x: i16, r: i16) -> i16 {
     let mut gamma: i16 = random();
     let mut t = x ^ gamma;
@@ -442,10 +454,11 @@ pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> ([fpr; ORDER]
     }
     nd[0] = nd[0].wrapping_sub(60);
     nd[0] = a2b_e(nd[0], nd[1]);
+    n[0] = a2b_e(n[0], n[1]);
     let my: [i64; ORDER] = secure_and_i64(&[my[0] as i64, my[1] as i64],
                                           &[(-((nd[0] >> 15) & 1) as i64), (-((nd[1] >> 15) & 1) as i64)]);
 
-    let mut my: [fpr; ORDER] = secure_fpr_ursh(&[my[0] as u64, my[1] as u64], &[n[0] as i8, n[1] as i8]);
+    let mut my: [fpr; ORDER] = secure_ursh(&[my[0] as u64, my[1] as u64], &[n[0] as i8, n[1] as i8]);
 
     let mut myd: [u64; ORDER] = [0; ORDER];
     myd[0] = !my[0];
@@ -472,17 +485,6 @@ pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> ([fpr; ORDER]
     secure_fpr(&sx, &mut ex, &zz)
 }
 
-pub fn secure_fpr_ursh<const ORDER: usize>(xx: &[u64], n: &[i8]) -> ([fpr; ORDER]) {
-    let mut y: [u64; ORDER] = [0; ORDER];
-    if n[0] < 0 || n[1] < 0 {
-        y[0] = (xx[0] >> (n[0] + n[1]));
-        y[1] = (xx[1] >> (n[0] + n[1]));
-    } else {
-        y[0] = (xx[0] >> n[0]) >> n[1];
-        y[1] = (xx[1] >> n[0]) >> n[1];
-    }
-    y
-}
 
 pub fn refresh<const ORDER: usize>(z: &mut [u64]) {
     for i in 0..ORDER {
@@ -565,6 +567,44 @@ pub fn secure_add<const ORDER: usize>(x: i64, y: i64, rx: i64, ry: i64) -> [i64;
     z
 }
 
+pub fn secure_add_u64<const ORDER: usize>(x: u64, y: u64, rx: u64, ry: u64) -> [u64; ORDER] {
+    let mut z = [0; ORDER];
+    let mut rng = thread_rng();
+    let mut c = rng.gen_range(0..2);
+    let (mut t, mut omega, mut b, mut a0, a1);
+    t = x & y;
+    omega = c ^ t;
+    t = x & ry;
+    omega = omega ^ t;
+    t = y & rx;
+    omega = omega ^ t;
+    t = rx & ry;
+    omega = omega ^ t;
+
+    b = omega << 1;
+    c = c << 1;
+    a0 = x ^ y;
+    a1 = rx ^ ry;
+    t = c & a0;
+    omega = omega ^ t;
+    t = c & a1;
+    omega = omega ^ t;
+
+    for _ in 2..64 {
+        t = b & a0;
+        b = b & a1;
+        b = b ^ omega;
+        b = b ^ t;
+        b = b << 1;
+    }
+
+    a0 = a0 ^ b;
+    a0 = a0 ^ c;
+    z[0] = a0;
+    z[1] = a1;
+    z
+}
+
 pub fn secure_add_i64<const ORDER: usize>(x: i64, y: i64, rx: i64, ry: i64) -> [i64; ORDER] {
     let mut z = [0; ORDER];
     let mut rng = thread_rng();
@@ -622,9 +662,37 @@ pub fn secure_xor<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
 }
 
 pub fn secure_ursh<const ORDER: usize>(x: &[fpr], n: &[i8]) -> [fpr; ORDER] {
-    let mut n_shift = [0; ORDER];
+    let mut y = [0; ORDER];
+    let mut nn = [0; ORDER];
+    for i in 0..ORDER {
+        y[i] = (x[i] >> 32) ^ x[i];
+        nn[i] = (n[i] >> 5) as u64;
+    }
+    let mut mask: [u64; ORDER] = [0; ORDER];
+    nn[0] = !nn[0];
+    mask[0] = 1;
+    refresh::<ORDER>(&mut mask);
+    nn = secure_add_u64(nn[0], mask[0], nn[1], mask[1]);
 
-    n_shift//z
+    let mut z: [fpr; ORDER] = secure_and(&y, &nn);
+    for i in 0..ORDER {
+        z[i] = z[i] ^ x[i];
+    }
+    let mut nn = [0; ORDER];
+    nn[0] = n[0] & 31;
+    nn[1] = n[1] & 31;
+    nn[0] = b2ai6(nn[0], nn[1]);
+    if nn[0] < 0 {
+        z[0] = (((z[0] as u128) << nn[0].abs()) >> nn[1]) as u64;
+        z[1] = (((z[1] as u128) << nn[0].abs()) >> nn[1]) as u64;
+    } else if nn[1] < 0 {
+        z[0] = (((z[0] as u128) << nn[1].abs()) >> nn[0]) as u64;
+        z[1] = (((z[1] as u128) << nn[1].abs()) >> nn[0]) as u64;
+    } else {
+        z[0] = (z[0] >> nn[0]) >> nn[1];
+        z[1] = (z[1] >> nn[0]) >> nn[1];
+    }
+    z
 }
 
 pub fn secure_rhs_const<const ORDER: usize>(x: &[fpr], c: i32) -> [fpr; ORDER] {
