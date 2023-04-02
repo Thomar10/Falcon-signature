@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use criterion::{black_box, Criterion, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 
 use falcon::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_tmpsize_keygen, falcon_tmpsize_signdyn, falcon_tmpsize_verify};
 use falcon::falcon::{falcon_keygen_make, FALCON_SIG_COMPRESS, FALCON_SIG_CT, falcon_sign_dyn, falcon_verify};
