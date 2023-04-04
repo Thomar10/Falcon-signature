@@ -1,9 +1,12 @@
+use std::ops::{Add, BitXor};
+use std::process::Output;
+
 use float_cmp::approx_eq;
 use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr, fpr_add, fpr_mul, fpr_norm64, fpr_sub, fpr_ursh};
-use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_sub, secure_mul, secure_or, secure_ursh};
+use falcon_masked::fpr_masked_deep::{kogge_stone_a2b, secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_sub, secure_mul, secure_or, secure_ursh};
 
 #[test]
 fn mul_fpr_test() {
@@ -17,6 +20,19 @@ fn mul_fpr_test() {
         let expected = fpr_mul(x, y);
         let result: [fpr; 2] = secure_mul(&x_mask, &y_mask);
         check_eq_fpr(expected, result[0] ^ result[1]);
+    }
+}
+
+#[test]
+fn kogge_stone_test() {
+    for _ in 0..100 {
+        let e: u16 = random();
+        let share_e: u16 = random();
+        let e_share = e.wrapping_sub(share_e);
+        let conv = kogge_stone_a2b(e_share, share_e);
+        assert_eq!(e_share.wrapping_add(share_e), e);
+        assert_eq!(conv ^ share_e, e);
+        assert_eq!(conv ^ share_e, e_share.wrapping_add(share_e))
     }
 }
 
@@ -112,8 +128,6 @@ fn fpr_test2() {
         let mut e_share: [i16; 2] = [-15010, 14963];
         let mut z_share = [55249731794911175, 48339284658128127];
         let result: [fpr; 2] = secure_fpr(&s_share, &mut e_share, &mut z_share);
-        // println!("expected {}", fpr_to_double(expected));
-        // println!("got {}", fpr_to_double(result[0] ^ result[1]));
         check_eq_fpr(expected, result[0] ^ result[1]);
     }
 }
@@ -127,8 +141,6 @@ fn fpr_test3() {
         let mut e_share: [i16; 2] = [-14433, 14390];
         let mut z_share = [34770256359083929, 18642285226283659];
         let result: [fpr; 2] = secure_fpr(&s_share, &mut e_share, &mut z_share);
-        // println!("expected {}", fpr_to_double(expected));
-        // println!("got {}", fpr_to_double(result[0] ^ result[1]));
         check_eq_fpr(expected, result[0] ^ result[1]);
     }
 }
