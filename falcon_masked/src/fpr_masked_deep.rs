@@ -2,31 +2,6 @@ use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
 
-//
-// pub fn fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
-//     let mut z = [0; ORDER];
-//     let mut xi = [0; ORDER];
-//     let mut yi = [0; ORDER];
-//
-//     for i in 0..ORDER {
-//         xi[i] = x[i] << 63;
-//     }
-//     z
-// }
-//
-// pub fn fpr_ursh<const ORDER: usize>(x: &[fpr], n: &[u8]) -> [fpr; ORDER] {
-//     let mut z: [fpr; ORDER] = [0; ORDER];
-//     let mut y = x.clone();
-//     let mut m: [fpr; ORDER] = [0; ORDER];
-//     m[0] = 1 << 63;
-//     // refresh
-//     for i in 0..ORDER {
-//         y[i] >>= n[i];
-//         m[i] >>= n[i];
-//     }
-//     z
-// }
-
 pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
     let mut rng = thread_rng();
     let mut r: [[fpr; ORDER]; ORDER] = [[0; ORDER]; ORDER];
@@ -45,68 +20,6 @@ pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
                 z[i] = z[i] ^ r[i][j];
             }
         }
-    }
-    z
-}
-
-pub fn secure_and_i128<const ORDER: usize>(x: &[i128], y: &[i128]) -> [i128; ORDER] {
-    let mut rng = thread_rng();
-    let mut r: [[i128; ORDER]; ORDER] = [[0; ORDER]; ORDER];
-
-    for i in 0..ORDER {
-        for j in (i + 1)..ORDER {
-            r[i][j] = rng.gen_range(0..2);
-            r[j][i] = (r[i][j] ^ (x[i] & y[j])) ^ (x[j] & y[i]);
-        }
-    }
-    let mut z = [0; ORDER];
-    for i in 0..ORDER {
-        z[i] = x[i] & y[i];
-        for j in 0..ORDER {
-            if i != j {
-                z[i] = z[i] ^ r[i][j];
-            }
-        }
-    }
-    z
-}
-
-pub fn secure_and_i64<const ORDER: usize>(x: &[i64], y: &[i64]) -> [i64; ORDER] {
-    let mut rng = thread_rng();
-    let mut r: [[i64; ORDER]; ORDER] = [[0; ORDER]; ORDER];
-
-    for i in 0..ORDER {
-        for j in (i + 1)..ORDER {
-            r[i][j] = rng.gen_range(0..2);
-            r[j][i] = (r[i][j] ^ (x[i] & y[j])) ^ (x[j] & y[i]);
-        }
-    }
-    let mut z = [0; ORDER];
-    for i in 0..ORDER {
-        z[i] = x[i] & y[i];
-        for j in 0..ORDER {
-            if i != j {
-                z[i] = z[i] ^ r[i][j];
-            }
-        }
-    }
-    z
-}
-
-pub fn secure_or_i128<const ORDER: usize>(x: &[i128], y: &[i128]) -> [i128; ORDER] {
-    let mut z = [0; ORDER];
-    let t: [i128; ORDER] = secure_and_i128(x, y);
-    for i in 0..ORDER {
-        z[i] = x[i] ^ t[i] ^ y[i];
-    }
-    z
-}
-
-pub fn secure_or_i64<const ORDER: usize>(x: &[i64], y: &[i64]) -> [i64; ORDER] {
-    let mut z = [0; ORDER];
-    let t: [i64; ORDER] = secure_and_i64(x, y);
-    for i in 0..ORDER {
-        z[i] = x[i] ^ t[i] ^ y[i];
     }
     z
 }
@@ -133,13 +46,6 @@ pub fn secure_non_zero<const ORDER: usize>(x: &[fpr], bits: i32, boolean: bool) 
     let mut length = bits / 2;
     let mut l: [fpr; ORDER] = [0; ORDER];
     let mut r: [fpr; ORDER] = [0; ORDER];
-    // if bits == 1 {
-    //     let mut t = secure_or(&t, &t);
-    //     for i in 0..ORDER {
-    //         t[i] = t[i] & 1;
-    //     }
-    //     return t;
-    // }
     while length >= 1 {
         for i in 0..ORDER {
             l[i] = t[i] >> length;
@@ -207,7 +113,7 @@ fn a2b_u128(a: i128, r: i128) -> i128 {
     omega = omega ^ gamma;
     gamma = t & a;
     omega = omega ^ gamma;
-    for _ in 1..128 {
+    for _ in 1..106 {
         gamma = t & r;
         gamma = gamma ^ omega;
         t = t & a;
@@ -229,17 +135,6 @@ fn b2a_i128(x: i128, r: i128) -> i128 {
     a ^ t
 }
 
-fn b2a_i64(x: i64, r: i64) -> i64 {
-    let rng: bool = random();
-    let mut gamma: i64 = rng as i64;
-    let mut t = x ^ gamma;
-    t = t.wrapping_sub(gamma);
-    t = t ^ x;
-    gamma = gamma ^ r;
-    let mut a = x ^ gamma;
-    a = a.wrapping_sub(gamma);
-    a ^ t
-}
 
 fn b2ai6(x: i8, r: i8) -> i8 {
     let randomi6: i8 = random();
@@ -263,6 +158,8 @@ fn b2a(x: i16, r: i16) -> i16 {
     a = a.wrapping_sub(gamma);
     a ^ t
 }
+
+
 
 pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr]) -> [fpr; ORDER] {
     let mut s = [0; ORDER];
@@ -308,14 +205,10 @@ pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr]) -> [fpr; ORDER] {
     let mut w: [i16; ORDER] = [0; ORDER];
     w[0] = ((p[0] >> 105) & 1) as i16;
     w[1] = ((p[1] >> 105) & 1) as i16;
-    let mut zz: [fpr; ORDER] = [0; ORDER];
-    for i in 0..ORDER {
-        zz[i] = z[i] ^ (zd[i] as u64);
-    }
-    let zd: [i64; ORDER] = secure_and_i64(&[zd[0] as i64, zd[1] as i64], &[-(w[0] as i64), -(w[1] as i64)]);
-    for i in 0..ORDER {
-        z[i] = zz[i] ^ (zd[i] as u64);
-    }
+    let mut zz = xor::<ORDER>(&z, &zd);
+    let zd: [u64; ORDER] = secure_and(&zd, &[w[0].wrapping_neg() as u64, w[1].wrapping_neg() as u64]);
+    z = xor(&zz, &zd);
+
     let z = secure_or::<2>(&z, &bb);
     w[0] = b2a(w[0], w[1]);
 
@@ -359,7 +252,7 @@ pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16]) -> ([fpr; ORD
             x[i] = x[i] ^ t[i];
         }
 
-        b[0] = b2a_i64(b[0] as i64, b[1] as i64) as u64;
+        b[0] = b2ai6(b[0] as i8, b[1] as i8) as u64;
         for i in 0..ORDER {
             e[i] = e[i] + ((b[i] as i16) << j);
         }
@@ -435,8 +328,9 @@ pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> ([fpr; ORDER]
     nd[0] = nd[0].wrapping_sub(60);
     nd[0] = a2b_e(nd[0], nd[1]);
     n[0] = a2b_e(n[0], n[1]);
-    let my: [i64; ORDER] = secure_and_i64(&[my[0] as i64, my[1] as i64],
-                                          &[(-((nd[0] >> 15) & 1) as i64), (-((nd[1] >> 15) & 1) as i64)]);
+    let my: [u64; ORDER] = secure_and(&my,
+                                      &[((nd[0] >> 15) & 1).wrapping_neg() as u64,
+                                          ((nd[1] >> 15) & 1).wrapping_neg() as u64]);
 
     let mut my: [fpr; ORDER] = secure_ursh(&[my[0] as u64, my[1] as u64], &[n[0] as i8, n[1] as i8]);
 
@@ -474,14 +368,6 @@ pub fn refresh<const ORDER: usize>(z: &mut [u64]) {
     }
 }
 
-pub fn refresh_i64<const ORDER: usize>(z: &mut [i64]) {
-    for i in 0..ORDER {
-        let rng: i64 = random();
-        z[0] ^= rng;
-        z[i] ^= rng;
-    }
-}
-
 pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[u64]) -> [fpr; ORDER] {
     let mut b: [u64; ORDER] = [0; ORDER];
     let mut e1: [i16; ORDER] = [0; ORDER];
@@ -507,43 +393,6 @@ pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[u64]) -> [f
     xx
 }
 
-pub fn secure_add<const ORDER: usize>(x: i64, y: i64, rx: i64, ry: i64) -> [i64; ORDER] {
-    let mut z = [0; ORDER];
-    let mut rng = thread_rng();
-    let mut c = rng.gen_range(0..2);
-    let (mut t, mut omega, mut b, mut a0, a1);
-    t = x & y;
-    omega = c ^ t;
-    t = x & ry;
-    omega = omega ^ t;
-    t = y & rx;
-    omega = omega ^ t;
-    t = rx & ry;
-    omega = omega ^ t;
-
-    b = omega << 1;
-    c = c << 1;
-    a0 = x ^ y;
-    a1 = rx ^ ry;
-    t = c & a0;
-    omega = omega ^ t;
-    t = c & a1;
-    omega = omega ^ t;
-
-    for _ in 2..16 {
-        t = b & a0;
-        b = b & a1;
-        b = b ^ omega;
-        b = b ^ t;
-        b = b << 1;
-    }
-
-    a0 = a0 ^ b;
-    a0 = a0 ^ c;
-    z[0] = a0;
-    z[1] = a1;
-    z
-}
 
 pub fn secure_add_u64<const ORDER: usize>(x: u64, y: u64, rx: u64, ry: u64) -> [u64; ORDER] {
     let mut z = [0; ORDER];
@@ -583,55 +432,8 @@ pub fn secure_add_u64<const ORDER: usize>(x: u64, y: u64, rx: u64, ry: u64) -> [
     z
 }
 
-pub fn secure_add_i64<const ORDER: usize>(x: i64, y: i64, rx: i64, ry: i64) -> [i64; ORDER] {
-    let mut z = [0; ORDER];
-    let mut rng = thread_rng();
-    let mut c = rng.gen_range(0..2);
-    let (mut t, mut omega, mut b, mut a0, a1);
-    t = x & y;
-    omega = c ^ t;
-    t = x & ry;
-    omega = omega ^ t;
-    t = y & rx;
-    omega = omega ^ t;
-    t = rx & ry;
-    omega = omega ^ t;
-
-    b = omega << 1;
-    c = c << 1;
-    a0 = x ^ y;
-    a1 = rx ^ ry;
-    t = c & a0;
-    omega = omega ^ t;
-    t = c & a1;
-    omega = omega ^ t;
-
-    for _ in 2..64 {
-        t = b & a0;
-        b = b & a1;
-        b = b ^ omega;
-        b = b ^ t;
-        b = b << 1;
-    }
-
-    a0 = a0 ^ b;
-    a0 = a0 ^ c;
-    z[0] = a0;
-    z[1] = a1;
-    z
-}
-
-
-pub fn secure_neg<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
-    let mut z = [0; ORDER];
-    for i in 0..ORDER - 1 {
-        z[i] = x[i];
-    }
-    z[ORDER - 1] = x[ORDER - 1].wrapping_neg();
-    z
-}
-
-pub fn secure_xor<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
+#[inline(always)]
+pub fn xor<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
     let mut z = [0; ORDER];
     for i in 0..ORDER {
         z[i] = x[i] ^ y[i];
@@ -669,14 +471,6 @@ pub fn secure_ursh<const ORDER: usize>(x: &[fpr], n: &[i8]) -> [fpr; ORDER] {
     } else {
         z[0] = (z[0] >> nn[0]) >> nn[1];
         z[1] = (z[1] >> nn[0]) >> nn[1];
-    }
-    z
-}
-
-pub fn secure_rhs_const<const ORDER: usize>(x: &[fpr], c: i32) -> [fpr; ORDER] {
-    let mut z = [0; ORDER];
-    for i in 0..ORDER {
-        z[i] = x[i] >> c;
     }
     z
 }

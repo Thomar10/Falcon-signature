@@ -3,7 +3,7 @@ use rand::{random, Rng, thread_rng};
 
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr, fpr_add, fpr_mul, fpr_norm64, fpr_sub, fpr_ursh};
-use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_sub, secure_mul, secure_neg, secure_or, secure_ursh};
+use falcon_masked::fpr_masked_deep::{secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_sub, secure_mul, secure_or, secure_ursh};
 
 #[test]
 fn mul_fpr_test() {
@@ -156,19 +156,6 @@ fn fpr_and_test() {
         let (xx, _) = reconstruct(&add_shares, &shares_y);
 
         check_eq_fpr(xx, x & y);
-    }
-}
-
-#[test]
-fn fpr_neg_test() {
-    for _ in 0..100 {
-        let mut shares_x = [0; 2];
-        let mut shares_y = [0; 2];
-        let (x, _) = create_masked(&mut shares_x, &mut shares_y);
-        let neg_shares = secure_neg::<2>(&shares_x);
-        let (xx, _) = reconstruct(&neg_shares, &shares_y);
-
-        check_eq_fpr(xx, x.wrapping_neg());
     }
 }
 
