@@ -1,7 +1,6 @@
 use std::ops::{BitAnd, BitXor, Shl};
 
 use rand::{random, Rng, thread_rng};
-use rand::rngs::ThreadRng;
 
 use falcon::falcon::fpr;
 
@@ -119,6 +118,17 @@ fn b2a(x: i16, r: i16) -> i16 {
     a ^ t
 }
 
+fn b2a_bit(x: i16, r: i16) -> i16 {
+    let mut gamma: i16 = thread_rng().gen_range(0..2);
+    let mut t = x ^ gamma;
+    t = t.wrapping_sub(gamma);
+    t = t ^ x;
+    gamma = gamma ^ r;
+    let mut a = x ^ gamma;
+    a = a.wrapping_sub(gamma);
+    a ^ t
+}
+
 
 pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr]) -> [fpr; ORDER] {
     let mut s = [0; ORDER];
@@ -164,12 +174,12 @@ pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr]) -> [fpr; ORDER] {
     let mut w: [i16; ORDER] = [0; ORDER];
     w[0] = ((p[0] >> 105) & 1) as i16;
     w[1] = ((p[1] >> 105) & 1) as i16;
-    let mut zz = xor::<ORDER>(&z, &zd);
+    let zz = xor::<ORDER>(&z, &zd);
     let zd: [u64; ORDER] = secure_and(&zd, &[w[0].wrapping_neg() as u64, w[1].wrapping_neg() as u64]);
     z = xor(&zz, &zd);
 
     let z = secure_or::<2>(&z, &bb);
-    w[0] = b2a(w[0], w[1]);
+    w[0] = b2a_bit(w[0], w[1]);
 
     for i in 0..ORDER {
         e[i] = e[i] + w[i] as i16;
@@ -291,7 +301,7 @@ pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16]) -> ([fpr; ORD
             x[i] = x[i] ^ t[i];
         }
 
-        b[0] = b2ai6(b[0] as i8, b[1] as i8) as u64;
+        b[0] = b2a_bit(b[0] as i16, b[1] as i16) as u64;
         for i in 0..ORDER {
             e[i] = e[i].wrapping_add((b[i] as i16) << j);
         }
