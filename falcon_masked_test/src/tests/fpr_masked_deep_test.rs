@@ -96,8 +96,8 @@ fn fpr_test() {
         let s_share: [u64; 2] = [(s as u64) ^ share, share];
         let share_e: i16 = random();
         let mut e_share: [i16; 2] = [(e as i16).wrapping_sub(share_e), share_e];
-        let share: i64 = rng.gen_range(0..18014398509481983);
-        let mut z_share = [(z as i64) ^ share, share];
+        let share: u64 = rng.gen_range(0..18014398509481983);
+        let mut z_share = [(z as u64) ^ share, share];
         let result: [fpr; 2] = secure_fpr(&s_share, &mut e_share, &mut z_share);
         check_eq_fpr(expected, result[0] ^ result[1]);
     }

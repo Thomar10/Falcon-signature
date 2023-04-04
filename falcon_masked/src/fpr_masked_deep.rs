@@ -325,8 +325,8 @@ pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr]) -> [fpr; ORDER] {
     let bx: [fpr; ORDER] = secure_non_zero(&[ex[0] as u64, ex[1] as u64], 16, false);
     let by: [fpr; ORDER] = secure_non_zero(&[ex[0] as u64, ex[1] as u64], 16, false);
     let d = secure_and::<2>(&bx, &by);
-    let z = secure_and_i64::<2>(&[z[0] as i64, z[1] as i64], &[-(d[0] as i64), -(d[1] as i64)]);
-    secure_fpr(&s, &mut e, &mut [z[0], z[1]])
+    let z = secure_and::<2>(&z, &[d[0].wrapping_neg(), d[1].wrapping_neg()]);
+    secure_fpr(&s, &mut e, &z)
 }
 
 
@@ -387,13 +387,14 @@ pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> ([fpr; ORDER]
     let mut refs: [u64; ORDER] = [0; ORDER];
     refs[0] = 1;
     refresh::<2>(&mut refs);
-    let ym: [i64; ORDER] = secure_add_i64(ym[0] as i64, refs[0] as i64, ym[1] as i64, refs[1] as i64);
-    let d: [i64; ORDER] = secure_add_i64(ym[0], xm[0] as i64, ym[1], xm[1] as i64);
-    let mut b: [u64; ORDER] = secure_non_zero(&[d[0] as u64, d[1] as u64], 64, true);
+    let ym: [u64; ORDER] = secure_add_u64(ym[0], refs[0], ym[1], refs[1]);
+    let d: [u64; ORDER] = secure_add_u64(ym[0], xm[0], ym[1], xm[1]);
+    let mut b: [u64; ORDER] = secure_non_zero(&d, 64, true);
     b[0] = !b[0];
     let mut cs: [u64; ORDER] = secure_and(&b, &[x[0] >> 63, x[1] >> 63]);
-    cs = secure_or(&cs, &[((d[0] as u64) >> 63) as u64, ((d[1] as u64) >> 63) as u64]);
-    let xy: [i64; ORDER] = secure_and_i64(&[(x[0] ^ y[0]) as i64, (x[1] ^ y[1]) as i64], &[-(cs[0] as i64), -(cs[1] as i64)]);
+    cs = secure_or(&cs, &[d[0] >> 63, d[1] >> 63]);
+    let xy: [u64; ORDER] = secure_and(&[x[0] ^ y[0], x[1] ^ y[1]],
+                                      &[cs[0].wrapping_neg(), cs[1].wrapping_neg()]);
     let mut xx: [u64; ORDER] = [0; ORDER];
     let mut yy: [u64; ORDER] = [0; ORDER];
     for i in 0..ORDER {
@@ -442,24 +443,24 @@ pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> ([fpr; ORDER]
     let mut myd: [u64; ORDER] = [0; ORDER];
     myd[0] = !my[0];
     myd[1] = my[1];
-    let mut myd: [i64; ORDER] = secure_add_i64(myd[0] as i64, refs[0] as i64, myd[1] as i64, refs[1] as i64);
+    let mut myd: [u64; ORDER] = secure_add_u64(myd[0], refs[0], myd[1], refs[1]);
     let mut s: [u64; ORDER] = [0; ORDER];
     for i in 0..ORDER {
         s[i] = (-((sx[i] ^ sy[i]) as i64)) as u64;
-        myd[i] = (my[i] as i64) ^ myd[i];
+        myd[i] = my[i] ^ myd[i];
     }
-    myd = secure_and_i64(&myd, &[s[0] as i64, s[1] as i64]);
+    myd = secure_and(&myd, &s);
     for i in 0..ORDER {
         my[i] = my[i] ^ (myd[i] as u64);
     }
-    let z: [i64; ORDER] = secure_add_i64(mx[0] as i64, my[0] as i64, mx[1] as i64, my[1] as i64);
-    let (z, mut ex) = secure_fpr_norm::<2>(&[z[0] as u64, z[1] as u64], &[ex[0] as i16, ex[1] as i16]);
+    let z: [u64; ORDER] = secure_add_u64(mx[0], my[0], mx[1], my[1]);
+    let (z, mut ex) = secure_fpr_norm::<2>(&z, &ex);
     let b: [fpr; ORDER] = secure_non_zero(&z, 9, true);
-    let mut zz: [i64; ORDER] = [0; ORDER];
+    let mut zz: [u64; ORDER] = [0; ORDER];
     for i in 0..ORDER {
-        zz[i] = (z[i] >> 9) as i64;
+        zz[i] = z[i] >> 9;
     }
-    zz = secure_or_i64(&zz, &[b[0] as i64, b[1] as i64]);
+    zz = secure_or(&zz, &b);
     ex[0] += 9;
     secure_fpr(&sx, &mut ex, &zz)
 }
@@ -481,31 +482,29 @@ pub fn refresh_i64<const ORDER: usize>(z: &mut [i64]) {
     }
 }
 
-pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[i64]) -> [fpr; ORDER] {
-    let mut b: [i64; ORDER] = [0; ORDER];
-    let mut e1: [i64; ORDER] = [0; ORDER];
-    e1[0] = e[0].wrapping_add(1076) as i64;
-    e1[0] = a2b_e(e1[0] as i16, e[1]) as i64;
-    e1[1] = e[1] as i64;
-    b[0] = (e1[0] >> 15) as i64;
-    b[1] = (e1[1] >> 15) as i64;
-    let z: [i64; ORDER] = secure_and_i64(&z, &[!b[0], b[1]]);
+pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[u64]) -> [fpr; ORDER] {
+    let mut b: [u64; ORDER] = [0; ORDER];
+    let mut e1: [i16; ORDER] = [0; ORDER];
+    e1[0] = e[0].wrapping_add(1076);
+    e1[0] = a2b_e(e1[0], e[1]);
+    e1[1] = e[1];
+    b[0] = (e1[0] >> 15) as u64;
+    b[1] = (e1[1] >> 15) as u64;
+    let z: [u64; ORDER] = secure_and(&z, &[!b[0], b[1]]);
     b[0] = (z[0] >> 54) & 1;
     b[1] = (z[1] >> 54) & 1;
 
-    let mut e: [i64; ORDER] = secure_and_i64(&e1, &[-b[0], -b[1]]);
-    e = secure_add(e[0], (z[0] >> 54) & 1, e[1], (z[1] >> 54) & 1);
-    let xx: [u64; ORDER] = secure_or(&[s[0] << 63, s[1] << 63], &[((z[0] & 0x3FFFFFFFFFFFFF) >> 2) as u64, ((z[1] & 0x3FFFFFFFFFFFFF) >> 2) as u64]);
+    let mut e: [u64; ORDER] = secure_and(&[e1[0] as u64, e1[1] as u64], &[b[0].wrapping_neg(), b[1].wrapping_neg()]);
+    e = secure_add_u64(e[0], (z[0] >> 54) & 1, e[1], (z[1] >> 54) & 1);
+    let xx: [u64; ORDER] = secure_or(&[s[0] << 63, s[1] << 63],
+                                     &[(z[0] & 0x3FFFFFFFFFFFFF) >> 2, (z[1] & 0x3FFFFFFFFFFFFF) >> 2]);
     let mut x: [u64; ORDER] = secure_or(&xx,
-                                        &[((e[0] & 0x7FF) << 52) as u64, ((e[1] & 0x7FF) << 52) as u64]);
+                                        &[(e[0] & 0x7FF) << 52, (e[1] & 0x7FF) << 52]);
 
-    let mut f: [i64; ORDER] = secure_or_i64(&[z[0] & 1, z[1] & 1], &[(z[0] >> 2) & 1, (z[1] >> 2) & 1]);
-    f = secure_and_i64(&f, &[(z[0] >> 1) & 1, (z[1] >> 1) & 1]);
-    let xx: [i64; ORDER] = secure_add(x[0] as i64, f[0], x[1] as i64, f[1]);
-    for i in 0..ORDER {
-        x[i] = xx[i] as u64;
-    }
-    x
+    let mut f: [u64; ORDER] = secure_or(&[z[0] & 1, z[1] & 1], &[(z[0] >> 2) & 1, (z[1] >> 2) & 1]);
+    f = secure_and(&f, &[(z[0] >> 1) & 1, (z[1] >> 1) & 1]);
+    let xx: [u64; ORDER] = secure_add_u64(x[0], f[0], x[1], f[1]);
+    xx
 }
 
 pub fn secure_add<const ORDER: usize>(x: i64, y: i64, rx: i64, ry: i64) -> [i64; ORDER] {
