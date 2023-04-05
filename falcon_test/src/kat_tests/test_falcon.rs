@@ -70,7 +70,8 @@ fn test_sign_self(f: &[i8], g: &[i8],
             dptr: 0,
         };
 
-        let mut msg = i_shake256_extract(&mut rng, 50);
+        let mut msg: [u8; 50] = [0; 50];
+        i_shake256_extract(&mut rng, &mut msg);
         i_shake256_init(&mut sc);
         i_shake256_inject(&mut sc, msg.as_mut_slice());
         i_shake256_flip(&mut sc);
@@ -107,7 +108,8 @@ fn test_sign_self(f: &[i8], g: &[i8],
             dptr: 0,
         };
 
-        let mut msg = i_shake256_extract(&mut rng, 50);
+        let mut msg: [u8; 50] = [0; 50];
+        i_shake256_extract(&mut rng, &mut msg);
         i_shake256_init(&mut sc);
         i_shake256_inject(&mut sc, msg.as_mut_slice());
         i_shake256_flip(&mut sc);
@@ -697,7 +699,8 @@ fn test_keygen_inner(logn: u32, tmp: &mut [u8]) {
             dptr: 0,
         };
         keygen(&mut rng, f, g, F, G, h, logn, tt);
-        let msg = i_shake256_extract(&mut rng, 50);
+        let mut msg: [u8; 50] = [0; 50];
+        i_shake256_extract(&mut rng, &mut msg);
 
         i_shake256_init(&mut sc);
         i_shake256_inject(&mut sc, msg.as_slice());
@@ -897,8 +900,8 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
 
         for u in 0..n {
             let w: u32;
-            let vec = i_shake256_extract(&mut rng, 4);
-            let extract = vec.as_slice();
+            let mut extract: [u8; 4] = [0; 4];
+            i_shake256_extract(&mut rng, &mut extract);
             w = extract[0] as u32
                 | ((extract[1] as u32) << 8)
                 | ((extract[2] as u32) << 16)
@@ -928,8 +931,8 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
             let mask2: u32 = mask1 - 1;
 
             for u in 0..n {
-                let vec = i_shake256_extract(&mut rng, 2);
-                let extracted = vec.as_slice();
+                let mut extracted: [u8; 2] = [0; 2];
+                i_shake256_extract(&mut rng, &mut extracted);
                 let w: u32 = (extracted[0] as u32) | ((extracted[1] as u32) << 8);
                 let a = w & mask2;
                 s1[u] = if (w & mask1) != 0 { (-(a as i32)) as i16 } else { a as i32 as i16 }
@@ -968,8 +971,9 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
             let mask1: u32 = 1 << (bits - 1);
             let mask2: u32 = mask1 - 1;
             for u in 0..n {
-                let vec = i_shake256_extract(&mut rng, 1);
-                let tt = *vec.get(0).unwrap();
+                let mut val: [u8; 1] = [0; 1];
+                i_shake256_extract(&mut rng, &mut val);
+                let tt = val[0];
                 let a: u32 = (tt as u32) & mask2;
                 b1[u] = if (tt as u32) & mask1 != 0 { (-(a as i32)) as i8 } else { a as i32 as i8 }
             }
@@ -995,14 +999,14 @@ fn test_codec_inner(logn: u32, tmp: &mut [u8], tlen: usize) {
 
 pub fn test_shake256() {
     print!("Test SHAKE256: ");
-    test_shake256_kat("", "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be");
-    test_shake256_kat("dc5a100fa16df1583c79722a0d72833d3bf22c109b8889dbd35213c6bfce205813edae3242695cfd9f59b9a1c203c1b72ef1a5423147cb990b5316a85266675894e2644c3f9578cebe451a09e58c53788fe77a9e850943f8a275f830354b0593a762bac55e984db3e0661eca3cb83f67a6fb348e6177f7dee2df40c4322602f094953905681be3954fe44c4c902c8f6bba565a788b38f13411ba76ce0f9f6756a2a2687424c5435a51e62df7a8934b6e141f74c6ccf539e3782d22b5955d3baf1ab2cf7b5c3f74ec2f9447344e937957fd7f0bdfec56d5d25f61cde18c0986e244ecf780d6307e313117256948d4230ebb9ea62bb302cfe80d7dfebabc4a51d7687967ed5b416a139e974c005fff507a96", "2bac5716803a9cda8f9e84365ab0a681327b5ba34fdedfb1c12e6e807f45284b");
-    test_shake256_kat("8d8001e2c096f1b88e7c9224a086efd4797fbf74a8033a2d422a2b6b8f6747e4", "2e975f6a8a14f0704d51b13667d8195c219f71e6345696c49fa4b9d08e9225d3d39393425152c97e71dd24601c11abcfa0f12f53c680bd3ae757b8134a9c10d429615869217fdd5885c4db174985703a6d6de94a667eac3023443a8337ae1bc601b76d7d38ec3c34463105f0d3949d78e562a039e4469548b609395de5a4fd43c46ca9fd6ee29ada5efc07d84d553249450dab4a49c483ded250c9338f85cd937ae66bb436f3b4026e859fda1ca571432f3bfc09e7c03ca4d183b741111ca0483d0edabc03feb23b17ee48e844ba2408d9dcfd0139d2e8c7310125aee801c61ab7900d1efc47c078281766f361c5e6111346235e1dc38325666c");
+    test_shake256_kat::<64>("", "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be");
+    test_shake256_kat::<32>("dc5a100fa16df1583c79722a0d72833d3bf22c109b8889dbd35213c6bfce205813edae3242695cfd9f59b9a1c203c1b72ef1a5423147cb990b5316a85266675894e2644c3f9578cebe451a09e58c53788fe77a9e850943f8a275f830354b0593a762bac55e984db3e0661eca3cb83f67a6fb348e6177f7dee2df40c4322602f094953905681be3954fe44c4c902c8f6bba565a788b38f13411ba76ce0f9f6756a2a2687424c5435a51e62df7a8934b6e141f74c6ccf539e3782d22b5955d3baf1ab2cf7b5c3f74ec2f9447344e937957fd7f0bdfec56d5d25f61cde18c0986e244ecf780d6307e313117256948d4230ebb9ea62bb302cfe80d7dfebabc4a51d7687967ed5b416a139e974c005fff507a96", "2bac5716803a9cda8f9e84365ab0a681327b5ba34fdedfb1c12e6e807f45284b");
+    test_shake256_kat::<250>("8d8001e2c096f1b88e7c9224a086efd4797fbf74a8033a2d422a2b6b8f6747e4", "2e975f6a8a14f0704d51b13667d8195c219f71e6345696c49fa4b9d08e9225d3d39393425152c97e71dd24601c11abcfa0f12f53c680bd3ae757b8134a9c10d429615869217fdd5885c4db174985703a6d6de94a667eac3023443a8337ae1bc601b76d7d38ec3c34463105f0d3949d78e562a039e4469548b609395de5a4fd43c46ca9fd6ee29ada5efc07d84d553249450dab4a49c483ded250c9338f85cd937ae66bb436f3b4026e859fda1ca571432f3bfc09e7c03ca4d183b741111ca0483d0edabc03feb23b17ee48e844ba2408d9dcfd0139d2e8c7310125aee801c61ab7900d1efc47c078281766f361c5e6111346235e1dc38325666c");
     println!("done.");
 }
 
-
-fn test_shake256_kat(hexsrc: &str, hexout: &str) {
+//64, 32, 250
+fn test_shake256_kat<const OUT_LEN: usize>(hexsrc: &str, hexout: &str) {
     let mut rng: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
         dptr: 0,
@@ -1013,8 +1017,9 @@ fn test_shake256_kat(hexsrc: &str, hexout: &str) {
     i_shake256_init(&mut rng);
     i_shake256_inject(&mut rng, &inn);
     i_shake256_flip(&mut rng);
-    let out_shake = i_shake256_extract(&mut rng, out.len());
-    assert_eq!(out_shake, out, "SHAKE KAT 1");
+    let mut out_shake: [u8; OUT_LEN] = [0; OUT_LEN];
+    i_shake256_extract(&mut rng, &mut out_shake);
+    assert_eq!(out_shake, out.as_slice(), "SHAKE KAT 1");
 
     i_shake256_init(&mut rng);
     for u in 0..inn.len() {
@@ -1023,8 +1028,9 @@ fn test_shake256_kat(hexsrc: &str, hexout: &str) {
     i_shake256_flip(&mut rng);
     let mut output: Vec<u8> = Vec::with_capacity(out.len());
     for _ in 0..out.len() {
-        let vec = i_shake256_extract(&mut rng, 1);
-        output.push(*vec.get(0).unwrap());
+        let mut out: [u8; 1] = [0; 1];
+        i_shake256_extract(&mut rng, &mut out);
+        output.push(out[0]);
     }
     assert_eq!(output, out, "SHAKE KAT 2");
 }

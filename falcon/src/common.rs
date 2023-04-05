@@ -32,10 +32,10 @@ pub fn hash_to_point_vartime(sc: &mut InnerShake256Context, x: &mut [u16], logn:
     let mut n = 1usize << logn;
     let mut index = 0;
     while n > 0 {
-        // let mut buf: [u8; 2] = [0; 2];
+        let mut buf: [u8; 2] = [0; 2];
         let mut w: u32;
 
-        let buf = i_shake256_extract(sc, 2);
+        i_shake256_extract(sc, &mut buf);
         w = ((buf[0] as u32) << 8) | buf[1] as u32;
         if w < 61445 {
             while w >= 12289 {
@@ -59,9 +59,10 @@ pub fn hash_to_point_ct(sc: &mut InnerShake256Context, x: &mut [u16], logn: u32,
     let m = n + over as usize;
 
     for u in 0usize..m {
+        let mut buf: [u8; 2] = [0; 2];
         let (w, mut wr): (u32, u32);
 
-        let buf = i_shake256_extract(sc, 2);
+        i_shake256_extract(sc, &mut buf);
         w = ((buf[0] as u32) << 8) | buf[1] as u32;
         wr = w - (24578u32 & (((w.wrapping_sub(24578)) >> 31).wrapping_sub(1)));
         wr = wr - (24578u32 & (((wr.wrapping_sub(24578)) >> 31).wrapping_sub(1)));
