@@ -1,6 +1,6 @@
 use core::ops::{BitAnd, BitXor, Shl};
-use rand::{Rng, RngCore};
-use rand::rngs::OsRng;
+
+use ran::Rnum;
 
 use falcon::falcon::fpr;
 
@@ -9,7 +9,7 @@ pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
 
     for i in 0..ORDER {
         for j in (i + 1)..ORDER {
-            r[i][j] = OsRng::default().gen_range(0..2);
+            r[i][j] = Rnum::newu16().rannum_in(0., 1.).getu16().unwrap() as fpr;
             r[j][i] = (r[i][j] ^ (x[i] & y[j])) ^ (x[j] & y[i]);
         }
     }
@@ -62,7 +62,7 @@ pub fn secure_non_zero<const ORDER: usize>(x: &[fpr], bits: i32, boolean: bool) 
 }
 
 fn a2b_e(a: i16, r: i16) -> i16 {
-    let mut gamma: i16 = OsRng::default().next_u32() as i16;
+    let mut gamma: i16 = Rnum::newu16().getu16().unwrap() as i16;
     let mut t = 2i16.wrapping_mul(gamma);
     let mut x = gamma ^ r;
     let mut omega = gamma & x;
@@ -84,7 +84,7 @@ fn a2b_e(a: i16, r: i16) -> i16 {
 
 
 fn b2a_u128(x: u128, r: u128) -> u128 {
-    let mut gamma: u128 = OsRng::default().gen_range(0..2) as u128;
+    let mut gamma: u128 = Rnum::newu16().rannum_in(0., 1.).getu16().unwrap() as u128;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
     t = t ^ x;
@@ -96,7 +96,7 @@ fn b2a_u128(x: u128, r: u128) -> u128 {
 
 
 fn b2ai6(x: i8, r: i8) -> i8 {
-    let mut gamma: i8 = OsRng::default().gen_range(0..63);
+    let mut gamma: i8 = Rnum::newu16().rannum_in(0., 63.).getu16().unwrap() as i8;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
     t = t ^ x;
@@ -107,7 +107,7 @@ fn b2ai6(x: i8, r: i8) -> i8 {
 }
 
 fn b2a(x: i16, r: i16) -> i16 {
-    let mut gamma: i16 = OsRng::default().next_u32() as i16;
+    let mut gamma: i16 = Rnum::newu16().getu16().unwrap() as i16;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
     t = t ^ x;
@@ -118,7 +118,7 @@ fn b2a(x: i16, r: i16) -> i16 {
 }
 
 fn b2a_bit(x: i16, r: i16) -> i16 {
-    let mut gamma: i16 = OsRng::default().next_u32() as i16;
+    let mut gamma: i16 = Rnum::newu16().getu16().unwrap() as i16;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
     t = t ^ x;
@@ -192,9 +192,9 @@ pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr]) -> [fpr; ORDER] {
 
 pub fn kogge_stone_a2b(a: u16, r: u16) -> u16 {
     let n = 4;
-    let s: u16 = OsRng::default().next_u32() as u16;
-    let t: u16 = OsRng::default().next_u32() as u16;
-    let u: u16 = OsRng::default().next_u32() as u16;
+    let s: u16 = Rnum::newu16().getu16().unwrap();
+    let t: u16 = Rnum::newu16().getu16().unwrap();
+    let u: u16 = Rnum::newu16().getu16().unwrap();
     let mut p = a ^ s;
     p = p ^ r;
     let mut g = s ^ ((a ^ t) & r);
@@ -225,9 +225,9 @@ pub fn kogge_stone_a2b(a: u16, r: u16) -> u16 {
 
 pub fn kogge_stone_a2b_u128(a: u128, r: u128) -> u128 {
     let n = 7;
-    let s: u128 = OsRng::default().next_u64() as u128;
-    let t: u128 = OsRng::default().next_u64() as u128;
-    let u: u128 = OsRng::default().next_u64() as u128;
+    let s: u128 = Rnum::newu64().getu64().unwrap() as u128;
+    let t: u128 = Rnum::newu64().getu64().unwrap() as u128;
+    let u: u128 = Rnum::newu64().getu64().unwrap() as u128;
     let mut p = a ^ s;
     p = p ^ r;
     let mut g = s ^ ((a ^ t) & r);
@@ -410,7 +410,7 @@ pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> ([fpr; ORDER]
 
 pub fn refresh<const ORDER: usize>(z: &mut [u64]) {
     for i in 0..ORDER {
-        let rng: u64 = OsRng::default().next_u64();
+        let rng: u64 = Rnum::newu64().getu64().unwrap();
         z[0] ^= rng;
         z[i] ^= rng;
     }
@@ -443,8 +443,8 @@ pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[u64]) -> [f
 
 pub fn secure_add<const ORDER: usize>(x: u64, y: u64, s: u64, r: u64) -> [u64; ORDER] {
     let n = 6;
-    let t: u64 = OsRng::default().next_u64();
-    let u: u64 = OsRng::default().next_u64();
+    let t: u64 = Rnum::newu64().getu64().unwrap();
+    let u: u64 = Rnum::newu64().getu64().unwrap();
     let mut p = sec_xor(x, y, r);
     let mut g = sec_and(x, y, s, r, u);
     g = g ^ s;

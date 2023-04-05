@@ -1,7 +1,7 @@
-use rand::RngCore;
+use ran::Rnum;
+
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
-use rand::rngs::OsRng;
 
 pub static FPR_ZERO: fpr = 0;
 
@@ -101,8 +101,8 @@ pub fn fpr_double(x: &[fpr]) -> [fpr; 2] {
 #[inline(always)]
 pub fn fpr_inv(x: &[fpr]) -> [fpr; 2] {
     let mut d = [0; 2];
-    let r1: fpr = OsRng::default().next_u64();
-    let share_two: fpr = OsRng::default().next_u64();
+    let r1: fpr = Rnum::newu64().getu64().unwrap();
+    let share_two: fpr = Rnum::newu64().getu64().unwrap();
     let share_one = sub(r1, share_two);
     let y = fpr_mul(&[share_one, share_two], x);
     let y_open_inv = inv(add(y[0], y[1]));
