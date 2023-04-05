@@ -5,6 +5,6 @@ edition = "2021"
 
 
 [dependencies]
-rand = {version = "0.8.3", features = ["getrandom"], default-features = false}
+ran = "1.1.0"
 bytemuck = "1.13.0"
 falcon = { path = "../falcon" }
