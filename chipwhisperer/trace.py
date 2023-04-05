@@ -195,8 +195,85 @@ def do_fpc_mul_test():
     with open("fpc_mul_traces.txt", "w") as filehandle:
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
+def do_fpc_mul_masked_test():
+    traces = {
+        "fix": [],
+        "rand": []
+    }
+
+    iterations = 10
+
+    fix_a_re_val = float(68.20750458284908)
+    fix_a_im_val = float(-57.48737600599283)
+    fix_b_re_val = float(-92.93250079435525)
+    fix_b_im_val = float(42.45470502022772)
+
+    for i in range(iterations):
+        print("Iteration:", str(i))
+
+        #Fixed test
+        scope.arm()
+        target.flush()
+
+        fix_a_re_rand = float(random.uniform(-100, 100))
+        fix_a_im_rand = float(random.uniform(-100, 100))
+        fix_b_re_rand = float(random.uniform(-100, 100))
+        fix_b_im_rand = float(random.uniform(-100, 100))
+
+        val_bytes = bytearray(struct.pack("8d", fix_a_re_val, fix_a_im_val, fix_b_re_val, fix_b_im_val, fix_a_re_rand, fix_a_im_rand, fix_b_re_rand, fix_b_im_rand))
+        data_arr = [len(val_bytes)] + list(val_bytes)
+        data = bytearray(data_arr)
+
+        target.write(data)
+
+        time.sleep(1)
+
+        ret = scope.capture()
+        trace = scope.get_last_trace()
+        traces["fix"].append(trace)
+
+        returned_data = target.read()
+        returned_bytes = bytearray(returned_data, "latin1")
+        (a, b) = struct.unpack("2d", returned_bytes)
+
+        print("Fixed result: a: " + str(a) + " b: " + str(b))
+
+        #Random test
+        rand_a_re_val = float(random.uniform(-100, 100))
+        rand_a_im_val = float(random.uniform(-100, 100))
+        rand_b_re_val = float(random.uniform(-100, 100))
+        rand_b_im_val = float(random.uniform(-100, 100))
+        rand_a_re_rand = float(random.uniform(-100, 100))
+        rand_a_im_rand = float(random.uniform(-100, 100))
+        rand_b_re_rand = float(random.uniform(-100, 100))
+        rand_b_im_rand = float(random.uniform(-100, 100))
+
+        scope.arm()
+        target.flush()
+
+        val_bytes = bytearray(struct.pack("8d", rand_a_re_val, rand_a_im_val, rand_b_re_val, rand_b_im_val, rand_a_re_rand, rand_a_im_rand, rand_b_re_rand, rand_b_im_rand))
+        data_arr = [len(val_bytes)] + list(val_bytes)
+        data = bytearray(data_arr)
+
+        target.write(data)
+
+        time.sleep(1)
+
+        ret = scope.capture()
+        trace = scope.get_last_trace()
+        traces["rand"].append(trace)
+
+        returned_data = target.read()
+        returned_bytes = bytearray(returned_data, "latin1")
+        (a, b) = struct.unpack("2d", returned_bytes)
+
+        print("Random result: a: " + str(a) + " b: " + str(b))
+
+    #Write traces to file
+    with open("fpc_mul_traces_masked.txt", "w") as filehandle:
+        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
 
 #do_write_test()
 #do_fft_trace()
-do_fpc_mul_test()
+do_fpc_mul_masked_test()

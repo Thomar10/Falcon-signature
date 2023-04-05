@@ -16,6 +16,7 @@ panic-halt = "0.2.0"
 bytemuck = "1.13.0"
 nb = "1.1.0"
 falcon = { path = "../falcon" }
+falcon_masked = { path = "../falcon_masked" }
 
 [profile.dev]
 panic = "abort"
