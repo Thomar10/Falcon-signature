@@ -76,7 +76,7 @@ fn main() -> ! {
 
 
         //result = test_fft(&mut trigger, first_fpr);//rust_test(&mut trigger, left, right, iter);
-        let result_buffer = rand_test();//test_fpc_mul_masked(&mut trigger, &read_buffer);
+        let result_buffer = test_fpc_mul_masked(&mut trigger, &read_buffer);
         //result = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
 
 
@@ -199,15 +199,6 @@ fn test_fpc_mul_masked(trigger: &mut  TriggerPin, read_buffer: &[u8]) -> [u8; 16
 
     return_buffer[0..8].copy_from_slice(&u64::to_le_bytes(a));
     return_buffer[8..16].copy_from_slice(&u64::to_le_bytes(b));
-
-    return return_buffer;
-}
-
-fn rand_test() -> [u8; 8] {
-    let mut rng = WyRand::new();
-    let val = rng.generate::<u64>();
-
-    let mut return_buffer: [u8; 8] = u64::to_le_bytes(val);
 
     return return_buffer;
 }
