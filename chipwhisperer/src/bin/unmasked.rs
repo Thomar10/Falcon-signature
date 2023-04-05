@@ -19,7 +19,7 @@ use stm32f4xx_hal::serial::{Config, Rx, Serial, Tx};
 use falcon::common::hash_to_point_vartime;
 use falcon::falcon::fpr;
 use falcon::{falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signtree};
-use falcon::fft::fft;
+use falcon::fft::{fft, fpc_mul};
 
 use falcon::keygen::keygen;
 use falcon::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
@@ -71,17 +71,25 @@ fn main() -> ! {
             read_buffer[i] = block!(rx.read()).unwrap();
         }
 
-        let first_fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
+        //let first_fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
 
-        let mut result = 0;
+        let a_re: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
+        let a_im: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
+        let b_re: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[16..24]).unwrap());
+        let b_im: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[24..32]).unwrap());
 
-        result = test_fft(&mut trigger, first_fpr);//rust_test(&mut trigger, left, right, iter);
+        let (mut a, mut b): (fpr, fpr) = (0, 0);
 
+        //result = test_fft(&mut trigger, first_fpr);//rust_test(&mut trigger, left, right, iter);
+        (a, b) = test_fpc_mul(&mut trigger, a_re, a_im, b_re, b_im);
         //result = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
 
-        let return_val: [u8; 8] = u64::to_le_bytes(result);
+        let mut return_val: [u8; 16] = [0; 16];
 
-        for i in 0..8 {
+        return_val[0..8].copy_from_slice(&u64::to_le_bytes(a));
+        return_val[8..16].copy_from_slice(&u64::to_le_bytes(b));
+
+        for i in 0..return_val.len() {
             block!(tx.write(return_val[i]));
         }
         //Return read byte
@@ -143,6 +151,18 @@ fn rust_genkey(trigger: &mut  TriggerPin){
         trigger.set_low();
     });
     return;
+}
+
+fn test_fpc_mul(trigger: &mut  TriggerPin, a_re: fpr, a_im: fpr, b_re: fpr, b_im: fpr) -> (fpr, fpr) {
+    let (mut a, mut b): (fpr, fpr) = (0, 0);
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        (a, b) = fpc_mul(a_re, a_im, b_re, b_im);
+        trigger.set_low();
+    });
+
+    return (a, b)
 }
 
 fn test_fft(trigger: &mut TriggerPin, first_fpr: fpr) -> u64 {

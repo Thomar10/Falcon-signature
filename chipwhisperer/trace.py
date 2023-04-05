@@ -4,6 +4,10 @@ from chipwhisperer.capture.api.programmers import STM32FProgrammer
 import matplotlib.pyplot as plt
 import time
 import struct
+import random
+import json
+import numpy as np
+from json import JSONEncoder
 
 try:
     if not scope.connectStatus:
@@ -116,5 +120,83 @@ def do_write_test():
 
     print(returned_val)
 
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
+
+def do_fpc_mul_test():
+    traces = {
+        "fix": [],
+        "rand": []
+    }
+
+    iterations = 10
+
+    fix_a_re = float(68.20750458284908)
+    fix_a_im = float(-57.48737600599283)
+    fix_b_re = float(-92.93250079435525)
+    fix_b_im = float(42.45470502022772)
+
+    for i in range(iterations):
+        print("Iteration:", str(i))
+
+        #Fixed test
+        scope.arm()
+        target.flush()
+
+        val_bytes = bytearray(struct.pack("4d", fix_a_re, fix_a_im, fix_b_re, fix_b_im))
+        data_arr = [len(val_bytes)] + list(val_bytes)
+        data = bytearray(data_arr)
+
+        target.write(data)
+
+        time.sleep(1)
+
+        ret = scope.capture()
+        trace = scope.get_last_trace()
+        traces["fix"].append(trace)
+
+        returned_data = target.read()
+        returned_bytes = bytearray(returned_data, "latin1")
+        (a, b) = struct.unpack("2d", returned_bytes)
+
+        print("Fixed result: a: " + str(a) + " b: " + str(b))
+
+        #Random test
+        rand_a_re = float(random.uniform(-100, 100))
+        rand_a_im = float(random.uniform(-100, 100))
+        rand_b_re = float(random.uniform(-100, 100))
+        rand_b_im = float(random.uniform(-100, 100))
+
+        scope.arm()
+        target.flush()
+
+        val_bytes = bytearray(struct.pack("4d", rand_a_re, rand_a_im, rand_b_re, rand_b_im))
+        data_arr = [len(val_bytes)] + list(val_bytes)
+        data = bytearray(data_arr)
+
+        target.write(data)
+
+        time.sleep(1)
+
+        ret = scope.capture()
+        trace = scope.get_last_trace()
+        traces["rand"].append(trace)
+
+        returned_data = target.read()
+        returned_bytes = bytearray(returned_data, "latin1")
+        (a, b) = struct.unpack("2d", returned_bytes)
+
+        print("Random result: a: " + str(a) + " b: " + str(b))
+
+    #Write traces to file
+    with open("fpc_mul_traces.txt", "w") as filehandle:
+        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
+
+
+
 #do_write_test()
-do_fft_trace()
+#do_fft_trace()
+do_fpc_mul_test()
