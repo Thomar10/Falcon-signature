@@ -1,3 +1,4 @@
+use stm32f4xx_hal::rng::Rng;
 use falcon::falcon::fpr;
 use crate::fpr_masked::{fpr_add, fpr_double, fpr_half, fpr_inv, fpr_mul, fpr_neg, fpr_sqr, fpr_sub, FPR_GM_TAB, FPR_P2_TAB, FPR_ZERO};
 
@@ -23,9 +24,9 @@ pub fn fpc_mul(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr;
     return (fpct_d_re, fpct_d_im);
 }
 
-pub fn fpc_div(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+pub fn fpc_div(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr], rng: &mut Rng) -> ([fpr; 2], [fpr; 2]) {
     let mut fpct_m: [fpr; 2] = fpr_add(&fpr_sqr(b_re), &fpr_sqr(b_im));
-    fpct_m = fpr_inv(&fpct_m);
+    fpct_m = fpr_inv(&fpct_m, rng);
     let b_re: [fpr; 2] = fpr_mul(b_re, &fpct_m);
     let b_im: [fpr; 2] = fpr_mul(&fpr_neg(b_im), &fpct_m);
     let fpct_d_re: [fpr; 2] = fpr_sub(
@@ -43,9 +44,9 @@ pub fn fpc_sqr(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
     (fpct_d_re, fpct_d_im)
 }
 
-pub fn fpc_inv(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; 2], [fpr; 2]) {
+pub fn fpc_inv(a_re: &[fpr], a_im: &[fpr], rng: &mut Rng) -> ([fpr; 2], [fpr; 2]) {
     let mut fpct_m: [fpr; 2] = fpr_add(&fpr_sqr(a_re), &fpr_sqr(a_im));
-    fpct_m = fpr_inv(&fpct_m);
+    fpct_m = fpr_inv(&fpct_m, rng);
     let fpct_d_re: [fpr; 2] = fpr_mul(a_re, &fpct_m);
     let fpct_d_im: [fpr; 2] = fpr_mul(&fpr_neg(a_im), &fpct_m);
     (fpct_d_re, fpct_d_im)
@@ -291,17 +292,17 @@ pub fn poly_mulconst(a: &mut [[fpr; 2]], x: fpr, logn: u32) {
 }
 
 
-pub fn poly_div_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
+pub fn poly_div_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32, rng: &mut Rng) {
     let (n, hn): (usize, usize);
 
     n = (1 as usize) << logn;
     hn = n >> 1;
     for u in 0..hn {
-        (a[u], a[u + hn]) = fpc_div(&a[u], &a[u + hn], &b[u], &b[u + hn]);
+        (a[u], a[u + hn]) = fpc_div(&a[u], &a[u + hn], &b[u], &b[u + hn], rng);
     }
 }
 
-pub fn poly_invnorm2_fft(d: &mut [[fpr; 2]], a: &[[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
+pub fn poly_invnorm2_fft(d: &mut [[fpr; 2]], a: &[[fpr; 2]], b: &[[fpr; 2]], logn: u32, rng: &mut Rng) {
     let (n, hn): (usize, usize);
 
     n = (1 as usize) << logn;
@@ -310,7 +311,7 @@ pub fn poly_invnorm2_fft(d: &mut [[fpr; 2]], a: &[[fpr; 2]], b: &[[fpr; 2]], log
     for u in 0..hn {
         d[u] = fpr_inv(&fpr_add(
             &fpr_add(&fpr_sqr(&a[u]), &fpr_sqr(&a[u + hn])),
-            &fpr_add(&fpr_sqr(&b[u]), &fpr_sqr(&b[u + hn]))));
+            &fpr_add(&fpr_sqr(&b[u]), &fpr_sqr(&b[u + hn]))), rng);
     }
 }
 
@@ -337,19 +338,19 @@ pub fn poly_mul_autoadj_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
     }
 }
 
-pub fn poly_div_autoadj_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
+pub fn poly_div_autoadj_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32, rng: &mut Rng) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
     for u in 0..hn {
-        let ib = fpr_inv(&b[u]);
+        let ib = fpr_inv(&b[u], rng);
         a[u] = fpr_mul(&a[u], &ib);
         a[u + hn] = fpr_mul(&a[u + hn], &ib);
     }
 }
 
 #[allow(non_snake_case)]
-pub fn poly_LDL_fft(g00: &[[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]], logn: u32) {
+pub fn poly_LDL_fft(g00: &[[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]], logn: u32, rng: &mut Rng) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
@@ -360,7 +361,7 @@ pub fn poly_LDL_fft(g00: &[[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]]
         let mut g01_im = g01[u + hn];
         let g11_re = g11[u];
         let g11_im = g11[u + hn];
-        let (mu_re, mu_im) = fpc_div(&g01_re, &g01_im, &g00_re, &g00_im);
+        let (mu_re, mu_im) = fpc_div(&g01_re, &g01_im, &g00_re, &g00_im, rng);
         (g01_re, g01_im) = fpc_mul(&mu_re, &mu_im, &g01_re, &fpr_neg(&g01_im));
         (g11[u], g11[u + hn]) = fpc_sub(&g11_re, &g11_im, &g01_re, &g01_im);
         g01[u] = mu_re;
@@ -369,7 +370,7 @@ pub fn poly_LDL_fft(g00: &[[fpr; 2]], g01: &mut [[fpr; 2]], g11: &mut [[fpr; 2]]
 }
 
 #[allow(non_snake_case)]
-pub fn poly_LDLmv_fft(d11: &mut [[fpr; 2]], l10: &mut [[fpr; 2]], g00: &[[fpr; 2]], g01: &[[fpr; 2]], g11: &[[fpr; 2]], logn: u32) {
+pub fn poly_LDLmv_fft(d11: &mut [[fpr; 2]], l10: &mut [[fpr; 2]], g00: &[[fpr; 2]], g01: &[[fpr; 2]], g11: &[[fpr; 2]], logn: u32, rng: &mut Rng) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
@@ -380,7 +381,7 @@ pub fn poly_LDLmv_fft(d11: &mut [[fpr; 2]], l10: &mut [[fpr; 2]], g00: &[[fpr; 2
         let mut g01_im = g01[u + hn];
         let g11_re = g11[u];
         let g11_im = g11[u + hn];
-        let (mu_re, mu_im) = fpc_div(&g01_re, &g01_im, &g00_re, &g00_im);
+        let (mu_re, mu_im) = fpc_div(&g01_re, &g01_im, &g00_re, &g00_im, rng);
         (g01_re, g01_im) = fpc_mul(&mu_re, &mu_im, &g01_re, &fpr_neg(&g01_im));
         (d11[u], d11[u + hn]) = fpc_sub(&g11_re, &g11_im, &g01_re, &g01_im);
         l10[u] = mu_re;
