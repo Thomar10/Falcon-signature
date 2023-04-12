@@ -19,11 +19,11 @@ pub struct Prng {
 }
 
 pub fn prng_init(p: &mut Prng, src: &mut InnerShake256Context) -> () {
-    let tmp: [u8; 56];
+    let mut tmp: [u8; 56] = [0; 56];
     let tl: u32;
     let mut i: usize = 0;
 
-    tmp = <[u8; 56]>::try_from(i_shake256_extract(src, 56).as_slice()).unwrap();
+    i_shake256_extract(src, &mut tmp);
 
     while i < 14 {
         //let mut w: u32;

@@ -1,5 +1,3 @@
-use alloc::vec::Vec;
-
 pub struct InnerShake256Context {
     pub st: [u64; 25],
     pub dptr: u64,
@@ -562,14 +560,11 @@ pub fn i_shake256_flip(sc: &mut InnerShake256Context) -> () {
  * Arbitrary amounts of data can be extracted, in one or several calls
  * to this function.
  */
-/* Rust doesn't support arrays of arbitrary length, as such we return
- * a vector which can then be converted to an array... I think :)
- */
-// TODO accept a buffer to mutate?
-pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<u8> {
+pub fn i_shake256_extract(sc: &mut InnerShake256Context, out: &mut [u8]) {
     let mut dptr: usize = sc.dptr as usize;
 
-    let mut output: Vec<u8> = Vec::with_capacity(len);
+    let mut len = out.len();
+    let mut index: usize = 0;
 
     while len > 0 {
         let mut clen: usize;
@@ -586,7 +581,8 @@ pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<
 
         len -= clen;
         while clen > 0 {
-            output.push((sc.st[dptr >> 3] >> ((dptr & 7) << 3)) as u8);
+            out[index] = (sc.st[dptr >> 3] >> ((dptr & 7) << 3)) as u8;
+            index += 1;
             dptr += 1;
             clen -= 1;
         }
@@ -594,5 +590,5 @@ pub fn i_shake256_extract(sc: &mut InnerShake256Context, mut len: usize) -> Vec<
 
     sc.dptr = dptr as u64;
 
-    return output;
+    return;
 }

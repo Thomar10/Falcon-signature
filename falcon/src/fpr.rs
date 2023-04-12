@@ -21,32 +21,32 @@ pub static FPR_INVERSE_OF_Q: fpr = 4545632735260551042;
 pub static FPR_INV_2SQRSIGMA0: fpr = 4594603506513722306;
 
 pub static FPR_INV_SIGMA: [fpr; 11] = [
-0,  /* unused */
-4574611497772390042,
-4574501679055810265,
-4574396282908341804,
-4574245855758572086,
-4574103865040221165,
-4573969550563515544,
-4573842244705920822,
-4573721358406441454,
-4573606369665796042,
-4573496814039276259
+    0, /* unused */
+    4574611497772390042,
+    4574501679055810265,
+    4574396282908341804,
+    4574245855758572086,
+    4574103865040221165,
+    4573969550563515544,
+    4573842244705920822,
+    4573721358406441454,
+    4573606369665796042,
+    4573496814039276259
 ];
 
 #[allow(dead_code)]
 pub static FPR_SIGMA_MIN: [fpr; 11] = [
-0,  /* unused */
-4607707126469777035,
-4607777455861499430,
-4607846828256951418,
-4607949175006100261,
-4608049571757433526,
-4608148125896792003,
-4608244935301382692,
-4608340089478362016,
-4608433670533905013,
-4608525754002622308
+    0, /* unused */
+    4607707126469777035,
+    4607777455861499430,
+    4607846828256951418,
+    4607949175006100261,
+    4608049571757433526,
+    4608148125896792003,
+    4608244935301382692,
+    4608340089478362016,
+    4608433670533905013,
+    4608525754002622308
 ];
 
 static C: [u64; 13] = [
@@ -65,37 +65,37 @@ static C: [u64; 13] = [
     0x8000000000000000
 ];
 
-fn fpr_norm64(mut m: u64, mut e: i32) -> (fpr, i32) {
+pub fn fpr_norm64(mut m: u64, mut e: i32) -> (fpr, i32) {
     let mut nt: u32;
     e -= 63;
 
     nt = (m >> 32) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 32)) & (nt as u64).wrapping_sub(1);
     e += (nt << 5) as i32;
 
     nt = (m >> 48) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 16)) & (nt as u64).wrapping_sub(1);
     e += (nt << 4) as i32;
 
     nt = (m >> 56) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 8)) & (nt as u64).wrapping_sub(1);
     e += (nt << 3) as i32;
 
     nt = (m >> 60) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 4)) & (nt as u64).wrapping_sub(1);
     e += (nt << 2) as i32;
 
     nt = (m >> 62) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 2)) & (nt as u64).wrapping_sub(1);
     e += (nt << 1) as i32;
 
     nt = (m >> 63) as u32;
-    nt = (nt | (!nt).wrapping_add( 1)) >> 31;
+    nt = (nt | (!nt).wrapping_add(1)) >> 31;
     m ^= (m ^ (m << 1)) & (nt as u64).wrapping_sub(1);
     e += nt as i32;
     (m, e)
@@ -105,7 +105,6 @@ pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
     let (mut m, mut xu, mut yu, za): (u64, u64, u64, u64);
     let cs: u32;
     let (mut ex, mut ey, sx, sy, mut cc): (i32, i32, i32, i32, i32);
-
     m = (1 << 63) - 1;
     za = (x & m).wrapping_sub(y & m);
     cs = (za >> 63) as u32 | ((1u32 - ((!za).wrapping_add(1) >> 63) as u32) & (x >> 63) as u32);
@@ -133,11 +132,10 @@ pub fn fpr_add(mut x: fpr, mut y: fpr) -> fpr {
     m = fpr_ulsh(1, cc) - 1;
     yu |= (yu & m) + m;
     yu = fpr_ursh(yu, cc);
-
     xu = xu.wrapping_add(yu.wrapping_sub((yu << 1) & (!((sx ^ sy) as u64)).wrapping_add(1)));
 
-    (xu, ex) = fpr_norm64(xu, ex);
 
+    (xu, ex) = fpr_norm64(xu, ex);
     xu |= (((xu as u32) & 0x1FF) + 0x1FF) as u64;
     xu >>= 9;
     ex += 9;
@@ -216,10 +214,8 @@ pub fn fpr_mul(x: fpr, y: fpr) -> fpr {
     let (xu, yu, mut w, mut zu, zv): (u64, u64, u64, u64, u64);
     let (x0, x1, y0, y1, z0, mut z1, mut z2): (u32, u32, u32, u32, u32, u32, u32);
     let (ex, ey, d, e, s): (i32, i32, i32, i32, i32);
-
     xu = (x & (((1 as u64) << 52) - 1)) | ((1 as u64) << 52);
     yu = (y & (((1 as u64) << 52) - 1)) | ((1 as u64) << 52);
-
 
     x0 = (xu as u32) & 0x01FFFFFF;
     x1 = (xu >> 25) as u32;
@@ -238,13 +234,10 @@ pub fn fpr_mul(x: fpr, y: fpr) -> fpr {
     z2 += z1 >> 25;
     z1 &= 0x01FFFFFF;
     zu += z2 as u64;
-
     zu |= (((z0 | z1) + 0x01FFFFFF) >> 25) as u64;
-
     zv = (zu >> 1) | (zu & 1);
     w = zu >> 55;
     zu ^= (zu ^ zv) & (!w).wrapping_add(1);
-
     ex = ((x >> 52) & 0x7FF) as i32;
     ey = ((y >> 52) & 0x7FF) as i32;
     e = ex + ey - 2100 + w as i32;
@@ -257,7 +250,6 @@ pub fn fpr_mul(x: fpr, y: fpr) -> fpr {
 
     d = ((ex + 0x7FF) & (ey + 0x7FF)) >> 11;
     zu &= (!d as u64).wrapping_add(1);
-
     fpr(s, e, zu)
 }
 
@@ -343,7 +335,7 @@ pub fn fpr_div(x: fpr, y: fpr) -> fpr {
         i += 1;
     }
 
-    q |= (xu | ((!xu) .wrapping_add(1))) >> 63;
+    q |= (xu | ((!xu).wrapping_add(1))) >> 63;
 
     q2 = (q >> 1) | (q & 1);
     w = q >> 55;
@@ -419,7 +411,7 @@ pub fn fpr_rint(x: fpr) -> i64 {
     let (s, dd, f): (u32, u32, u32);
 
 
-    m = ((((x << 10) as u64) | ((1 as u64) << 62))  & (((1 as u64) << 63) - 1)) as u64;
+    m = ((((x << 10) as u64) | ((1 as u64) << 62)) & (((1 as u64) << 63) - 1)) as u64;
     e = 1085 - (((x >> 52) as i32) & 0x7FF);
 
 
@@ -529,7 +521,7 @@ pub fn fpr_sqr(x: fpr) -> fpr {
  * (2^54 to 2^55-1).
  */
 #[inline(always)]
-fn fpr(s: i32, mut e: i32, mut m: u64) -> fpr {
+pub fn fpr(s: i32, mut e: i32, mut m: u64) -> fpr {
     let mut x: u64;
     let mut t: u32;
     let f: u32;
@@ -541,7 +533,6 @@ fn fpr(s: i32, mut e: i32, mut m: u64) -> fpr {
     e &= -(t as i32);
 
     x = (((s as u64) << 63) | (m >> 2)).wrapping_add((e as u32 as u64) << 52);
-
     f = m as u32 & 7;
     x += ((0xC8u32 >> f) & 1) as u64;
     x

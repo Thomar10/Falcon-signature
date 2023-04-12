@@ -2,10 +2,11 @@
 mod tests {
     use float_cmp::approx_eq;
     use rand::{Rng, thread_rng};
+
     use falcon::falcon::fpr;
-    use falcon::fpr::{fpr_sub as u_fpr_sub, fpr_add as u_fpr_add};
-    use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_sub, poly_split_fft, poly_merge_fft};
-    use falcon::fft::{poly_merge_fft as u_poly_merge_fft, poly_split_fft as u_poly_split_fft, poly_LDLmv_fft as u_poly_LDLmv_fft, poly_LDL_fft as u_poly_LDL_fft, poly_div_autoadj_fft as u_poly_div_autoadj_fft, poly_mul_autoadj_fft as u_poly_mul_autoadj_fft, poly_add_muladj_fft as u_poly_add_muladj_fft, fpc_inv as u_fpc_inv, fpc_sqr as u_fpc_sqr, fpc_div as u_fpc_div, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_div_fft as u_poly_div_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mul_fft as u_poly_mul_fft, poly_adj_fft as u_poly_adj_fft, fpc_add as u_fpc_add, fpc_mul as u_fpc_mul, fpc_sub as u_fpc_sub, fft as u_fft, ifft as u_ifft, poly_add as u_poly_add, poly_sub as u_poly_sub, poly_neg as u_poly_neg};
+    use falcon::fft::{fft as u_fft, fpc_add as u_fpc_add, fpc_div as u_fpc_div, fpc_inv as u_fpc_inv, fpc_mul as u_fpc_mul, fpc_sqr as u_fpc_sqr, fpc_sub as u_fpc_sub, ifft as u_ifft, poly_add as u_poly_add, poly_add_muladj_fft as u_poly_add_muladj_fft, poly_adj_fft as u_poly_adj_fft, poly_div_autoadj_fft as u_poly_div_autoadj_fft, poly_div_fft as u_poly_div_fft, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_LDL_fft as u_poly_LDL_fft, poly_LDLmv_fft as u_poly_LDLmv_fft, poly_merge_fft as u_poly_merge_fft, poly_mul_autoadj_fft as u_poly_mul_autoadj_fft, poly_mul_fft as u_poly_mul_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_neg as u_poly_neg, poly_split_fft as u_poly_split_fft, poly_sub as u_poly_sub};
+    use falcon::fpr::{fpr_add as u_fpr_add, fpr_sub as u_fpr_sub};
+    use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
 
     #[test]
     fn test_fpc_add() {
@@ -519,11 +520,11 @@ mod tests {
         return (f, f_shares);
     }
 
-    fn reconstruct(shares: &[fpr]) -> fpr {
+    pub fn reconstruct(shares: &[fpr]) -> fpr {
         return u_fpr_add(shares[0], shares[1]);
     }
 
-    fn reconstruct_arr<const LENGTH: usize>(share_arr: &[[fpr; 2]; LENGTH]) -> [fpr; LENGTH] {
+    pub fn reconstruct_arr<const LENGTH: usize>(share_arr: &[[fpr; 2]; LENGTH]) -> [fpr; LENGTH] {
         let mut reconstructed: [fpr; LENGTH] = [0; LENGTH];
 
         for i in 0..LENGTH {
