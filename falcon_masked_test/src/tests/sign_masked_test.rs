@@ -2,9 +2,12 @@
 
 #[cfg(test)]
 mod tests {
+    use rand::{Rng, thread_rng};
+
     use falcon::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_ct_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
     use falcon::common::hash_to_point_vartime;
     use falcon::falcon::{falcon_expand_privatekey, falcon_keygen_make, FALCON_SIG_COMPRESS, falcon_verify, fpr};
+    use falcon::fpr::fpr_sub;
     use falcon::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
     use falcon::sign::sign_tree as u_sign_tree;
     use falcon_masked::falcon_masked::{falcon_sign_tree_masked, falcon_sign_tree_masked_sample};
@@ -95,9 +98,17 @@ mod tests {
         let mut mkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; expkey.len());
         for i in 0..expkey.len() {
             let mut mask: [fpr; ORDER] = [0; ORDER];
-            mask[0] = expkey[i];
+            let random_fpr = create_random_fpr();
+            mask[0] = fpr_sub(expkey[i], random_fpr);
+            mask[1] = random_fpr;
             mkey[i] = mask;
         }
         mkey
+    }
+
+    pub fn create_random_fpr() -> fpr {
+        let mut rng = thread_rng();
+        let random: f64 = rng.gen_range(-100f64..100f64);
+        return f64::to_bits(random);
     }
 }

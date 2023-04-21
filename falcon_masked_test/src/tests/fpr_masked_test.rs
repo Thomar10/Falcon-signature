@@ -128,14 +128,15 @@ mod tests {
 
     #[test]
     fn fpr_sqrt_test() {
-        for _ in 0..100 {
+        for i in 0..1000 {
             let mut shares_x = [0; ORDER];
             let mut shares_y = [0; ORDER];
             let (x, _) = create_masked(&mut shares_x, &mut shares_y);
-            let add_shares: [fpr; ORDER] = fpr_sqrt(&shares_x);
-            let (xx, _) = reconstruct(&add_shares, &shares_y);
-
+            let sqrt_shares: [fpr; ORDER] = fpr_sqrt::<ORDER>(&shares_x);
+            let (xx, _) = reconstruct(&sqrt_shares, &shares_y);
             check_eq_fpr(xx, sqrt(x));
+
+
         }
     }
 
@@ -192,6 +193,19 @@ mod tests {
         assert!(approx_eq!(f64, fpr_to_double(x), fpr_to_double(y), epsilon = 0.000000003));
     }
 
+    pub fn create_masked_positive(x: &mut [fpr], y: &mut [fpr]) -> (fpr, fpr) {
+        let x_fpr = create_random_fpr_positive();
+        let y_fpr = create_random_fpr();
+        let x_random = create_random_fpr();
+        let y_random = create_random_fpr();
+        let first = vec![sub(x_fpr, x_random), x_random];
+        let second = vec![sub(y_fpr, y_random), y_random];
+        x.clone_from_slice(&first);
+        y.clone_from_slice(&second);
+        (x_fpr, y_fpr)
+    }
+
+
     pub fn create_masked(x: &mut [fpr], y: &mut [fpr]) -> (fpr, fpr) {
         let x_fpr = create_random_fpr();
         let y_fpr = create_random_fpr();
@@ -213,6 +227,11 @@ mod tests {
     pub fn create_random_fpr() -> fpr {
         let mut rng = thread_rng();
         let random: f64 = rng.gen_range(-100f64..100f64);
+        return f64::to_bits(random);
+    }
+    pub fn create_random_fpr_positive() -> fpr {
+        let mut rng = thread_rng();
+        let random: f64 = rng.gen_range(0f64..100000f64);
         return f64::to_bits(random);
     }
 
