@@ -1,22 +1,37 @@
 use falcon::falcon::fpr;
 use stm32f4xx_hal::rng::Rng;
 use rand_core::RngCore;
-use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
+use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of as of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
+
 
 pub static FPR_ZERO: fpr = 0;
 
-pub fn fpr_add(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
+pub fn fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
     d[0] = add(x[0], y[0]);
     d[1] = add(x[1], y[1]);
     d
 }
 
 #[inline(always)]
-pub fn fpr_sub(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
+pub fn fpr_sub<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
     d[0] = sub(x[0], y[0]);
     d[1] = sub(x[1], y[1]);
+    d
+}
+
+pub fn fpr_sub_const<const ORDER: usize>(x: &[fpr], c: fpr) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
+    d[0] = sub(x[0], c);
+    d[1] = sub(x[1], c);
+    d
+}
+
+pub fn fpr_sub_const_fpr<const ORDER: usize>(c: fpr, x: &[fpr]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
+    d[0] = sub(c, x[0]);
+    d[1] = sub(c, x[1]);
     d
 }
 
@@ -27,11 +42,18 @@ pub fn fpr_expm_p63(x: &[fpr], ccs: &[fpr]) -> [u64; 2] {
     d
 }
 
-pub fn fpr_mul(x: &[fpr], y: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
+pub fn fpr_mul<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
     d[0] = mul(x[0], y[0]);
     d[1] = add(mul(x[1], y[0]),
                add(mul(y[1], x[0]), mul(x[1], y[1])));
+    d
+}
+
+pub fn fpr_mul_const<const ORDER: usize>(x: &[fpr], c: fpr) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
+    d[0] = mul(x[0], c);
+    d[1] = mul(x[1], c);
     d
 }
 
@@ -43,68 +65,88 @@ pub fn fpr_sqrt(x: &[fpr]) -> [fpr; 2] {
 }
 
 #[inline(always)]
-pub fn fpr_trunc(x: &[fpr]) -> [i64; 2] {
-    let mut d = [0; 2];
-    d[0] = trunc(x[0]);
-    d[1] = trunc(x[1]);
-    d
+pub fn fpr_trunc(x: &[fpr]) -> i64 {
+    trunc(add(x[1], x[0]))
 }
 
 
-pub fn fpr_div(x: &[fpr], y: &[fpr], rng: &mut Rng) -> [fpr; 2] {
-    let d = fpr_inv(y, rng);
+pub fn fpr_div<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> [fpr; ORDER] {
+    let d: [fpr; ORDER] = fpr_inv(y, rng);
     fpr_mul(x, &d)
 }
 
 
 #[inline(always)]
-pub fn fpr_rint(x: &[fpr]) -> [i64; 2] {
-    let mut d = [0; 2];
-    d[0] = rint(x[0]);
-    d[1] = rint(x[1]);
+pub fn fpr_rint<const ORDER: usize>(x: &[fpr]) -> [i64; ORDER] {
+    let xx = add(x[0], x[1]);
+    let mut d = [0; ORDER];
+    d[0] = rint(xx);
+    d[1] = 0;
     d
 }
 
 #[inline(always)]
-pub fn fpr_floor(x: &[fpr]) -> [i64; 2] {
-    let mut d = [0; 2];
-    d[0] = floor(x[0]);
-    d[1] = floor(x[1]);
+pub fn fpr_floor<const ORDER: usize>(x: &[fpr]) -> [i64; ORDER] {
+    let mut d = [0; ORDER];
+    d[0] = floor(add(x[0], x[1]));
+    d[1] = 0;
+    d
+}
+
+pub fn fpr_of_i<const ORDER: usize>(i: i64) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
+    let xx = of(i);
+    d[0] = xx;
+    d[1] = 0;
+    d
+}
+
+pub fn fpr_of<const ORDER: usize>(i: &[i64]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
+    let x = i[0] + i[1];
+    let xx = of(x);
+    d[0] = xx;
+    d[1] = 0;
     d
 }
 
 
 #[inline(always)]
-pub fn fpr_neg(x: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
+pub fn fpr_neg_fpr(x: fpr) -> fpr {
+    neg(x)
+}
+
+#[inline(always)]
+pub fn fpr_neg<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
     d[0] = neg(x[0]);
     d[1] = neg(x[1]);
     d
 }
 
 #[inline(always)]
-pub fn fpr_half(x: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
+pub fn fpr_half<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
     d[0] = half(x[0]);
     d[1] = half(x[1]);
     d
 }
 
 #[inline(always)]
-pub fn fpr_double(x: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
+pub fn fpr_double<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
     d[0] = double(x[0]);
     d[1] = double(x[1]);
     d
 }
 
 #[inline(always)]
-pub fn fpr_inv(x: &[fpr], rng: &mut Rng) -> [fpr; 2] {
-    let mut d = [0; 2];
+pub fn fpr_inv<const ORDER: usize>(x: &[fpr], rng: &mut Rng) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
     let r1: fpr = rng.next_u64();
     let share_two: fpr = rng.next_u64();
     let share_one = sub(r1, share_two);
-    let y = fpr_mul(&[share_one, share_two], x);
+    let y: [fpr; ORDER] = fpr_mul(&[share_one, share_two], x);
     let y_open_inv = inv(add(y[0], y[1]));
     d[0] = mul(share_one, y_open_inv);
     d[1] = mul(share_two, y_open_inv);
@@ -119,7 +161,7 @@ pub fn fpr_lt(x: &[fpr], y: fpr) -> i32 {
 }
 
 #[inline(always)]
-pub fn fpr_sqr(x: &[fpr]) -> [fpr; 2] {
+pub fn fpr_sqr<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
     fpr_mul(x, x)
 }
 

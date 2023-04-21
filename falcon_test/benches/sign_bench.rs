@@ -250,6 +250,6 @@ pub fn expand_key_10(c: &mut Criterion) {
 
 
 
-criterion_group!(benches, sign_dyn_9, sign_dyn_9_ct,  sign_dyn_10, sign_dyn_10_ct,
-    sign_tree_9, sign_tree_9_ct,  sign_tree_10, sign_tree_10_ct, expand_key_9, expand_key_10);
+criterion_group!(benches, /*sign_dyn_9, sign_dyn_9_ct,  sign_dyn_10, sign_dyn_10_ct,*/
+    sign_tree_9,/* sign_tree_9_ct,  sign_tree_10, sign_tree_10_ct, expand_key_9, expand_key_10*/);
 criterion_main!(benches);
