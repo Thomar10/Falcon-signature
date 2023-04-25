@@ -84,7 +84,7 @@ mod tests {
         falcon_keygen_make(&mut rng, LOGN as u32, sk.as_mut_slice(), sk_len,
                            pk.as_mut_slice(), pk_len, tmp.as_mut_slice(), tmp_len);
         falcon_expand_privatekey(exp_key.as_mut_slice(), exp_key_len, sk.as_mut_slice(), sk_len, tmp_exp.as_mut_slice(), exp_tmp_len);
-        let (res, sig_len) = falcon_sign_tree_masked_sample::<ORDER, LOGN>(&mut rng, signature.as_mut_slice(), sig_len,
+        let (res, sig_len) = falcon_sign_tree_masked::<ORDER, LOGN>(&mut rng, signature.as_mut_slice(), sig_len,
                                         FALCON_SIG_COMPRESS, exp_key.as_mut_slice(),
                                         "data".as_bytes());
 
