@@ -1,7 +1,7 @@
 use rand::{Rng, thread_rng};
 
 use falcon::falcon::fpr;
-use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of as of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
+use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of as of, fpr_rint as rint, fpr_sub as sub, fpr_trunc as trunc};
 
 pub static FPR_ZERO: fpr = 0;
 
@@ -60,7 +60,7 @@ pub fn fpr_sqrt<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
     let mut d = [0; ORDER];
     d[0] = of(1);
     d[1] = 0;
-    let negative = fpr_ltz(&x);
+    let negative = fpr_ltz::<ORDER>(&x);
     let precession = 10;
     if negative {
         let xx = fpr_neg::<ORDER>(&x);
@@ -173,7 +173,7 @@ pub fn fpr_lt(x: &[fpr], y: fpr) -> i32 {
     lt(xx, y)
 }
 
-pub fn fpr_ltz(x: &[fpr]) -> bool {
+pub fn fpr_ltz<const ORDER: usize>(x: &[fpr]) -> bool {
     let sign0 = x[0] >> 63;
     let sign1 = x[1] >> 63;
     if sign0 == 1 && sign1 == 1 {
