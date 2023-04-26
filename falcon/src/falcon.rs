@@ -23,8 +23,8 @@ macro_rules! MKN {
 #[macro_export]
 macro_rules! falcon_tmpsize_keygen {
     ($logn:expr) => {
-        if $logn <= 3 {272 + ((3 << $logn) + 7)}
-        else {(28 << $logn) + ((3 << $logn )+ 7)}
+        if $logn <= 3 {272 + ((3 << $logn) + 8)}
+        else {(28 << $logn) + ((3 << $logn )+ 8)}
     }
 }
 

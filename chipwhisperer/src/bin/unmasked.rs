@@ -92,8 +92,8 @@ fn main() -> ! {
         //result = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
         //let result_buffer = test_sign(&mut trigger, &read_buffer);
         //let result_buffer = test_sign_endpoint(&mut trigger, &read_buffer);
-        //let result_buffer = test_sign_random_key(&mut trigger, &read_buffer);
-        let result_buffer = test_masked_sign(&mut trigger, &read_buffer, &mut rand_source);
+        let result_buffer = test_sign_random_key(&mut trigger, &read_buffer);
+        //let result_buffer = test_masked_sign(&mut trigger, &read_buffer, &mut rand_source);
 
         for i in 0..result_buffer.len() {
             block!(tx.write(result_buffer[i]));
@@ -526,7 +526,7 @@ fn test_sign_random_key(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 16
 
     const LOGN: usize = 8;
     const N: usize = 1 << LOGN;
-    const BUFFER_SIZE: usize = falcon_tmpsize_signtree!(LOGN) + 1;
+    const BUFFER_SIZE: usize = falcon_tmpsize_signtree!(LOGN);
 
     let mut tmp_signtree: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
     let mut rng_rust: InnerShake256Context = gen_rng(&seed);
