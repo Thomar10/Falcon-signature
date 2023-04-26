@@ -428,7 +428,7 @@ def do_sign_test():
 
         target.write(data)
 
-        time.sleep(30)
+        time.sleep(5)
         #Falcon 8 needs 30 seconds to create a random key :O
 
         ret = scope.capture()

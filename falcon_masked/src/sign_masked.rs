@@ -275,15 +275,13 @@ fn reconstruct_fpr<const ORDER: usize>(hm: &[[fpr; ORDER]], res: &mut [fpr]) {
     }
 }
 
-
 pub fn sign_tree<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
-                                                        expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32) {
-    let tmp_length: usize = falcon_tmpsize_signtree!(LOGN);
+                                                                  expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32) {
+    let tmp_length: usize = falcon_tmpsize_signtree!(LOGN) / 8;
     let mut ftmp = vec![[0; ORDER]; tmp_length];
     for i in 0..tmp_length {
         ftmp[i] = [0; ORDER];
     }
-
 
     loop {
         let mut spc: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[logn as usize] };
@@ -291,6 +289,26 @@ pub fn sign_tree<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &m
         let samp: SamplerZ = samp;
 
         if do_sign_tree::<ORDER, LOGN>(samp, &mut spc, sig, expanded_key, hm, logn, ftmp.as_mut_slice()) {
+            break;
+        }
+    }
+}
+
+pub fn sign_tree_with_temp<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
+                                                        expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32, tmp: &mut [[fpr; ORDER]]) {
+    //let tmp_length: usize = falcon_tmpsize_signtree!(LOGN) / 8;
+    //let mut ftmp = vec![[0; ORDER]; tmp_length];
+    //for i in 0..tmp_length {
+    //    ftmp[i] = [0; ORDER];
+    //}
+
+
+    loop {
+        let mut spc: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[logn as usize] };
+        prng_init(&mut spc.p, rng);
+        let samp: SamplerZ = samp;
+
+        if do_sign_tree::<ORDER, LOGN>(samp, &mut spc, sig, expanded_key, hm, logn, tmp) {
             break;
         }
     }

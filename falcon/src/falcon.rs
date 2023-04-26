@@ -57,12 +57,12 @@ macro_rules! falcon_tmpsize_signdyn {
 
 #[macro_export]
 macro_rules! falcon_tmpsize_signtree {
-    ($logn:expr) => {(50 << $logn) + 7}
+    ($logn:expr) => {(50 << $logn) + 8}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expandprivate {
-    ($logn:expr) => {(52 << $logn) + 7}
+    ($logn:expr) => {(52 << $logn) + 8}
 }
 
 #[macro_export]

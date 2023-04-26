@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 #![no_std]
+#[macro_use]
+extern crate alloc;
 
 pub mod fpr_masked;
 pub mod fpr_masked_deep;

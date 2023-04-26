@@ -3,6 +3,7 @@ use falcon::codec::{comp_encode, max_sig_bits, trim_i16_encode};
 use falcon::common::{hash_to_point_ct, hash_to_point_vartime};
 use falcon::falcon::{FALCON_SIG_CT, fpr, shake256_extract, shake256_flip, shake256_init, shake256_inject};
 use falcon::shake::InnerShake256Context;
+use alloc::vec::Vec;
 
 use crate::sign_masked::sign_tree;
 use crate::sign_masked_mask_sample::sign_tree_sample;
