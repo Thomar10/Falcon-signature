@@ -1,4 +1,4 @@
-use rand::{Rng, thread_rng};
+use rand::{Rng, RngCore, thread_rng};
 
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of as of, fpr_rint as rint, fpr_sub as sub, fpr_trunc as trunc};
@@ -61,7 +61,7 @@ pub fn fpr_sqrt<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
     d[0] = of(1);
     d[1] = 0;
     let negative = fpr_ltz::<ORDER>(&x);
-    let precession = 10;
+    let precession = 40;
     if negative {
         let xx = fpr_neg::<ORDER>(&x);
         for _ in 0..precession {
@@ -156,8 +156,8 @@ pub fn fpr_double<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
 pub fn fpr_inv<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
     let mut d = [0; ORDER];
     let mut rng = thread_rng();
-    let r1: fpr = f64::to_bits(rng.gen_range(-100f64..100f64));
-    let share_two: fpr = f64::to_bits(rng.gen_range(-100f64..100f64));
+    let r1: fpr = of(rng.next_u64() as i64);
+    let share_two: fpr = of(rng.next_u64() as i64);
     let share_one = sub(r1, share_two);
     let y: [fpr; ORDER] = fpr_mul(&[share_one, share_two], x);
     let y_open_inv = inv(add(y[0], y[1]));

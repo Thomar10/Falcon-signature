@@ -338,22 +338,11 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     smallints_to_fpr(b00, g, logn);
     smallints_to_fpr(b11, F, logn);
     smallints_to_fpr(b10, G, logn);
-    reconstruct_fpr(b01, ff.as_mut_slice());
-    let x2: Vec<f64> = ff.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b01m {:?}", x2);
     reconstruct_fpr(b10, GG.as_mut_slice());
-    let x2: Vec<f64> = GG.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b10m {:?}", x2);
     fft(b01, logn);
-    reconstruct_fpr(b01, ff.as_mut_slice());
-    let x2: Vec<f64> = ff.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b01m {:?}", x2);
     fft(b00, logn);
     fft(b11, logn);
     fft(b10, logn);
-    reconstruct_fpr(b10, GG.as_mut_slice());
-    let x2: Vec<f64> = GG.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b10m {:?}", x2);
     poly_neg(b01, logn);
     poly_neg(b11, logn);
 
@@ -363,13 +352,7 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     t0.copy_from_slice(b01);
     poly_mulselfadj_fft(t0, logn);
     t1.copy_from_slice(b00);
-    reconstruct_fpr(t1, ff.as_mut_slice());
-    let x1: Vec<f64> = ff.iter().map(|x| fpr_to_double(*x)).collect();
-    //println!("b00m {:?}", x1);
 
-    reconstruct_fpr(b10, ff2.as_mut_slice());
-    let x2: Vec<f64> = ff2.iter().map(|x| fpr_to_double(*x)).collect();
-    //println!("b10m {:?}", x2);
     poly_muladj_fft(t1, b10, logn);
     poly_mulselfadj_fft(b00, logn);
     poly_add(b00, t0, logn);
@@ -407,11 +390,6 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
 
     let t0 = b11;
     let t1 = b01;
-    let mut t0_res = vec![0; n];
-    reconstruct_fpr(t0, t0_res.as_mut_slice());
-    let x1: Vec<f64> = t0_res.iter().map(|x| fpr_to_double(*x)).collect();
-    //println!("t0m {:?}", x1);
-    return true;
     ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, interrest);
 
     let (b00, inter) = tmp.split_at_mut(n);

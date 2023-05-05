@@ -465,17 +465,13 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     smallints_to_fpr(b11, F, logn);
     smallints_to_fpr(b10, G, logn);
     let x2: Vec<f64> = b01.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b01 {:?}", x2);
     let x2: Vec<f64> = b10.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b10 {:?}", x2);
     fft(b01, logn);
     let x2: Vec<f64> = b01.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b01 {:?}", x2);
     fft(b00, logn);
     fft(b11, logn);
     fft(b10, logn);
     let x2: Vec<f64> = b10.iter().map(|x| fpr_to_double(*x)).collect();
-    println!("b10 {:?}", x2);
     poly_neg(b01, logn);
     poly_neg(b11, logn);
 
@@ -485,10 +481,6 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     t0.copy_from_slice(b01);
     poly_mulselfadj_fft(t0, logn);
     t1.copy_from_slice(b00);
-    let x2: Vec<f64> = t1.iter().map(|x| fpr_to_double(*x)).collect();
-    //println!("b00 {:?}", x2);
-    let x3: Vec<f64> = b10.iter().map(|x| fpr_to_double(*x)).collect();
-    //println!("b10 {:?}", x3);
     poly_muladj_fft(t1, b10, logn);
     poly_mulselfadj_fft(b00, logn);
     poly_add(b00, t0, logn);
@@ -528,8 +520,6 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let t1 = b01;
 
     let x1: Vec<f64> = t0.iter().map(|x| fpr_to_double(*x)).collect();
-    //println!("t0 {:?}", x1);
-    return true;
     ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, interrest);
 
     let (b00, inter) = tmp.split_at_mut(n);
