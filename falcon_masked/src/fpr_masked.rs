@@ -147,8 +147,8 @@ pub fn fpr_double<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
 #[inline(always)]
 pub fn fpr_inv<const ORDER: usize>(x: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut d = [0; ORDER];
-    let r1: fpr = rng.next_u64();
-    let share_two: fpr = rng.next_u64();
+    let r1: fpr = of(rng.next_u64() as i64);
+    let share_two: fpr = of(rng.next_u64() as i64);
     let share_one = sub(r1, share_two);
     let y: [fpr; ORDER] = fpr_mul(&[share_one, share_two], x);
     let y_open_inv = inv(add(y[0], y[1]));
