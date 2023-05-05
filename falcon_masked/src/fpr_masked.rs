@@ -1,8 +1,12 @@
-use falcon::falcon::fpr;
-use stm32f4xx_hal::rng::Rng;
+#![no_std]
+
 use rand_core::RngCore;
+use stm32f4xx_hal::rng::Rng;
+
+use falcon::falcon::fpr;
 use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of as of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
 
+use crate::random::RngBoth;
 
 pub static FPR_ZERO: fpr = 0;
 
@@ -70,7 +74,7 @@ pub fn fpr_trunc(x: &[fpr]) -> i64 {
 }
 
 
-pub fn fpr_div<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> [fpr; ORDER] {
+pub fn fpr_div<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let d: [fpr; ORDER] = fpr_inv(y, rng);
     fpr_mul(x, &d)
 }
@@ -141,7 +145,7 @@ pub fn fpr_double<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
 }
 
 #[inline(always)]
-pub fn fpr_inv<const ORDER: usize>(x: &[fpr], rng: &mut Rng) -> [fpr; ORDER] {
+pub fn fpr_inv<const ORDER: usize>(x: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut d = [0; ORDER];
     let r1: fpr = rng.next_u64();
     let share_two: fpr = rng.next_u64();

@@ -12,4 +12,5 @@ cortex-m-rt = { version = "0.7.3", features = ["device"] }
 stm32f4xx-hal = { version = "0.15.0", features = ["stm32f415"] }
 bytemuck = "1.13.0"
 rand_core = "0.6.4"
+rand= "0.8.5"
 falcon = { path = "../falcon" }

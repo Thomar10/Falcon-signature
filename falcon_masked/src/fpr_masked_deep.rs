@@ -1,11 +1,13 @@
+#![no_std]
 use core::ops::{BitAnd, BitXor, Shl};
 
 use stm32f4xx_hal::rng::Rng;
 use rand_core::RngCore;
 
 use falcon::falcon::fpr;
+use crate::random::RngBoth;
 
-pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> [fpr; ORDER] {
+pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut r: [[fpr; ORDER]; ORDER] = [[0; ORDER]; ORDER];
 
     for i in 0..ORDER {
@@ -26,7 +28,7 @@ pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> [f
     z
 }
 
-pub fn secure_or<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> [fpr; ORDER] {
+pub fn secure_or<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut z = [0; ORDER];
     let t: [fpr; ORDER] = secure_and(x, y, rng);
     for i in 0..ORDER {
@@ -35,7 +37,7 @@ pub fn secure_or<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> [fp
     z
 }
 
-pub fn secure_non_zero<const ORDER: usize>(x: &[fpr], bits: i32, boolean: bool, rng: &mut Rng) -> [fpr; ORDER] {
+pub fn secure_non_zero<const ORDER: usize>(x: &[fpr], bits: i32, boolean: bool, rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut t = [0; ORDER];
     if !boolean {
         t[0] = kogge_stone_a2b(x[0] as u16, x[1] as u16, rng) as u64;
@@ -62,7 +64,7 @@ pub fn secure_non_zero<const ORDER: usize>(x: &[fpr], bits: i32, boolean: bool, 
     t
 }
 
-fn a2b_e(a: i16, r: i16, rng: &mut Rng) -> i16 {
+fn a2b_e(a: i16, r: i16, rng: &mut RngBoth) -> i16 {
     let mut gamma: i16 = rng.next_u32() as i16;
     let mut t = 2i16.wrapping_mul(gamma);
     let mut x = gamma ^ r;
@@ -84,7 +86,7 @@ fn a2b_e(a: i16, r: i16, rng: &mut Rng) -> i16 {
 }
 
 
-fn b2a_u128(x: u128, r: u128, rng: &mut Rng) -> u128 {
+fn b2a_u128(x: u128, r: u128, rng: &mut RngBoth) -> u128 {
     let mut gamma: u128 = rng.next_u32() as u128;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
@@ -96,7 +98,7 @@ fn b2a_u128(x: u128, r: u128, rng: &mut Rng) -> u128 {
 }
 
 
-fn b2ai6(x: i8, r: i8, rng: &mut Rng) -> i8 {
+fn b2ai6(x: i8, r: i8, rng: &mut RngBoth) -> i8 {
     let mut gamma: i8 = (rng.next_u32() % 63) as i8;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
@@ -107,7 +109,7 @@ fn b2ai6(x: i8, r: i8, rng: &mut Rng) -> i8 {
     a ^ t
 }
 
-fn b2a(x: i16, r: i16, rng: &mut Rng) -> i16 {
+fn b2a(x: i16, r: i16, rng: &mut RngBoth) -> i16 {
     let mut gamma: i16 = rng.next_u32() as i16;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
@@ -118,7 +120,7 @@ fn b2a(x: i16, r: i16, rng: &mut Rng) -> i16 {
     a ^ t
 }
 
-fn b2a_bit(x: i16, r: i16, rng: &mut Rng) -> i16 {
+fn b2a_bit(x: i16, r: i16, rng: &mut RngBoth) -> i16 {
     let mut gamma: i16 = rng.next_u32() as i16;
     let mut t = x ^ gamma;
     t = t.wrapping_sub(gamma);
@@ -130,7 +132,7 @@ fn b2a_bit(x: i16, r: i16, rng: &mut Rng) -> i16 {
 }
 
 
-pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr], rng: &mut Rng) -> [fpr; ORDER] {
+pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut s = [0; ORDER];
     let mut ex: [i16; ORDER] = [0; ORDER];
     let mut ey: [i16; ORDER] = [0; ORDER];
@@ -191,7 +193,7 @@ pub fn secure_mul<const ORDER: usize>(xx: &[fpr], yy: &[fpr], rng: &mut Rng) -> 
     secure_fpr(&s, &mut e, &z, rng)
 }
 
-pub fn kogge_stone_a2b(a: u16, r: u16, rng: &mut Rng) -> u16 {
+pub fn kogge_stone_a2b(a: u16, r: u16, rng: &mut RngBoth) -> u16 {
     let n = 4;
     let s: u16 = rng.next_u32() as u16;
     let t: u16 = rng.next_u32() as u16;
@@ -224,7 +226,7 @@ pub fn kogge_stone_a2b(a: u16, r: u16, rng: &mut Rng) -> u16 {
 }
 
 
-pub fn kogge_stone_a2b_u128(a: u128, r: u128, rng: &mut Rng) -> u128 {
+pub fn kogge_stone_a2b_u128(a: u128, r: u128, rng: &mut RngBoth) -> u128 {
     let n = 7;
     let s: u128 = rng.next_u64() as u128;
     let t: u128 = rng.next_u64() as u128;
@@ -272,7 +274,7 @@ fn sec_xor<T: BitXor<Output=T>>(x: T, y: T, r: T) -> T {
     x ^ y ^ r
 }
 
-pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16], rng: &mut Rng) -> ([fpr; ORDER], [i16; ORDER]) {
+pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16], rng: &mut RngBoth) -> ([fpr; ORDER], [i16; ORDER]) {
     let mut e: [i16; ORDER] = [0; ORDER];
     let mut x: [u64; ORDER] = [0; ORDER];
     e[0] = ee[0].wrapping_sub(63);
@@ -310,7 +312,7 @@ pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16], rng: &mut Rng
     (x, e)
 }
 
-pub fn secure_fpr_sub<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> ([fpr; ORDER]) {
+pub fn secure_fpr_sub<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> ([fpr; ORDER]) {
     let mut yy: [u64; ORDER] = [0; ORDER];
     yy[0] = y[0] ^ (1u64 << 63);
     yy[1] = y[1];
@@ -318,7 +320,7 @@ pub fn secure_fpr_sub<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -
 }
 
 
-pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -> ([fpr; ORDER]) {
+pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> ([fpr; ORDER]) {
     let mut xm: [u64; ORDER] = [0; ORDER];
     let mut ym: [u64; ORDER] = [0; ORDER];
     for i in 0..ORDER {
@@ -409,7 +411,7 @@ pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut Rng) -
 }
 
 
-pub fn refresh<const ORDER: usize>(z: &mut [u64], rng: &mut Rng) {
+pub fn refresh<const ORDER: usize>(z: &mut [u64], rng: &mut RngBoth) {
     for i in 0..ORDER {
         let rng: u64 = rng.next_u64();
         z[0] ^= rng;
@@ -417,7 +419,7 @@ pub fn refresh<const ORDER: usize>(z: &mut [u64], rng: &mut Rng) {
     }
 }
 
-pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[u64], rng: &mut Rng) -> [fpr; ORDER] {
+pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[u64], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut b: [u64; ORDER] = [0; ORDER];
     let mut e1: [i16; ORDER] = [0; ORDER];
     e1[0] = e[0].wrapping_add(1076);
@@ -442,7 +444,7 @@ pub fn secure_fpr<const ORDER: usize>(s: &[u64], e: &mut [i16], z: &[u64], rng: 
     xx
 }
 
-pub fn secure_add<const ORDER: usize>(x: u64, y: u64, s: u64, r: u64, rng: &mut Rng) -> [u64; ORDER] {
+pub fn secure_add<const ORDER: usize>(x: u64, y: u64, s: u64, r: u64, rng: &mut RngBoth) -> [u64; ORDER] {
     let n = 6;
     let t: u64 = rng.next_u64();
     let u: u64 = rng.next_u64();
@@ -486,7 +488,7 @@ pub fn xor<const ORDER: usize>(x: &[fpr], y: &[fpr]) -> [fpr; ORDER] {
     z
 }
 
-pub fn secure_ursh<const ORDER: usize>(x: &[fpr], n: &[i8], rng: &mut Rng) -> [fpr; ORDER] {
+pub fn secure_ursh<const ORDER: usize>(x: &[fpr], n: &[i8], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut y = [0; ORDER];
     let mut nn = [0; ORDER];
     for i in 0..ORDER {
