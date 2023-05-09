@@ -32,7 +32,7 @@ use falcon_masked::fft_masked_deep::secure_fpc_mul;
 use falcon_masked::fpr_masked::{fpr_add as fpr_add_masked, fpr_mul as fpr_mul_masked};
 use falcon_masked::fpr_masked_deep::{secure_add, secure_fpr_add, secure_mul};
 use falcon_masked::sign_masked::sign_tree_with_temp as sign_tree_masked;
-use randomness::random::nostd::RngBoth;
+use randomness::random::RngBoth;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();

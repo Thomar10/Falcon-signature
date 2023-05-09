@@ -13,4 +13,4 @@ stm32f4xx-hal = { version = "0.15.0", features = ["stm32f415"] }
 bytemuck = "1.13.0"
 rand_core = "0.6.4"
 falcon = { path = "../falcon" }
-randomness = { path = "../randomness", default-features = false, features = ["nostd"] }
+randomness = { path = "../randomness", version="0.1.0", default-features = false, features = ["nostd"] }

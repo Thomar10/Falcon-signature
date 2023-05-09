@@ -5,8 +5,7 @@ edition = "2021"
 
 [features]
 default = []
-
-with_std = ["dep:rand"]
+withstd = ["dep:rand"]
 nostd = []
 
 [dependencies]
