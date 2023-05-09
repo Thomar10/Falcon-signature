@@ -116,7 +116,7 @@ pub fn shake256_flip(rng: &mut InnerShake256Context) {
     i_shake256_flip(rng);
 }
 
-pub fn shake256_extract(rng: &mut InnerShake256Context, out: &mut [u8], len: usize) {
+pub fn shake256_extract(rng: &mut InnerShake256Context, out: &mut [u8], _len: usize) {
     return i_shake256_extract(rng, out);
 }
 
