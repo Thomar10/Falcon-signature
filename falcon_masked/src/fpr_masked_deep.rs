@@ -310,7 +310,7 @@ pub fn secure_fpr_norm<const ORDER: usize>(xx: &[u64], ee: &[i16], rng: &mut Rng
     (x, e)
 }
 
-pub fn secure_fpr_sub<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> ([fpr; ORDER]) {
+pub fn secure_fpr_sub<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut yy: [u64; ORDER] = [0; ORDER];
     yy[0] = y[0] ^ (1u64 << 63);
     yy[1] = y[1];
@@ -318,7 +318,7 @@ pub fn secure_fpr_sub<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBot
 }
 
 
-pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> ([fpr; ORDER]) {
+pub fn secure_fpr_add<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut xm: [u64; ORDER] = [0; ORDER];
     let mut ym: [u64; ORDER] = [0; ORDER];
     for i in 0..ORDER {

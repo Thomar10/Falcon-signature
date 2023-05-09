@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+#![allow(unused)]
 use falcon::{falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_signtree};
 use falcon::codec::{comp_encode, max_sig_bits, trim_i16_encode};
 use falcon::common::{hash_to_point_ct, hash_to_point_vartime};

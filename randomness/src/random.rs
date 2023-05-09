@@ -1,3 +1,4 @@
+#![allow(unreachable_code)]
 use rand_core::{Error, RngCore};
 use stm32f4xx_hal::rng::Rng as HalRng;
 
@@ -36,11 +37,11 @@ fn next_u64(mut rng: &mut RngBoth) -> u64 {
 }
 
 #[cfg(not(target_os = "thumbv7em-none-eabihf"))]
-fn next_u64(_rng: &mut RngBoth) -> u64 {
+fn next_u64(rng: &mut RngBoth) -> u64 {
     #[cfg(feature = "withstd")]
     return rng.rust_rng.as_mut().unwrap().next_u64();
-    #[cfg(not(feature = "withstd"))]
-    return 0;
+    #[cfg(feature = "nostd")]
+    return rng.hal_rng.as_mut().unwrap().next_u64();
 }
 
 
@@ -50,11 +51,11 @@ fn next_u32(mut rng: &mut RngBoth) -> u32 {
 }
 
 #[cfg(not(target_os = "thumbv7em-none-eabihf"))]
-fn next_u32(_rng: &mut RngBoth) -> u32 {
+fn next_u32(rng: &mut RngBoth) -> u32 {
     #[cfg(feature = "withstd")]
     return rng.rust_rng.as_mut().unwrap().next_u32();
-    #[cfg(not(feature = "withstd"))]
-    return 0;
+    #[cfg(feature = "nostd")]
+    return rng.hal_rng.as_mut().unwrap().next_u32();
 }
 
 

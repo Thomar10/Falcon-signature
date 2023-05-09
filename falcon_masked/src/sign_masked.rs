@@ -1,13 +1,13 @@
 use falcon::{falcon_tmpsize_signtree, MKN};
 use falcon::common::is_short_half;
 use falcon::falcon::fpr;
-use falcon::fpr::{fpr_add as add, fpr_expm_p63 as expm_p63, FPR_INV_2SQRSIGMA0, FPR_INV_LOG2, FPR_INVERSE_OF_Q, FPR_INVSQRT2, FPR_INVSQRT8, FPR_LOG2, fpr_mul as mul, fpr_of as of, fpr_rint as rint, FPR_SIGMA_MIN};
-use falcon::rng::{Prng, prng_get_u8, prng_init, State};
+use falcon::fpr::{fpr_add as add, FPR_INVERSE_OF_Q, FPR_INVSQRT2, FPR_INVSQRT8, fpr_rint as rint, FPR_SIGMA_MIN};
+use falcon::rng::{Prng, prng_init, State};
 use falcon::shake::InnerShake256Context;
-use falcon::sign::{ffLDL_treesize, gaussian0_sampler, sampler as samp, SamplerContext, SamplerZ};
+use falcon::sign::{ffLDL_treesize, sampler as samp, SamplerContext, SamplerZ};
 
 use crate::fft_masked::{fft, ifft, poly_add, poly_merge_fft, poly_mul_fft, poly_mulconst, poly_split_fft, poly_sub};
-use crate::fpr_masked::{fpr_add, fpr_floor, fpr_half, fpr_mul, fpr_mul_const, fpr_neg_fpr, fpr_of, fpr_of_i, fpr_sqr, fpr_sub, fpr_sub_const, fpr_sub_const_fpr, fpr_trunc};
+use crate::fpr_masked::{fpr_add, fpr_half, fpr_mul, fpr_mul_const, fpr_neg_fpr, fpr_of_i, fpr_sub};
 
 #[allow(non_snake_case)]
 pub fn ffSampling_fft<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [[fpr; ORDER]],
