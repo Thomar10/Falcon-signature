@@ -1,18 +1,18 @@
 use core::ops::{BitAnd, BitXor, Shl};
 
-use stm32f4xx_hal::rng::Rng;
 use rand_core::RngCore;
+use stm32f4xx_hal::rng::Rng;
 
 use falcon::falcon::fpr;
 use randomness::random::RngBoth;
-
 
 pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut r: [[fpr; ORDER]; ORDER] = [[0; ORDER]; ORDER];
 
     for i in 0..ORDER {
         for j in (i + 1)..ORDER {
-            r[i][j] = (rng.next_u32() % 2) as u64;
+            // Only one bit of randomness, bit-slice would be more optimal
+            r[i][j] = (rng.next_u64() % 2) as u64;
             r[j][i] = (r[i][j] ^ (x[i] & y[j])) ^ (x[j] & y[i]);
         }
     }
@@ -228,9 +228,9 @@ pub fn kogge_stone_a2b(a: u16, r: u16, rng: &mut RngBoth) -> u16 {
 
 pub fn kogge_stone_a2b_u128(a: u128, r: u128, rng: &mut RngBoth) -> u128 {
     let n = 7;
-    let s: u128 = rng.next_u64() as u128;
-    let t: u128 = rng.next_u64() as u128;
-    let u: u128 = rng.next_u64() as u128;
+    let s: u128 = rng.next_u64() as u128 | ((rng.next_u64() as u128) << 64);
+    let t: u128 = rng.next_u64() as u128 | ((rng.next_u64() as u128) << 64);
+    let u: u128 = rng.next_u64() as u128 | ((rng.next_u64() as u128) << 64);
     let mut p = a ^ s;
     p = p ^ r;
     let mut g = s ^ ((a ^ t) & r);
