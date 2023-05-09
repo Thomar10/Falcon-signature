@@ -21,11 +21,11 @@ impl RngCore for RngBoth {
         next_u64(self)
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
+    fn fill_bytes(&mut self, _dest: &mut [u8]) {
         todo!()
     }
 
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
+    fn try_fill_bytes(&mut self, _dest: &mut [u8]) -> Result<(), Error> {
         todo!()
     }
 }
@@ -36,7 +36,7 @@ fn next_u64(mut rng: &mut RngBoth) -> u64 {
 }
 
 #[cfg(not(target_os = "thumbv7em-none-eabihf"))]
-fn next_u64(mut rng: &mut RngBoth) -> u64 {
+fn next_u64(_rng: &mut RngBoth) -> u64 {
     #[cfg(feature = "withstd")]
     return rng.rust_rng.as_mut().unwrap().next_u64();
     #[cfg(not(feature = "withstd"))]
@@ -50,7 +50,7 @@ fn next_u32(mut rng: &mut RngBoth) -> u32 {
 }
 
 #[cfg(not(target_os = "thumbv7em-none-eabihf"))]
-fn next_u32(mut rng: &mut RngBoth) -> u32 {
+fn next_u32(_rng: &mut RngBoth) -> u32 {
     #[cfg(feature = "withstd")]
     return rng.rust_rng.as_mut().unwrap().next_u32();
     #[cfg(not(feature = "withstd"))]

@@ -1,8 +1,6 @@
 use core::ops::{BitAnd, BitXor, Shl};
 
 use rand_core::RngCore;
-use stm32f4xx_hal::rng::Rng;
-
 use falcon::falcon::fpr;
 use randomness::random::RngBoth;
 
