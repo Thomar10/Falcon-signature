@@ -1,0 +1,11 @@
+[package]
+name = "ntru_gen_test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.4"
+ntru_gen = { path = "../ntru_gen" }
+ntru_gen_c = { path = "../ntru_gen_c" }

@@ -1,0 +1,9 @@
+[package]
+name = "ntru_gen_c"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[build-dependencies]
+cmake = "0.1.31"
