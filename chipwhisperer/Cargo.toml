@@ -17,6 +17,7 @@ bytemuck = "1.13.0"
 nb = "1.1.0"
 falcon = { path = "../falcon" }
 falcon_masked = { path = "../falcon_masked" }
+rand_core = "0.6.4"
 randomness = { path = "../randomness", default-features = false, features = ["nostd"] }
 
 [profile.dev]

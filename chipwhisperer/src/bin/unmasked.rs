@@ -8,6 +8,7 @@ use cortex_m::asm::delay;
 use cortex_m_rt::entry;
 use embedded_alloc::Heap;
 use panic_halt as _;
+use rand_core::RngCore;
 use stm32f4xx_hal as hal;
 use stm32f4xx_hal::block;
 use stm32f4xx_hal::gpio::{self, Alternate, Output, Pin, PushPull};
@@ -31,7 +32,7 @@ use falcon_masked::fft_masked_deep::secure_fpc_mul;
 use falcon_masked::fpr_masked::{fpr_add as fpr_add_masked, fpr_mul as fpr_mul_masked};
 use falcon_masked::fpr_masked_deep::{secure_add, secure_fpr_add, secure_mul};
 use falcon_masked::sign_masked::sign_tree_with_temp as sign_tree_masked;
-use randomness::random::RngBoth;
+use randomness::random::nostd::RngBoth;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -441,7 +442,7 @@ fn test_fpr_mul_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: 
     return return_buffer;
 }
 
-fn test_rand(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 8] {
+fn test_rand(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut RngBoth) -> [u8; 8] {
     let mut return_buffer: [u8; 8] = [0; 8];
 
     let rn: u64 = rng.next_u64();
@@ -466,7 +467,7 @@ fn test_fft(trigger: &mut TriggerPin) -> [u8; 8] {
     return return_buffer;
 }
 
-fn test_fft_rand(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
+fn test_fft_rand(trigger: &mut TriggerPin, rng: &mut RngBoth) -> [u8; 8] {
     const LOGN: u32 = 9;
     const N: usize = 1 << LOGN;
     let mut f: [fpr; N] = RAND_ARRAY;
@@ -486,7 +487,7 @@ fn test_fft_rand(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
     return return_buffer;
 }
 
-fn test_fft_masked(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
+fn test_fft_masked(trigger: &mut TriggerPin, rng: &mut RngBoth) -> [u8; 8] {
     const LOGN: u32 = 9;
     const N: usize = 1 << LOGN;
     let mut f: [[fpr; 2]; N] = [[0; 2]; N];
@@ -508,7 +509,7 @@ fn test_fft_masked(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
     return return_buffer;
 }
 
-fn test_fft_rand_masked(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
+fn test_fft_rand_masked(trigger: &mut TriggerPin, rng: &mut RngBoth) -> [u8; 8] {
     const LOGN: u32 = 9;
     const N: usize = 1 << LOGN;
     let mut f: [[fpr; 2]; N] = [[0; 2]; N];
@@ -611,7 +612,7 @@ fn test_sign(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 16] {
     return return_buffer//[sum];
 }
 
-fn test_masked_sign(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 16] {
+fn test_masked_sign(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut RngBoth) -> [u8; 16] {
     let input: &[u8] = "This is a test message".as_bytes();
     let mut seed: [u8; 8] = [0; 8];
     seed.copy_from_slice(&read_buffer[..8]);
@@ -656,7 +657,7 @@ fn test_masked_sign(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut Rng)
     return return_buffer//[sum];
 }
 
-fn gen_array(rng: &mut Rng) -> [i8; 1024] {
+fn gen_array(rng: &mut RngBoth) -> [i8; 1024] {
     let mut buffer: [u8; 1024] = [0; 1024];
 
     for i in 0..(1024/8) {
@@ -670,7 +671,7 @@ fn gen_array(rng: &mut Rng) -> [i8; 1024] {
     return arr;
 }
 
-fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut Rng) {
+fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut RngBoth) {
     const LOGN: usize = 8;
     const exp_tmp_len: usize = falcon_tmpsize_expandprivate!(LOGN) / 8;
 
@@ -684,7 +685,7 @@ fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut Rng) {
 }
 
 
-fn mask_expanded_key<const ORDER: usize, const EXKLENGTH: usize>(key: &[fpr], rng: &mut Rng) -> [[fpr; ORDER]; EXKLENGTH] {
+fn mask_expanded_key<const ORDER: usize, const EXKLENGTH: usize>(key: &[fpr], rng: &mut RngBoth) -> [[fpr; ORDER]; EXKLENGTH] {
     //const LOGN: usize = 8;
     //const exp_key_len: usize = falcon_tmpsize_expanded_key_size!(LOGN);
     //let (_, random_key3) = random_key2.split_at_mut(8); // alignment
@@ -704,7 +705,7 @@ fn mask_expanded_key<const ORDER: usize, const EXKLENGTH: usize>(key: &[fpr], rn
 }
 
 /* DOESN'T WORK */
-fn test_sign_random_key_fast(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 16] {
+fn test_sign_random_key_fast(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut RngBoth) -> [u8; 16] {
     let input: &[u8] = "This is a test message".as_bytes();
     let mut seed: [u8; 8] = [0; 8];
     seed.copy_from_slice(&read_buffer[..8]);

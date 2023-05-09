@@ -3,7 +3,8 @@ use stm32f4xx_hal::rng::Rng;
 use falcon::falcon::fpr;
 
 use crate::fpr_masked::{fpr_add, fpr_double, FPR_GM_TAB, fpr_half, fpr_inv, fpr_mul, fpr_neg, FPR_P2_TAB, fpr_sqr, fpr_sub, FPR_ZERO};
-use randomness::random::RngBoth;
+use randomness::random::nostd::RngBoth;
+
 
 pub fn fpc_add<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; ORDER], [fpr; ORDER]) {
     let fpct_re: [fpr; ORDER] = fpr_add(a_re, b_re);

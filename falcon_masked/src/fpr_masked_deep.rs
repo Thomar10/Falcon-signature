@@ -4,7 +4,8 @@ use stm32f4xx_hal::rng::Rng;
 use rand_core::RngCore;
 
 use falcon::falcon::fpr;
-use randomness::random::RngBoth;
+use randomness::random::nostd::RngBoth;
+
 
 pub fn secure_and<const ORDER: usize>(x: &[fpr], y: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut r: [[fpr; ORDER]; ORDER] = [[0; ORDER]; ORDER];

@@ -4,14 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["dep:rand"]
+default = []
 
+with_std = ["dep:rand"]
 nostd = []
 
 [dependencies]
 embedded-hal = "0.2"
 embedded-alloc = "0.5.0"
-cortex-m = { version = "0.7.4", features = ["critical-section-single-core"]}
+cortex-m = { version = "0.7.4", features = ["critical-section-single-core"] }
 cortex-m-rt = { version = "0.7.3", features = ["device"] }
 stm32f4xx-hal = { version = "0.15.0", features = ["stm32f415"] }
 rand_core = "0.6.4"

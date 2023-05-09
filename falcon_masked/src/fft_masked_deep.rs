@@ -1,7 +1,8 @@
 use stm32f4xx_hal::rng::Rng;
 
 use falcon::falcon::fpr;
-use randomness::random::RngBoth;
+use randomness::random::nostd::RngBoth;
+
 
 use crate::fpr_masked::FPR_GM_TAB;
 use crate::fpr_masked_deep::{secure_fpr_add, secure_fpr_sub, secure_mul};
