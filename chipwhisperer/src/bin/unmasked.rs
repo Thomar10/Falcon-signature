@@ -5,33 +5,33 @@ extern crate alloc;
 
 use bytemuck;
 use cortex_m::asm::delay;
-use embedded_alloc::Heap;
 use cortex_m_rt::entry;
+use embedded_alloc::Heap;
 use panic_halt as _;
 use stm32f4xx_hal as hal;
 use stm32f4xx_hal::block;
-use stm32f4xx_hal::pac::{USART1, Peripherals, RNG};
-use stm32f4xx_hal::prelude::*;
-use stm32f4xx_hal::gpio::{self, Alternate, Pin, Output, PushPull};
+use stm32f4xx_hal::gpio::{self, Alternate, Output, Pin, PushPull};
 use stm32f4xx_hal::gpio::Dynamic::OutputPushPull;
+use stm32f4xx_hal::pac::{Peripherals, RNG, USART1};
+use stm32f4xx_hal::prelude::*;
 use stm32f4xx_hal::rng::Rng;
-use rand_core::RngCore;
 use stm32f4xx_hal::serial::{Config, Rx, Serial, Tx};
+
+use falcon::{falcon_sig_compressed_maxsize, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signtree};
 //use chipwhisperer::setup;
 use falcon::common::hash_to_point_vartime;
 use falcon::falcon::{falcon_sign_tree, fpr};
-use falcon::{falcon_sig_compressed_maxsize, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signtree};
 use falcon::fft::{fft, fpc_mul};
-use falcon_masked::fft_masked::{fpc_mul as fpc_mul_masked, fft as fft_masked};
-use falcon_masked::fft_masked_deep::{secure_fpc_mul};
-use falcon_masked::fpr_masked::{fpr_mul as fpr_mul_masked, fpr_add as fpr_add_masked};
-use falcon_masked::fpr_masked_deep::{secure_add, secure_fpr_add, secure_mul};
-use falcon_masked::sign_masked::{sign_tree_with_temp as sign_tree_masked};
 use falcon::fpr::{fpr_add, fpr_mul, fpr_sub};
 use falcon::keygen::keygen;
 use falcon::shake::{i_shake256_extract, i_shake256_init, i_shake256_inject, InnerShake256Context};
 use falcon::sign::{expand_privkey, sign_tree};
-use falcon_masked::random::RngBoth;
+use falcon_masked::fft_masked::{fft as fft_masked, fpc_mul as fpc_mul_masked};
+use falcon_masked::fft_masked_deep::secure_fpc_mul;
+use falcon_masked::fpr_masked::{fpr_add as fpr_add_masked, fpr_mul as fpr_mul_masked};
+use falcon_masked::fpr_masked_deep::{secure_add, secure_fpr_add, secure_mul};
+use falcon_masked::sign_masked::sign_tree_with_temp as sign_tree_masked;
+use randomness::random::RngBoth;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();

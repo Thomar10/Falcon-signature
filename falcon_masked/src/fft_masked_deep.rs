@@ -1,11 +1,10 @@
-#![no_std]
 use stm32f4xx_hal::rng::Rng;
 
 use falcon::falcon::fpr;
+use randomness::random::RngBoth;
 
 use crate::fpr_masked::FPR_GM_TAB;
 use crate::fpr_masked_deep::{secure_fpr_add, secure_fpr_sub, secure_mul};
-use crate::random::RngBoth;
 
 pub fn secure_fpc_add<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr], rng: &mut RngBoth) -> ([fpr; ORDER], [fpr; ORDER]) {
     let fpct_re: [fpr; ORDER] = secure_fpr_add(a_re, b_re, rng);

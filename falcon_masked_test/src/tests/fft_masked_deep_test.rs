@@ -4,7 +4,7 @@ use rand::{Rng, thread_rng};
 use falcon::falcon::fpr;
 use falcon::fft::{fft, fpc_add, fpc_mul, fpc_sub};
 use falcon_masked::fft_masked_deep::{secure_fft, secure_fpc_add, secure_fpc_mul, secure_fpc_sub};
-use falcon_masked::random::RngBoth;
+use randomness::random::RngBoth;
 
 #[test]
 fn fpc_add_test() {

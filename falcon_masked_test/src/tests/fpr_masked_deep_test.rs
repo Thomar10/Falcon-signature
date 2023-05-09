@@ -4,7 +4,7 @@ use rand::{random, Rng, thread_rng};
 use falcon::falcon::fpr;
 use falcon::fpr::{fpr, fpr_add, fpr_mul, fpr_norm64, fpr_sub, fpr_ursh};
 use falcon_masked::fpr_masked_deep::{kogge_stone_a2b, secure_and, secure_fpr, secure_fpr_add, secure_fpr_norm, secure_fpr_sub, secure_mul, secure_or, secure_ursh};
-use falcon_masked::random::RngBoth;
+use randomness::random::RngBoth;
 
 #[test]
 fn mul_fpr_test() {

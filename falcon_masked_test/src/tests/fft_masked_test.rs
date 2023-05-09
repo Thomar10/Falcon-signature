@@ -7,7 +7,7 @@ mod tests {
     use falcon::fft::{fft as u_fft, fpc_add as u_fpc_add, fpc_div as u_fpc_div, fpc_inv as u_fpc_inv, fpc_mul as u_fpc_mul, fpc_sqr as u_fpc_sqr, fpc_sub as u_fpc_sub, ifft as u_ifft, poly_add as u_poly_add, poly_add_muladj_fft as u_poly_add_muladj_fft, poly_adj_fft as u_poly_adj_fft, poly_div_autoadj_fft as u_poly_div_autoadj_fft, poly_div_fft as u_poly_div_fft, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_LDL_fft as u_poly_LDL_fft, poly_LDLmv_fft as u_poly_LDLmv_fft, poly_merge_fft as u_poly_merge_fft, poly_mul_autoadj_fft as u_poly_mul_autoadj_fft, poly_mul_fft as u_poly_mul_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_neg as u_poly_neg, poly_split_fft as u_poly_split_fft, poly_sub as u_poly_sub};
     use falcon::fpr::{fpr_add as u_fpr_add, fpr_sub as u_fpr_sub};
     use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
-    use falcon_masked::random::RngBoth;
+    use randomness::random::RngBoth;
 
     #[test]
     fn test_fpc_add() {

@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![no_std]
 #[macro_use]
 extern crate alloc;
 
@@ -9,4 +10,3 @@ pub mod fft_masked_deep;
 pub mod sign_masked;
 pub mod falcon_masked;
 pub mod sign_masked_mask_sample;
-pub mod random;

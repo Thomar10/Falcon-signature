@@ -1,5 +1,3 @@
-#![no_std]
-
 use falcon::{falcon_tmpsize_signtree, MKN};
 use falcon::common::is_short_half;
 use falcon::falcon::fpr;
