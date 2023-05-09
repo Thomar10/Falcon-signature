@@ -7,6 +7,7 @@ mod tests {
     use falcon::fft::{fft as u_fft, fpc_add as u_fpc_add, fpc_div as u_fpc_div, fpc_inv as u_fpc_inv, fpc_mul as u_fpc_mul, fpc_sqr as u_fpc_sqr, fpc_sub as u_fpc_sub, ifft as u_ifft, poly_add as u_poly_add, poly_add_muladj_fft as u_poly_add_muladj_fft, poly_adj_fft as u_poly_adj_fft, poly_div_autoadj_fft as u_poly_div_autoadj_fft, poly_div_fft as u_poly_div_fft, poly_invnorm2_fft as u_poly_invnorm2_fft, poly_LDL_fft as u_poly_LDL_fft, poly_LDLmv_fft as u_poly_LDLmv_fft, poly_merge_fft as u_poly_merge_fft, poly_mul_autoadj_fft as u_poly_mul_autoadj_fft, poly_mul_fft as u_poly_mul_fft, poly_muladj_fft as u_poly_muladj_fft, poly_mulconst as u_poly_mulconst, poly_mulselfadj_fft as u_poly_mulselfadj_fft, poly_neg as u_poly_neg, poly_split_fft as u_poly_split_fft, poly_sub as u_poly_sub};
     use falcon::fpr::{fpr_add as u_fpr_add, fpr_sub as u_fpr_sub};
     use falcon_masked::fft_masked::{fft, fpc_add, fpc_div, fpc_inv, fpc_mul, fpc_sqr, fpc_sub, ifft, poly_add, poly_add_muladj_fft, poly_adj_fft, poly_div_autoadj_fft, poly_div_fft, poly_invnorm2_fft, poly_LDL_fft, poly_LDLmv_fft, poly_merge_fft, poly_mul_autoadj_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
+    use randomness::random::RngBoth;
 
     #[test]
     fn test_fpc_add() {
@@ -16,7 +17,7 @@ mod tests {
             let (b_re, shares_b_re): (fpr, [fpr; 2]) = create_random_mask();
             let (b_im, shares_b_im): (fpr, [fpr; 2]) = create_random_mask();
 
-            let (shares_res_re, shares_res_im) = fpc_add(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
+            let (shares_res_re, shares_res_im) = fpc_add::<2>(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
             let (res_re, res_im) = u_fpc_add(a_re, a_im, b_re, b_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
@@ -32,7 +33,7 @@ mod tests {
             let (b_re, shares_b_re): (fpr, [fpr; 2]) = create_random_mask();
             let (b_im, shares_b_im): (fpr, [fpr; 2]) = create_random_mask();
 
-            let (shares_res_re, shares_res_im) = fpc_sub(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
+            let (shares_res_re, shares_res_im) = fpc_sub::<2>(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
             let (res_re, res_im) = u_fpc_sub(a_re, a_im, b_re, b_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
@@ -48,7 +49,7 @@ mod tests {
             let (b_re, shares_b_re): (fpr, [fpr; 2]) = create_random_mask();
             let (b_im, shares_b_im): (fpr, [fpr; 2]) = create_random_mask();
 
-            let (shares_res_re, shares_res_im) = fpc_mul(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
+            let (shares_res_re, shares_res_im) = fpc_mul::<2>(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
             let (res_re, res_im) = u_fpc_mul(a_re, a_im, b_re, b_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
@@ -63,8 +64,8 @@ mod tests {
             let (a_im, shares_a_im): (fpr, [fpr; 2]) = create_random_mask();
             let (b_re, shares_b_re): (fpr, [fpr; 2]) = create_random_mask();
             let (b_im, shares_b_im): (fpr, [fpr; 2]) = create_random_mask();
-
-            let (shares_res_re, shares_res_im) = fpc_div(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im);
+            let mut rng = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            let (shares_res_re, shares_res_im) = fpc_div::<2>(&shares_a_re, &shares_a_im, &shares_b_re, &shares_b_im, &mut rng);
             let (res_re, res_im) = u_fpc_div(a_re, a_im, b_re, b_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
@@ -78,7 +79,7 @@ mod tests {
             let (a_re, shares_a_re): (fpr, [fpr; 2]) = create_random_mask();
             let (a_im, shares_a_im): (fpr, [fpr; 2]) = create_random_mask();
 
-            let (shares_res_re, shares_res_im) = fpc_sqr(&shares_a_re, &shares_a_im);
+            let (shares_res_re, shares_res_im) = fpc_sqr::<2>(&shares_a_re, &shares_a_im);
             let (res_re, res_im) = u_fpc_sqr(a_re, a_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
@@ -91,8 +92,8 @@ mod tests {
         for _ in 0..100 {
             let (a_re, shares_a_re): (fpr, [fpr; 2]) = create_random_mask();
             let (a_im, shares_a_im): (fpr, [fpr; 2]) = create_random_mask();
-
-            let (shares_res_re, shares_res_im) = fpc_inv(&shares_a_re, &shares_a_im);
+            let mut rng = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            let (shares_res_re, shares_res_im) = fpc_inv::<2>(&shares_a_re, &shares_a_im, &mut rng);
             let (res_re, res_im) = u_fpc_inv(a_re, a_im);
 
             check_fpr_eq(reconstruct(&shares_res_re), res_re);
@@ -107,7 +108,7 @@ mod tests {
         for _ in 0..100 {
             let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
-            fft(&mut f_shares, LOGN);
+            fft::<2>(&mut f_shares, LOGN);
             u_fft(&mut f, LOGN);
 
             //Reconstruct
@@ -284,7 +285,8 @@ mod tests {
             let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_div_fft(&mut a, &b, LOGN);
-            poly_div_fft(&mut a_shares, &b_shares, LOGN);
+            let mut rng = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            poly_div_fft(&mut a_shares, &b_shares, LOGN, &mut rng);
 
             let a_reconstructed: [fpr; LENGTH] = reconstruct_arr(&a_shares);
             let b_reconstructed: [fpr; LENGTH] = reconstruct_arr(&b_shares);
@@ -303,8 +305,9 @@ mod tests {
             let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
             let (mut d, mut d_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
-            u_poly_invnorm2_fft(&mut d, &a, &b,LOGN);
-            poly_invnorm2_fft(&mut d_shares, &a_shares, &b_shares, LOGN);
+            u_poly_invnorm2_fft(&mut d, &a, &b, LOGN);
+            let mut rng = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            poly_invnorm2_fft(&mut d_shares, &a_shares, &b_shares, LOGN, &mut rng);
 
             let a_reconstructed: [fpr; LENGTH] = reconstruct_arr(&a_shares);
             let b_reconstructed: [fpr; LENGTH] = reconstruct_arr(&b_shares);
@@ -328,7 +331,7 @@ mod tests {
             let (f, f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
             let (g, g_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
-            u_poly_add_muladj_fft(&mut d, &F, &G, &f, &g,LOGN);
+            u_poly_add_muladj_fft(&mut d, &F, &G, &f, &g, LOGN);
             poly_add_muladj_fft(&mut d_shares, &F_shares, &G_shares, &f_shares, &g_shares, LOGN);
 
             let d_reconstructed: [fpr; LENGTH] = reconstruct_arr(&d_shares);
@@ -373,7 +376,8 @@ mod tests {
             let (b, b_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_div_autoadj_fft(&mut a, &b, LOGN);
-            poly_div_autoadj_fft(&mut a_shares, &b_shares, LOGN);
+            let mut rng = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            poly_div_autoadj_fft(&mut a_shares, &b_shares, LOGN, &mut rng);
 
             let a_reconstructed: [fpr; LENGTH] = reconstruct_arr(&a_shares);
             let b_reconstructed: [fpr; LENGTH] = reconstruct_arr(&b_shares);
@@ -394,7 +398,8 @@ mod tests {
             let (mut g11, mut g11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_LDL_fft(&g00, &mut g01, &mut g11, LOGN);
-            poly_LDL_fft(&g00_shares, &mut g01_shares, &mut g11_shares, LOGN);
+            let mut rng = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            poly_LDL_fft(&g00_shares, &mut g01_shares, &mut g11_shares, LOGN, &mut rng);
 
             let g00_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g00_shares);
             let g01_reconstructed: [fpr; LENGTH] = reconstruct_arr(&g01_shares);
@@ -419,7 +424,8 @@ mod tests {
             let (g11, g11_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();
 
             u_poly_LDLmv_fft(&mut d11, &mut l10, &g00, &g01, &g11, LOGN);
-            poly_LDLmv_fft(&mut d11_shares, &mut l10_shares, &g00_shares, &g01_shares, &g11_shares, LOGN);
+            let mut rng = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            poly_LDLmv_fft(&mut d11_shares, &mut l10_shares, &g00_shares, &g01_shares, &g11_shares, LOGN, &mut rng);
 
             let d11_reconstructed: [fpr; LENGTH] = reconstruct_arr(&d11_shares);
             let l10_reconstructed: [fpr; LENGTH] = reconstruct_arr(&l10_shares);
@@ -480,7 +486,7 @@ mod tests {
     }
 
     fn check_fpr_eq(x: fpr, y: fpr) {
-        assert!(approx_eq!(f64, fpr_to_double(x), fpr_to_double(y), epsilon = 0.00003));
+        assert!(approx_eq!(f64, fpr_to_double(x), fpr_to_double(y), epsilon = 0.00003),  "The two arrays differ in position {}\nLeft: fpr: {}, double: {}\nRight: fpr: {}, double: {}", 0, x, fpr_to_double(x), y, fpr_to_double(y));
     }
 
     fn check_fpr_arr_eq(x: &[fpr], y: &[fpr]) {
@@ -508,7 +514,7 @@ mod tests {
     }
 
     fn create_random_mask_arr<const LENGTH: usize>() -> ([fpr; LENGTH], [[fpr; 2]; LENGTH]) {
-        let mut f_shares: [[fpr; 2]; LENGTH]  = [[0; 2]; LENGTH];
+        let mut f_shares: [[fpr; 2]; LENGTH] = [[0; 2]; LENGTH];
         let mut f: [fpr; LENGTH] = [0; LENGTH];
 
         for i in 0..LENGTH {
@@ -520,11 +526,11 @@ mod tests {
         return (f, f_shares);
     }
 
-    pub fn reconstruct(shares: &[fpr]) -> fpr {
+    fn reconstruct(shares: &[fpr]) -> fpr {
         return u_fpr_add(shares[0], shares[1]);
     }
 
-    pub fn reconstruct_arr<const LENGTH: usize>(share_arr: &[[fpr; 2]; LENGTH]) -> [fpr; LENGTH] {
+    fn reconstruct_arr<const LENGTH: usize>(share_arr: &[[fpr; 2]; LENGTH]) -> [fpr; LENGTH] {
         let mut reconstructed: [fpr; LENGTH] = [0; LENGTH];
 
         for i in 0..LENGTH {

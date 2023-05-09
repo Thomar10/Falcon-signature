@@ -2,6 +2,7 @@ mod fft_masked_test;
 mod fpr_masked_test;
 mod fpr_masked_deep_test;
 mod fft_masked_deep_test;
+mod sign_masked_test;
 
 #[cfg(test)]
 mod tests {

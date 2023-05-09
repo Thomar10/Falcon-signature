@@ -149,7 +149,7 @@ pub struct SamplerContext {
     pub sigma_min: fpr
 }
 
-type SamplerZ = fn(&mut SamplerContext, fpr, fpr) -> i32;
+pub type SamplerZ = fn(&mut SamplerContext, fpr, fpr) -> i32;
 
 #[allow(non_snake_case)]
 pub fn ffSampling_fft_dyntree(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0: &mut [fpr],
@@ -431,7 +431,7 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
     for u in 0..n {
         let z: i32 = hm[u] as i32 - fpr_rint(t0[u]) as i32;
 
-        sqn += (z * z) as u32;
+        sqn = sqn.wrapping_add((z * z) as u32);
         ng |= sqn;
         s1tmp[u] = z as i16;
     }

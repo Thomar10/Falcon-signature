@@ -1,6 +1,7 @@
 .dep/
 objdir/
 target/
+captured_traces/
 
 *.eep
 *.elf

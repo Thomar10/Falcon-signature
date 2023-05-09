@@ -9,13 +9,16 @@ name = "unmasked"
 [dependencies]
 embedded-hal = "0.2"
 embedded-alloc = "0.5.0"
-cortex-m = { version = "0.7.4", features = ["critical-section-single-core"]}
+cortex-m = { version = "0.7.4", features = ["critical-section-single-core"] }
 cortex-m-rt = { version = "0.7.3", features = ["device"] }
 stm32f4xx-hal = { version = "0.15.0", features = ["stm32f415"] }
 panic-halt = "0.2.0"
 bytemuck = "1.13.0"
 nb = "1.1.0"
 falcon = { path = "../falcon" }
+falcon_masked = { path = "../falcon_masked" }
+rand_core = "0.6.4"
+randomness = { path = "../randomness", default-features = false, features = ["nostd"] }
 
 [profile.dev]
 panic = "abort"

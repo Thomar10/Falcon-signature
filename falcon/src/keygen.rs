@@ -229,7 +229,7 @@ pub fn modp_iNTT2(a: &mut [u32], igm: &[u32], logn: u32, p: u32, p0i: u32) {
 pub fn modp_poly_rec_res(f: &mut [u32], logn: u32, p: u32, p0i: u32, r2: u32) {
     let hn: usize = 1 << (logn - 1);
     for u in 0..hn {
-        let w0 = f[(u << 1)];
+        let w0 = f[u << 1];
         let w1 = f[(u << 1) + 1];
         f[u] = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
     }
@@ -887,7 +887,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
 
         stride = 0;
         for v in 0..hn {
-            let w0 = t1[(v << 1)];
+            let w0 = t1[v << 1];
             let w1 = t1[(v << 1) + 1];
             gd[u + stride] = modp_montymul(
                 modp_montymul(w0, w1, p, p0i), r2, p, p0i);
@@ -942,7 +942,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
         modp_NTT2(t1, gm, logn, p, p0i);
         stride = 0;
         for v in 0..hn {
-            let w0 = t1[(v << 1)];
+            let w0 = t1[v << 1];
             let w1 = t1[(v << 1) + 1];
 
             fd[u + stride] = modp_montymul(
@@ -959,7 +959,7 @@ pub fn make_fg_step(data: &mut [u32], logn: u32, depth: usize, in_ntt: bool, out
         modp_NTT2(t1, gm, logn, p, p0i);
         stride = 0;
         for v in 0..hn {
-            let w0 = t1[(v << 1)];
+            let w0 = t1[v << 1];
             let w1 = t1[(v << 1) + 1];
             gd[u + stride] = modp_montymul(
                 modp_montymul(w0, w1, p, p0i), r2, p, p0i);
@@ -1385,7 +1385,7 @@ pub fn solve_ntru_binary_depth1(logn_top: u32, f: &[i8], g: &[i8], tmp: &mut [u3
         for v in 0..hn {
             let ftA = fx[v << 1];
             let ftB = fx[(v << 1) + 1];
-            let gtA = gx[(v << 1)];
+            let gtA = gx[v << 1];
             let gtB = gx[(v << 1) + 1];
             let mFp = modp_montymul(Fp[v], r2, p, p0i);
             let mGp = modp_montymul(Gp[v], r2, p, p0i);

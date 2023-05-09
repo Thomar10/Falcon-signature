@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// #![no_std]
+#![no_std]
 extern crate core;
 #[macro_use]
 extern crate alloc;

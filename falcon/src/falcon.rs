@@ -23,8 +23,8 @@ macro_rules! MKN {
 #[macro_export]
 macro_rules! falcon_tmpsize_keygen {
     ($logn:expr) => {
-        if $logn <= 3 {272 + ((3 << $logn) + 7)}
-        else {(28 << $logn) + ((3 << $logn )+ 7)}
+        if $logn <= 3 {272 + ((3 << $logn) + 8)}
+        else {(28 << $logn) + ((3 << $logn )+ 8)}
     }
 }
 
@@ -57,12 +57,12 @@ macro_rules! falcon_tmpsize_signdyn {
 
 #[macro_export]
 macro_rules! falcon_tmpsize_signtree {
-    ($logn:expr) => {(50 << $logn) + 7}
+    ($logn:expr) => {(50 << $logn) + 8}
 }
 
 #[macro_export]
 macro_rules! falcon_tmpsize_expandprivate {
-    ($logn:expr) => {(52 << $logn) + 7}
+    ($logn:expr) => {(52 << $logn) + 8}
 }
 
 #[macro_export]
@@ -116,7 +116,7 @@ pub fn shake256_flip(rng: &mut InnerShake256Context) {
     i_shake256_flip(rng);
 }
 
-pub fn shake256_extract(rng: &mut InnerShake256Context, out: &mut [u8], len: usize) {
+pub fn shake256_extract(rng: &mut InnerShake256Context, out: &mut [u8], _len: usize) {
     return i_shake256_extract(rng, out);
 }
 
