@@ -31,6 +31,7 @@ use falcon::fpr::{fpr_add, fpr_mul, fpr_sub};
 use falcon::keygen::keygen;
 use falcon::shake::{i_shake256_extract, i_shake256_init, i_shake256_inject, InnerShake256Context};
 use falcon::sign::{expand_privkey, sign_tree};
+use falcon_masked::random::RngBoth;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -58,6 +59,7 @@ fn main() -> ! {
     let clocks = rcc.cfgr.require_pll48clk().freeze();
 
     let mut rand_source: Rng = dp.RNG.constrain(&clocks);
+    let mut rng: RngBoth = RngBoth { hal_rng: Some(rand_source), rust_rng: None };
 
     let tx_pin = gpioa.pa9.into_alternate();
     let rx_pin = gpioa.pa10.into_alternate();
@@ -86,21 +88,21 @@ fn main() -> ! {
 
 
         //result = test_fft(&mut trigger, first_fpr);//rust_test(&mut trigger, left, right, iter);
-        //let result_buffer = test_fpc_mul_masked_deep(&mut trigger, &read_buffer, &mut rand_source); //test_rand(&mut trigger, &read_buffer, &mut rand_source);
+        //let result_buffer = test_fpc_mul_masked_deep(&mut trigger, &read_buffer, &mut rng); //test_rand(&mut trigger, &read_buffer, &mut rand_source);
         //let result_buffer = test_fpc_mul_masked(&mut trigger, &read_buffer);
         //let result_buffer = test_fpr_mul(&mut trigger, &read_buffer);
         //let result_buffer = test_fpr_mul_masked(&mut trigger, &read_buffer);
         //let result_buffer = test_fpr_add(&mut trigger, &read_buffer);
-        let result_buffer = test_fpr_add_masked(&mut trigger, &read_buffer);
+        //let result_buffer = test_fpr_add_masked(&mut trigger, &read_buffer);
         //let result_buffer = test_fpr_masked_higher_order(&mut trigger, &read_buffer);
-        //let result_buffer = test_fpr_add_masked_deep(&mut trigger, &read_buffer, &mut rand_source);
-        //let result_buffer = test_fpr_mul_masked_deep(&mut trigger, &read_buffer, &mut rand_source);
+        let result_buffer = test_fpr_add_masked_deep(&mut trigger, &read_buffer, &mut rng);
+        //let result_buffer = test_fpr_mul_masked_deep(&mut trigger, &read_buffer, &mut rng);
         //result = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
         //let result_buffer = test_sign(&mut trigger, &read_buffer);
         //let result_buffer = test_sign_endpoint(&mut trigger, &read_buffer);
         //let result_buffer = test_sign_random_key(&mut trigger, &read_buffer);
-        //let result_buffer = test_sign_random_key_fast(&mut trigger, &read_buffer, &mut rand_source);
-        //let result_buffer = test_masked_sign(&mut trigger, &read_buffer, &mut rand_source);
+        //let result_buffer = test_sign_random_key_fast(&mut trigger, &read_buffer, &mut rng);
+        //let result_buffer = test_masked_sign(&mut trigger, &read_buffer, &mut rng);
 
         //let mut result_buffer: [u8; 16] = [0; 16];
 
@@ -234,7 +236,7 @@ fn test_fpc_mul_masked(trigger: &mut  TriggerPin, read_buffer: &[u8]) -> [u8; 16
     return return_buffer;
 }
 
-fn test_fpc_mul_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 16] {
+fn test_fpc_mul_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut RngBoth) -> [u8; 16] {
     let (mut re, mut im): ([fpr; 2], [fpr; 2]) = ([0; 2], [0; 2]);
 
     let a_re_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
@@ -386,7 +388,7 @@ fn test_fpr_masked_higher_order(trigger: &mut  TriggerPin, read_buffer: &[u8]) -
     return return_buffer;
 }
 
-fn test_fpr_add_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 8] {
+fn test_fpr_add_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut RngBoth) -> [u8; 8] {
     let a_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
     let b_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
 
@@ -413,7 +415,7 @@ fn test_fpr_add_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: 
 }
 
 
-fn test_fpr_mul_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 8] {
+fn test_fpr_mul_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut RngBoth) -> [u8; 8] {
     let a_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
     let b_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
 
