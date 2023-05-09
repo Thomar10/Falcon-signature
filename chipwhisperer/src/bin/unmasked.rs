@@ -22,10 +22,10 @@ use falcon::common::hash_to_point_vartime;
 use falcon::falcon::{falcon_sign_tree, fpr};
 use falcon::{falcon_sig_compressed_maxsize, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signtree};
 use falcon::fft::{fft, fpc_mul};
-use falcon_masked::fft_masked::{fpc_mul as fpc_mul_masked};
+use falcon_masked::fft_masked::{fpc_mul as fpc_mul_masked, fft as fft_masked};
 use falcon_masked::fft_masked_deep::{secure_fpc_mul};
-use falcon_masked::fpr_masked::{fpr_mul as fpr_mul_masked};
-use falcon_masked::fpr_masked_deep::{secure_mul};
+use falcon_masked::fpr_masked::{fpr_mul as fpr_mul_masked, fpr_add as fpr_add_masked};
+use falcon_masked::fpr_masked_deep::{secure_add, secure_fpr_add, secure_mul};
 use falcon_masked::sign_masked::{sign_tree_with_temp as sign_tree_masked};
 use falcon::fpr::{fpr_add, fpr_mul, fpr_sub};
 use falcon::keygen::keygen;
@@ -72,6 +72,8 @@ fn main() -> ! {
     //led_blink_test(dp);
 
     loop {
+        //let cmd: u8 = block!(rx.read()).unwrap() as u8;
+
         let data_len: usize = block!(rx.read()).unwrap() as usize;
 
         let mut read_buffer: [u8; 1024] = [0; 1024];
@@ -88,12 +90,26 @@ fn main() -> ! {
         //let result_buffer = test_fpc_mul_masked(&mut trigger, &read_buffer);
         //let result_buffer = test_fpr_mul(&mut trigger, &read_buffer);
         //let result_buffer = test_fpr_mul_masked(&mut trigger, &read_buffer);
+        //let result_buffer = test_fpr_add(&mut trigger, &read_buffer);
+        let result_buffer = test_fpr_add_masked(&mut trigger, &read_buffer);
+        //let result_buffer = test_fpr_masked_higher_order(&mut trigger, &read_buffer);
+        //let result_buffer = test_fpr_add_masked_deep(&mut trigger, &read_buffer, &mut rand_source);
         //let result_buffer = test_fpr_mul_masked_deep(&mut trigger, &read_buffer, &mut rand_source);
         //result = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
         //let result_buffer = test_sign(&mut trigger, &read_buffer);
         //let result_buffer = test_sign_endpoint(&mut trigger, &read_buffer);
-        let result_buffer = test_sign_random_key(&mut trigger, &read_buffer);
+        //let result_buffer = test_sign_random_key(&mut trigger, &read_buffer);
+        //let result_buffer = test_sign_random_key_fast(&mut trigger, &read_buffer, &mut rand_source);
         //let result_buffer = test_masked_sign(&mut trigger, &read_buffer, &mut rand_source);
+
+        //let mut result_buffer: [u8; 16] = [0; 16];
+
+        //match cmd {
+        //    0 => result_buffer = test_masked_sign(&mut trigger, &read_buffer, &mut rand_source),
+            //1 => result_buffer = test_sign_random_key(&mut trigger, &read_buffer),
+            //2 => result_buffer = test_sign(&mut trigger, &read_buffer),
+        //    _ => result_buffer = [0; 16],
+        //}
 
         for i in 0..result_buffer.len() {
             block!(tx.write(result_buffer[i]));
@@ -297,6 +313,106 @@ fn test_fpr_mul_masked(trigger: &mut  TriggerPin, read_buffer: &[u8]) -> [u8; 8]
     return return_buffer;
 }
 
+fn test_fpr_add(trigger: &mut  TriggerPin, read_buffer: &[u8]) -> [u8; 8] {
+    let a: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
+    let b: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
+
+    let mut c: fpr = 0;
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        c = fpr_add(a, b);
+        trigger.set_low();
+    });
+
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(c));
+
+    return return_buffer;
+}
+
+fn test_fpr_add_masked(trigger: &mut  TriggerPin, read_buffer: &[u8]) -> [u8; 8] {
+    let a_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
+    let b_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
+
+    let a_share: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[16..24]).unwrap());
+    let b_share: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[24..32]).unwrap());
+
+    let a: [fpr; 2] = [fpr_sub(a_val, a_share), a_share];
+    let b: [fpr; 2] = [fpr_sub(b_val, b_share), b_share];
+
+    let mut c: [fpr; 2] = [0; 2];
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        c = fpr_add_masked(&a, &b);
+        trigger.set_low();
+    });
+
+    let c_val: fpr = fpr_add(c[0], c[1]);
+
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(c_val));
+
+    return return_buffer;
+}
+
+fn test_fpr_masked_higher_order(trigger: &mut  TriggerPin, read_buffer: &[u8]) -> [u8; 8] {
+    let a_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
+    let b_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
+
+    let a_share_1: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[16..24]).unwrap());
+    let b_share_1: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[24..32]).unwrap());
+
+    let a_share_2: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[32..40]).unwrap());
+    let b_share_2: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[40..48]).unwrap());
+
+    let a: [fpr; 3] = [fpr_sub(fpr_sub(a_val, a_share_1), a_share_2), a_share_1, a_share_1];
+    let b: [fpr; 3] = [fpr_sub(fpr_sub(b_val, b_share_1), b_share_2), b_share_1, b_share_2];
+
+    let mut c: [fpr; 3] = [0; 3];
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        c = fpr_add_masked(&a, &b);
+        trigger.set_low();
+    });
+
+    let c_val: fpr = fpr_add(fpr_add(c[0], c[1]), c[2]);
+
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(c_val));
+
+    return return_buffer;
+}
+
+fn test_fpr_add_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 8] {
+    let a_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
+    let b_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
+
+    let a_share: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[16..24]).unwrap());
+    let b_share: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[24..32]).unwrap());
+
+    let a: [fpr; 2] = [a_val ^ a_share, a_share];
+    let b: [fpr; 2] = [b_val ^ b_share, b_share];
+
+    let mut c: [fpr; 2] = [0; 2];
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        c = secure_fpr_add(&a, &b, rng);
+        trigger.set_low();
+    });
+
+    let c_val: fpr = c[0] ^ c[1];
+
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(c_val));
+
+    return return_buffer;
+}
+
+
 fn test_fpr_mul_masked_deep(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 8] {
     let a_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[..8]).unwrap());
     let b_val: fpr = u64::from_le_bytes(<[u8; 8]>::try_from(&read_buffer[8..16]).unwrap());
@@ -332,11 +448,10 @@ fn test_rand(trigger: &mut  TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u
     return return_buffer;
 }
 
-fn test_fft(trigger: &mut TriggerPin, first_fpr: fpr) -> u64 {
+fn test_fft(trigger: &mut TriggerPin) -> [u8; 8] {
     const LOGN: u32 = 9;
     const N: usize = 1 << LOGN;
     let mut f: [fpr; N] = RAND_ARRAY;
-    f[0] = first_fpr;
 
     cortex_m::interrupt::free(|_| {
         trigger.set_high();
@@ -344,7 +459,74 @@ fn test_fft(trigger: &mut TriggerPin, first_fpr: fpr) -> u64 {
         trigger.set_low();
     });
 
-    return f[0];
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(f[0]));
+    return return_buffer;
+}
+
+fn test_fft_rand(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
+    const LOGN: u32 = 9;
+    const N: usize = 1 << LOGN;
+    let mut f: [fpr; N] = RAND_ARRAY;
+
+    for i in 0..f.len() {
+        f[i] = rng.next_u64();
+    }
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        fft(&mut f, LOGN);
+        trigger.set_low();
+    });
+
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(f[0]));
+    return return_buffer;
+}
+
+fn test_fft_masked(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
+    const LOGN: u32 = 9;
+    const N: usize = 1 << LOGN;
+    let mut f: [[fpr; 2]; N] = [[0; 2]; N];
+
+    for i in 0..f.len() {
+        let rand_val: fpr = rng.next_u64();
+        f[i] = [fpr_sub(RAND_ARRAY[i], rand_val), rand_val];
+    }
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        fft_masked(&mut f, LOGN);
+        trigger.set_low();
+    });
+
+    let c: fpr = fpr_add(f[0][0], f[0][1]);
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(c));
+    return return_buffer;
+}
+
+fn test_fft_rand_masked(trigger: &mut TriggerPin, rng: &mut Rng) -> [u8; 8] {
+    const LOGN: u32 = 9;
+    const N: usize = 1 << LOGN;
+    let mut f: [[fpr; 2]; N] = [[0; 2]; N];
+
+    for i in 0..f.len() {
+        let a: fpr = rng.next_u64();
+        let b: fpr = rng.next_u64();
+        f[i] = [fpr_sub(a, b), b];
+    }
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        fft_masked(&mut f, LOGN);
+        trigger.set_low();
+    });
+
+    let c: fpr = fpr_add(f[0][0], f[0][1]);
+    let mut return_buffer: [u8; 8] = [0; 8];
+    return_buffer.copy_from_slice(&u64::to_le_bytes(c));
+    return return_buffer;
 }
 
 fn test_sign_endpoint(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 16] {
@@ -396,7 +578,7 @@ fn test_sign(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 16] {
 
     const LOGN: usize = 9;
     const N: usize = 1 << LOGN;
-    const BUFFER_SIZE: usize = falcon_tmpsize_signtree!(LOGN) + 1;
+    const BUFFER_SIZE: usize = falcon_tmpsize_signtree!(LOGN);
 
     let mut tmp_signtree: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
     let mut rng_rust: InnerShake256Context = gen_rng(&seed);
@@ -517,6 +699,48 @@ fn mask_expanded_key<const ORDER: usize, const EXKLENGTH: usize>(key: &[fpr], rn
         mkey[i] = mask;
     }
     mkey
+}
+
+/* DOESN'T WORK */
+fn test_sign_random_key_fast(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut Rng) -> [u8; 16] {
+    let input: &[u8] = "This is a test message".as_bytes();
+    let mut seed: [u8; 8] = [0; 8];
+    seed.copy_from_slice(&read_buffer[..8]);
+
+    const LOGN: usize = 9;
+    const N: usize = 1 << LOGN;
+    const BUFFER_SIZE: usize = falcon_tmpsize_signtree!(LOGN);
+
+    let mut tmp_signtree: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
+    let mut rng_rust: InnerShake256Context = gen_rng(&seed);
+    const EXKLENGTH: usize = falcon_tmpsize_expanded_key_size!(LOGN) / 8;
+    let mut expanded_key: [fpr; EXKLENGTH] = [0; EXKLENGTH];
+
+    random_expanded_key(&mut expanded_key, rng);
+
+    let mut sig: [i16; 1024] = [0; 1024];
+
+    let mut salt: [u8; 40] = [0; 40];
+    salt.copy_from_slice(&read_buffer[8..48]);
+    let mut sc = gen_rng(&salt);
+    i_shake256_inject(&mut sc, input);
+    let mut hm: [u16; 1024] = [0; 1024];
+    hash_to_point_vartime(&mut sc, &mut hm, LOGN as u32);
+
+    cortex_m::interrupt::free(|_| {
+        trigger.set_high();
+        //sig[0] = rng_rust.st[0] as i16 + hm[0] as i16;
+        sign_tree(&mut sig, &mut rng_rust, &mut expanded_key, &hm, LOGN as u32, &mut tmp_signtree);
+        trigger.set_low();
+    });
+
+    //sig[0] += 3; //OK
+
+    let mut return_buffer: [u8; 16] = [0; 16];
+    let return_vals: &[u8] = bytemuck::cast_slice::<i16, u8>(&sig[..8]);
+    return_buffer.copy_from_slice(return_vals);
+    //let sum: u8 = sig.iter().sum::<i16>() as u8;
+    return return_buffer//[sum];
 }
 
 fn test_sign_random_key(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 16] {
