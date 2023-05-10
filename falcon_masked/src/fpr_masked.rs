@@ -58,7 +58,7 @@ pub fn fpr_mul_const<const ORDER: usize>(x: &[fpr], c: fpr) -> [fpr; ORDER] {
     d
 }
 
-pub fn fpr_sqrt<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
+pub fn fpr_sqrt<const ORDER: usize>(x: &[fpr], mut rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut d = [0; ORDER];
     d[0] = of(1);
     d[1] = 0;
@@ -67,12 +67,12 @@ pub fn fpr_sqrt<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
     if negative {
         let xx = fpr_neg::<ORDER>(&x);
         for _ in 0..precession {
-            d = fpr_half::<ORDER>(&fpr_add::<ORDER>(&d, &fpr_div::<ORDER>(&xx, &d)))
+            d = fpr_half::<ORDER>(&fpr_add::<ORDER>(&d, &fpr_div::<ORDER>(&xx, &d, &mut rng)))
         }
         d
     } else {
         for _ in 0..precession {
-            d = fpr_half::<ORDER>(&fpr_add::<ORDER>(&d, &fpr_div::<ORDER>(&x, &d)))
+            d = fpr_half::<ORDER>(&fpr_add::<ORDER>(&d, &fpr_div::<ORDER>(&x, &d, &mut rng)))
         }
         d
     }

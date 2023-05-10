@@ -1,24 +1,27 @@
 #![allow(non_snake_case)]
 #![allow(unused)]
-use falcon::{falcon_sig_ct_size, falcon_sig_padded_size, falcon_privatekey_size, falcon_tmpsize_expandprivate, falcon_tmpsize_signtree, falcon_tmpsize_signdyn, falcon_tmpsize_expanded_key_size, falcon_tmpsize_keygen};
+
+use alloc::vec::Vec;
+
+use rand_core::RngCore;
+
+use falcon::{falcon_privatekey_size, falcon_sig_ct_size, falcon_sig_padded_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signdyn, falcon_tmpsize_signtree};
 use falcon::codec::{comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, trim_i16_encode, trim_i8_decode};
 use falcon::common::{hash_to_point_ct, hash_to_point_vartime};
 use falcon::falcon::{FALCON_SIG_CT, fpr, shake256_extract, shake256_flip, shake256_init, shake256_inject};
 use falcon::fpr::fpr_sub;
 use falcon::keygen::keygen;
 use falcon::shake::InnerShake256Context;
-use rand::{random, Rng};
-use falcon::sign::{expand_privkey};
+use falcon::sign::expand_privkey;
 use falcon::vrfy::complete_private;
-use alloc::vec::Vec;
+use randomness::random::RngBoth;
 
 use crate::sign_masked::{sign_dyn, sign_tree};
 use crate::sign_masked_mask_sample::sign_tree_sample;
 
-
 pub fn falcon_sign_dyn_masked<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                                                                      signature_type: i32, private_key: &[u8], private_len: usize,
-                                                                     data: &[u8]) -> (i32, usize) {
+                                                                     data: &[u8], mut rngboth: &mut RngBoth) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
         dptr: 0,
@@ -27,14 +30,14 @@ pub fn falcon_sign_dyn_masked<const ORDER: usize, const LOGN: usize>(mut rng: &m
     falcon_sign_start(rng, &mut nonce, &mut hd);
     shake256_inject(&mut hd, data);
     falcon_sign_dyn_finish::<ORDER, LOGN>(&mut rng, signature, signature_len, signature_type, private_key, private_len,
-                                          &mut hd, &mut nonce)
+                                          &mut hd, &mut nonce, rngboth)
 }
 
 #[allow(non_snake_case)]
 fn falcon_sign_dyn_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                                                                  signature_type: i32, private_key: &[u8],
                                                                  private_len: usize,
-                                                                 mut hash_data: &mut InnerShake256Context, nonce: &mut [u8]) -> (i32, usize) {
+                                                                 mut hash_data: &mut InnerShake256Context, nonce: &mut [u8], mut rngboth: &mut RngBoth) -> (i32, usize) {
     if private_len == 0 {
         return (-6, 0);
     }
@@ -120,11 +123,11 @@ fn falcon_sign_dyn_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut I
         sv.clone_from_slice(hm);
         let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
         //let (ff, gg, FF, GG) = mask_all_secret_polynomials(&f, &g, &F, &G, logn as u32);
-        let mut ff = mask_polynomials(&f, LOGN as u32);
-        let mut gg = mask_polynomials(&g, LOGN as u32);
-        let mut FF = mask_polynomials(&F, LOGN as u32);
-        let mut GG = mask_polynomials(&G, LOGN as u32);
-        sign_dyn::<ORDER, LOGN>(sv, &mut rng, ff.as_slice(), gg.as_slice(), FF.as_slice(), GG.as_slice(), hm, logn);
+        let mut ff = mask_polynomials(&f, LOGN as u32, &mut rngboth);
+        let mut gg = mask_polynomials(&g, LOGN as u32, &mut rngboth);
+        let mut FF = mask_polynomials(&F, LOGN as u32, &mut rngboth);
+        let mut GG = mask_polynomials(&G, LOGN as u32, &mut rngboth);
+        sign_dyn::<ORDER, LOGN>(sv, &mut rng, ff.as_slice(), gg.as_slice(), FF.as_slice(), GG.as_slice(), hm, logn, rngboth);
         signature[1..41].copy_from_slice(nonce);
         let u = 41;
         let mut v: usize;
@@ -206,12 +209,12 @@ fn mask_all_secret_polynomials<const ORDER: usize>(f: &[i8], g: &[i8], F: &[i8],
     (fkey, gkey, Fkey, Gkey)
 }
 
-fn mask_polynomials<const ORDER: usize>(polynomial: &[i8], logn: u32) -> Vec<[i8; ORDER]> {
+fn mask_polynomials<const ORDER: usize>(polynomial: &[i8], logn: u32, rng: &mut RngBoth) -> Vec<[i8; ORDER]> {
     let n: usize = 1 << logn;
     let mut mkey: Vec<[i8; ORDER]> = vec!([0; ORDER]; n);
     for i in 0..n {
         let mut mask: [i8; ORDER] = [0; ORDER];
-        let random: i8 = rand::thread_rng().gen_range(-115..115);
+        let random: i8 = rng.next_u64() as i8;
         mask[1] = random;
         mask[0] = polynomial[i].wrapping_sub(random);
         mkey[i] = mask;
@@ -222,7 +225,7 @@ fn mask_polynomials<const ORDER: usize>(polynomial: &[i8], logn: u32) -> Vec<[i8
 
 pub fn falcon_sign_tree_masked<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                                                                       signature_type: i32, expanded_key: &[u8],
-                                                                      data: &[u8]) -> (i32, usize) {
+                                                                      data: &[u8], mut rngboth: &mut RngBoth) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
         dptr: 0,
@@ -231,12 +234,12 @@ pub fn falcon_sign_tree_masked<const ORDER: usize, const LOGN: usize>(mut rng: &
     falcon_sign_start(rng, &mut nonce, &mut hd);
     shake256_inject(&mut hd, data);
     falcon_sign_tree_finish::<ORDER, LOGN>(&mut rng, signature, signature_len, signature_type, expanded_key,
-                                           &mut hd, &mut nonce)
+                                           &mut hd, &mut nonce, rngboth)
 }
 
 pub fn falcon_sign_tree_masked_sample<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                                                                      signature_type: i32, expanded_key: &[u8],
-                                                                      data: &[u8]) -> (i32, usize) {
+                                                                             signature_type: i32, expanded_key: &[u8],
+                                                                             data: &[u8], mut rngboth: &mut RngBoth) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
         dptr: 0,
@@ -245,7 +248,7 @@ pub fn falcon_sign_tree_masked_sample<const ORDER: usize, const LOGN: usize>(mut
     falcon_sign_start(rng, &mut nonce, &mut hd);
     shake256_inject(&mut hd, data);
     falcon_sign_tree_finish_sample::<ORDER, LOGN>(&mut rng, signature, signature_len, signature_type, expanded_key,
-                                           &mut hd, &mut nonce)
+                                                  &mut hd, &mut nonce, rngboth)
 }
 
 fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
@@ -256,10 +259,9 @@ fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
 }
 
 fn falcon_sign_tree_finish_sample<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                                                                  signature_type: i32, expanded_key: &[u8],
-                                                                  mut hash_data: &mut InnerShake256Context,
-                                                                  nonce: &mut [u8]) -> (i32, usize) {
-
+                                                                         signature_type: i32, expanded_key: &[u8],
+                                                                         mut hash_data: &mut InnerShake256Context,
+                                                                         nonce: &mut [u8], mut rngboth: &mut RngBoth) -> (i32, usize) {
     let length = 1 << LOGN;
     let logn: u32 = expanded_key[0] as u32;
     if logn != LOGN as u32 {
@@ -302,7 +304,7 @@ fn falcon_sign_tree_finish_sample<const ORDER: usize, const LOGN: usize>(mut rng
         let mut sv = vec![0u16; hm.len()];
         sv.clone_from_slice(hm.as_mut_slice());
         let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
-        let mut masked_expand = mask_expanded_key::<ORDER>(&expanded_key, LOGN as u32);
+        let mut masked_expand = mask_expanded_key::<ORDER>(&expanded_key, LOGN as u32, rngboth);
         sign_tree_sample::<ORDER, LOGN>(sv, &mut rng, masked_expand.as_mut_slice(), hm.as_mut_slice(), logn);
 
         signature[1..41].copy_from_slice(nonce);
@@ -345,7 +347,7 @@ fn falcon_sign_tree_finish_sample<const ORDER: usize, const LOGN: usize>(mut rng
 fn falcon_sign_tree_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
                                                                   signature_type: i32, expanded_key: &[u8],
                                                                   mut hash_data: &mut InnerShake256Context,
-                                                                  nonce: &mut [u8]) -> (i32, usize) {
+                                                                  nonce: &mut [u8], mut rngboth: &mut RngBoth) -> (i32, usize) {
     let length = 1 << LOGN;
     let logn: u32 = expanded_key[0] as u32;
     if logn != LOGN as u32 {
@@ -388,7 +390,7 @@ fn falcon_sign_tree_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut 
         let mut sv = vec![0u16; hm.len()];
         sv.clone_from_slice(hm.as_mut_slice());
         let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
-        let mut masked_expand = mask_expanded_key::<ORDER>(&expanded_key, LOGN as u32);
+        let mut masked_expand = mask_expanded_key::<ORDER>(&expanded_key, LOGN as u32, &mut rngboth);
         sign_tree::<ORDER, LOGN>(sv, &mut rng, masked_expand.as_mut_slice(), hm.as_mut_slice(), logn);
 
         signature[1..41].copy_from_slice(nonce);
@@ -428,29 +430,35 @@ fn falcon_sign_tree_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut 
     }
 }
 
-fn random_expanded_key(mut exp_key: &mut [fpr]) {
+fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut RngBoth) {
     const LOGN: usize = 10;
     const exp_tmp_len: usize = falcon_tmpsize_expandprivate!(LOGN);
 
     let mut exp_tmp = [0; exp_tmp_len];
-    let mut rng = rand::thread_rng();
-    let mut f: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
-    let mut g: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
-    let mut F: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
-    let mut G: [i8; 1024] = core::array::from_fn(|_| rng.gen::<i8>());
+
+    let mut f: [i8; 1024] = [0; 1024];
+    let mut g: [i8; 1024] = [0; 1024];
+    let mut F: [i8; 1024] = [0; 1024];
+    let mut G: [i8; 1024] = [0; 1024];
+    for i in 0..1024 {
+        f[i] = rng.next_u32() as i8;
+        g[i] = rng.next_u32() as i8;
+        F[i] = rng.next_u32() as i8;
+        G[i] = rng.next_u32() as i8;
+    }
 
     expand_privkey(&mut exp_key, &f, &g, &F, &G, LOGN as u32, &mut exp_tmp);
 }
 
 
-fn mask_expanded_key<const ORDER: usize>(key: &[u8], logn: u32) -> Vec<[fpr; ORDER]> {
+fn mask_expanded_key<const ORDER: usize>(key: &[u8], logn: u32, mut rng: &mut RngBoth) -> Vec<[fpr; ORDER]> {
     const LOGN: usize = 10;
     const exp_key_len: usize = falcon_tmpsize_expanded_key_size!(LOGN);
     let mut random_key2 = [0u8; exp_key_len];
     let (_, random_key3) = random_key2.split_at_mut(8); // alignment
 
     let mut random_key = bytemuck::cast_slice_mut(random_key3);
-    random_expanded_key(&mut random_key);
+    random_expanded_key(&mut random_key, &mut rng);
     let (_, expkey) = key.split_at(8); // alignment
     let expkey: &[fpr] = bytemuck::cast_slice(expkey);
     let mut mkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; expkey.len());
