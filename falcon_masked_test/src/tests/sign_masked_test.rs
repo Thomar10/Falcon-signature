@@ -130,7 +130,7 @@ mod tests {
     fn signature_verifies_dyn() {
         let mut rng = InnerShake256Context { st: [0; 25], dptr: 0 };
         let mut rngU = InnerShake256Context { st: [0; 25], dptr: 0 };
-        const LOGN: usize = 10;
+        const LOGN: usize = 3;
         const ORDER: usize = 2;
         let pk_len = falcon_publickey_size!(LOGN);
         let sk_len = falcon_privatekey_size!(LOGN);

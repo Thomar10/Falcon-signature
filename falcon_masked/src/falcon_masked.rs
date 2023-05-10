@@ -122,7 +122,7 @@ fn falcon_sign_dyn_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut I
         let mut sv = vec![0u16; hm.len()];
         sv.clone_from_slice(hm);
         let sv = bytemuck::cast_slice_mut::<u16, i16>(sv.as_mut_slice());
-        //let (ff, gg, FF, GG) = mask_all_secret_polynomials(&f, &g, &F, &G, logn as u32);
+        // let (ff, gg, FF, GG) = mask_all_secret_polynomials(&f, &g, &F, &G, logn as u32);
         let mut ff = mask_polynomials(&f, LOGN as u32, &mut rngboth);
         let mut gg = mask_polynomials(&g, LOGN as u32, &mut rngboth);
         let mut FF = mask_polynomials(&F, LOGN as u32, &mut rngboth);
@@ -191,19 +191,19 @@ fn mask_all_secret_polynomials<const ORDER: usize>(f: &[i8], g: &[i8], F: &[i8],
         let mut Fmask: [i8; ORDER] = [0; ORDER];
         let mut Gmask: [i8; ORDER] = [0; ORDER];
         fmask[0] = ff[i];
-        fmask[1] = f[i] - ff[i];
+        fmask[1] = f[i].wrapping_sub(ff[i]);
         fkey[i] = fmask;
 
         gmask[0] = gg[i];
-        gmask[1] = g[i] - gg[i];
+        gmask[1] = g[i].wrapping_sub(gg[i]);
         gkey[i] = gmask;
 
         Fmask[0] = FF[i];
-        Fmask[1] = F[i] - FF[i];
+        Fmask[1] = F[i].wrapping_sub(FF[i]);
         Fkey[i] = Fmask;
 
         Gmask[0] = GG[i];
-        Gmask[1] = G[i] - GG[i];
+        Gmask[1] = G[i].wrapping_sub(GG[i]);
         Gkey[i] = Gmask;
     }
     (fkey, gkey, Fkey, Gkey)
@@ -214,7 +214,7 @@ fn mask_polynomials<const ORDER: usize>(polynomial: &[i8], logn: u32, rng: &mut 
     let mut mkey: Vec<[i8; ORDER]> = vec!([0; ORDER]; n);
     for i in 0..n {
         let mut mask: [i8; ORDER] = [0; ORDER];
-        let random: i8 = rng.next_u64() as i8;
+        let random: i8 = rng.next_u32() as i8;
         mask[1] = random;
         mask[0] = polynomial[i].wrapping_sub(random);
         mkey[i] = mask;
@@ -432,9 +432,8 @@ fn falcon_sign_tree_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut 
 
 fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut RngBoth) {
     const LOGN: usize = 10;
-    const exp_tmp_len: usize = falcon_tmpsize_expandprivate!(LOGN);
-
-    let mut exp_tmp = [0; exp_tmp_len];
+    const EXP_TMP_LEN: usize = falcon_tmpsize_expandprivate!(LOGN);
+    let mut exp_tmp = [0; EXP_TMP_LEN];
 
     let mut f: [i8; 1024] = [0; 1024];
     let mut g: [i8; 1024] = [0; 1024];
@@ -453,8 +452,8 @@ fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut RngBoth) {
 
 fn mask_expanded_key<const ORDER: usize>(key: &[u8], logn: u32, mut rng: &mut RngBoth) -> Vec<[fpr; ORDER]> {
     const LOGN: usize = 10;
-    const exp_key_len: usize = falcon_tmpsize_expanded_key_size!(LOGN);
-    let mut random_key2 = [0u8; exp_key_len];
+    const EXP_KEY_LEN: usize = falcon_tmpsize_expanded_key_size!(LOGN);
+    let mut random_key2 = [0u8; EXP_KEY_LEN];
     let (_, random_key3) = random_key2.split_at_mut(8); // alignment
 
     let mut random_key = bytemuck::cast_slice_mut(random_key3);
