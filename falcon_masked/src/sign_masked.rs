@@ -296,7 +296,7 @@ pub fn sign_tree<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &m
 }
 
 pub fn sign_dyn<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
-                                                       f: &[[i8; ORDER]], g: &[[i8; ORDER]], F: &[[i8; ORDER]], G: &[[i8; ORDER]], hm: &[u16], logn: u32, mut rngboth: &mut RngBoth) {
+                                                       f: &[[fpr; ORDER]], g: &[[fpr; ORDER]], F: &[[fpr; ORDER]], G: &[[fpr; ORDER]], hm: &[u16], logn: u32, mut rngboth: &mut RngBoth) {
     let tmp_length: usize = falcon_tmpsize_signdyn!(LOGN);
     let mut ftmp = vec![[0; ORDER]; tmp_length];
     for i in 0..tmp_length {
@@ -316,7 +316,7 @@ pub fn sign_dyn<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mu
 }
 
 pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
-                                                          f: &[[i8; ORDER]], g: &[[i8; ORDER]], F: &[[i8; ORDER]], G: &[[i8; ORDER]],
+                                                          f: &[[fpr; ORDER]], g: &[[fpr; ORDER]], F: &[[fpr; ORDER]], G: &[[fpr; ORDER]],
                                                           hm: &[u16], logn: u32, tmp: &mut [[fpr; ORDER]], mut rng: &mut RngBoth) -> bool {
     let n: usize = MKN!(logn);
     let (b00, inter) = tmp.split_at_mut(n);
@@ -324,10 +324,10 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     let (b10, b11) = inter.split_at_mut(n);
 
 
-    smallints_to_fpr(b01, f, logn);
-    smallints_to_fpr(b00, g, logn);
-    smallints_to_fpr(b11, F, logn);
-    smallints_to_fpr(b10, G, logn);
+    b01.copy_from_slice(&f);
+    b00.copy_from_slice(&g);
+    b11[0..n].copy_from_slice(&F);
+    b10.copy_from_slice(&G);
     fft(b01, logn);
     fft(b00, logn);
     fft(b11, logn);
@@ -390,11 +390,10 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
 
     t1.copy_from_slice(t0);
     t0.copy_from_slice(b11);
-
-    smallints_to_fpr(b01, f, logn);
-    smallints_to_fpr(b00, g, logn);
-    smallints_to_fpr(b11, F, logn);
-    smallints_to_fpr(b10, G, logn);
+    b01.copy_from_slice(&f);
+    b00.copy_from_slice(&g);
+    b11.copy_from_slice(&F);
+    b10.copy_from_slice(&G);
     fft(b01, logn);
     fft(b00, logn);
     fft(b11, logn);
@@ -475,7 +474,7 @@ pub fn ffSampling_fft_dyntree<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut
 
     if logn == 0 {
         let mut leaf = g00[0];
-        leaf = fpr_mul_const(&fpr_sqrt::<ORDER>(&leaf, rng), FPR_INV_SIGMA[orig_logn as usize]);
+        leaf = fpr_mul(&fpr_sqrt::<ORDER>(&leaf, rng), &[FPR_INV_SIGMA[orig_logn as usize], 0]);
         t0[0] = fpr_of_i(samp(samp_ctx, add(t0[0][0], t0[0][1]), add(leaf[0], leaf[1])) as i64);
         t1[0] = fpr_of_i(samp(samp_ctx, add(t1[0][0], t1[0][1]), add(leaf[0], leaf[1])) as i64);
         return;

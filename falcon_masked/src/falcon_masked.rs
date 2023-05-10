@@ -209,14 +209,14 @@ fn mask_all_secret_polynomials<const ORDER: usize>(f: &[i8], g: &[i8], F: &[i8],
     (fkey, gkey, Fkey, Gkey)
 }
 
-fn mask_polynomials<const ORDER: usize>(polynomial: &[i8], logn: u32, rng: &mut RngBoth) -> Vec<[i8; ORDER]> {
+fn mask_polynomials<const ORDER: usize>(polynomial: &[i8], logn: u32, rng: &mut RngBoth) -> Vec<[fpr; ORDER]> {
     let n: usize = 1 << logn;
-    let mut mkey: Vec<[i8; ORDER]> = vec!([0; ORDER]; n);
+    let mut mkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; n);
     for i in 0..n {
-        let mut mask: [i8; ORDER] = [0; ORDER];
-        let random: i8 = rng.next_u32() as i8;
+        let mut mask: [fpr; ORDER] = [0; ORDER];
+        let random: fpr = fpr_of((rng.next_u32() % 2) as i64);
         mask[1] = random;
-        mask[0] = polynomial[i].wrapping_sub(random);
+        mask[0] = fpr_sub(fpr_of(polynomial[i] as i64), (random));
         mkey[i] = mask;
     }
     mkey

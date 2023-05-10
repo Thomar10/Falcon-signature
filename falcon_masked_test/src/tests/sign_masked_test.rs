@@ -95,8 +95,14 @@ mod tests {
                           &mut g01_masked, &mut g11_masked, LOGN as u32, LOGN as u32, &mut tmp_masked, &mut rngboth);
         let binding = reconstruct(&t0_masked);
         let x = binding.as_slice();
-        println!("{}", fpr_to_double(x[0]));
-        println!("{}", fpr_to_double(t0[0]));
+        println!("got {}", fpr_to_double(x[0]));
+        println!("exp {}", fpr_to_double(t0[0]));
+        println!("got {}", fpr_to_double(x[1]));
+        println!("exp {}", fpr_to_double(t0[1]));
+        println!("got {}", fpr_to_double(x[2]));
+        println!("exp {}", fpr_to_double(t0[2]));
+        println!("got {}", fpr_to_double(x[3]));
+        println!("exp {}", fpr_to_double(t0[3]));
         assert_eq!(t0, x)
     }
 
@@ -129,8 +135,7 @@ mod tests {
     #[test]
     fn signature_verifies_dyn() {
         let mut rng = InnerShake256Context { st: [0; 25], dptr: 0 };
-        let mut rngU = InnerShake256Context { st: [0; 25], dptr: 0 };
-        const LOGN: usize = 3;
+        const LOGN: usize = 6;
         const ORDER: usize = 2;
         let pk_len = falcon_publickey_size!(LOGN);
         let sk_len = falcon_privatekey_size!(LOGN);
@@ -150,10 +155,6 @@ mod tests {
         let mut rngboth = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
         falcon_keygen_make(&mut rng, LOGN as u32, sk.as_mut_slice(), sk_len,
                            pk.as_mut_slice(), pk_len, tmp.as_mut_slice(), tmp_len);
-
-        falcon_sign_dyn(&mut rngU, signature.as_mut_slice(), sig_len,
-                        FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
-                        "data".as_bytes(), tmp_dyn.as_mut_slice(), tmp_len_dyn);
 
         let (res, sig_len) = falcon_sign_dyn_masked::<ORDER, LOGN>(&mut rng, signature.as_mut_slice(), sig_len,
                                                                    FALCON_SIG_COMPRESS, sk.as_mut_slice(), sk_len,
