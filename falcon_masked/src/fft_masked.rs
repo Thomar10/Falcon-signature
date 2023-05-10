@@ -1,6 +1,8 @@
 use falcon::falcon::fpr;
 
 use crate::fpr_masked::{fpr_add, fpr_double, FPR_GM_TAB, fpr_half, fpr_inv, fpr_mul, fpr_neg, FPR_P2_TAB, fpr_sqr, fpr_sub, FPR_ZERO};
+use randomness::random::RngBoth;
+
 
 pub fn fpc_add<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; ORDER], [fpr; ORDER]) {
     let fpct_re: [fpr; ORDER] = fpr_add(a_re, b_re);
@@ -24,9 +26,9 @@ pub fn fpc_mul<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_i
     return (fpct_d_re, fpct_d_im);
 }
 
-pub fn fpc_div<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr]) -> ([fpr; ORDER], [fpr; ORDER]) {
+pub fn fpc_div<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr], b_re: &[fpr], b_im: &[fpr], rng: &mut RngBoth) -> ([fpr; ORDER], [fpr; ORDER]) {
     let mut fpct_m: [fpr; ORDER] = fpr_add::<ORDER>(&fpr_sqr::<ORDER>(b_re), &fpr_sqr::<ORDER>(b_im));
-    fpct_m = fpr_inv::<ORDER>(&fpct_m);
+    fpct_m = fpr_inv::<ORDER>(&fpct_m, rng);
     let b_re: [fpr; ORDER] = fpr_mul::<ORDER>(b_re, &fpct_m);
     let b_im: [fpr; ORDER] = fpr_mul::<ORDER>(&fpr_neg::<ORDER>(b_im), &fpct_m);
     let fpct_d_re: [fpr; ORDER] = fpr_sub(
@@ -44,9 +46,9 @@ pub fn fpc_sqr<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; ORDER],
     (fpct_d_re, fpct_d_im)
 }
 
-pub fn fpc_inv<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr]) -> ([fpr; ORDER], [fpr; ORDER]) {
+pub fn fpc_inv<const ORDER: usize>(a_re: &[fpr], a_im: &[fpr], rng: &mut RngBoth) -> ([fpr; ORDER], [fpr; ORDER]) {
     let mut fpct_m: [fpr; ORDER] = fpr_add::<ORDER>(&fpr_sqr::<ORDER>(a_re), &fpr_sqr::<ORDER>(a_im));
-    fpct_m = fpr_inv::<ORDER>(&fpct_m);
+    fpct_m = fpr_inv::<ORDER>(&fpct_m, rng);
     let fpct_d_re: [fpr; ORDER] = fpr_mul::<ORDER>(a_re, &fpct_m);
     let fpct_d_im: [fpr; ORDER] = fpr_mul::<ORDER>(&fpr_neg::<ORDER>(a_im), &fpct_m);
     (fpct_d_re, fpct_d_im)
@@ -292,17 +294,17 @@ pub fn poly_mulconst<const ORDER: usize>(a: &mut [[fpr; ORDER]], x: fpr, logn: u
 }
 
 
-pub fn poly_div_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32) {
+pub fn poly_div_fft(a: &mut [[fpr; 2]], b: &[[fpr; 2]], logn: u32, rng: &mut RngBoth) {
     let (n, hn): (usize, usize);
 
     n = (1 as usize) << logn;
     hn = n >> 1;
     for u in 0..hn {
-        (a[u], a[u + hn]) = fpc_div(&a[u], &a[u + hn], &b[u], &b[u + hn]);
+        (a[u], a[u + hn]) = fpc_div(&a[u], &a[u + hn], &b[u], &b[u + hn], rng);
     }
 }
 
-pub fn poly_invnorm2_fft<const ORDER: usize>(d: &mut [[fpr; ORDER]], a: &[[fpr; ORDER]], b: &[[fpr; ORDER]], logn: u32) {
+pub fn poly_invnorm2_fft<const ORDER: usize>(d: &mut [[fpr; ORDER]], a: &[[fpr; ORDER]], b: &[[fpr; ORDER]], logn: u32, rng: &mut RngBoth) {
     let (n, hn): (usize, usize);
 
     n = (1 as usize) << logn;
@@ -311,7 +313,7 @@ pub fn poly_invnorm2_fft<const ORDER: usize>(d: &mut [[fpr; ORDER]], a: &[[fpr; 
     for u in 0..hn {
         d[u] = fpr_inv::<ORDER>(&fpr_add::<ORDER>(
             &fpr_add::<ORDER>(&fpr_sqr::<ORDER>(&a[u]), &fpr_sqr::<ORDER>(&a[u + hn])),
-            &fpr_add::<ORDER>(&fpr_sqr::<ORDER>(&b[u]), &fpr_sqr::<ORDER>(&b[u + hn]))));
+            &fpr_add::<ORDER>(&fpr_sqr::<ORDER>(&b[u]), &fpr_sqr::<ORDER>(&b[u + hn]))), rng);
     }
 }
 
@@ -338,19 +340,19 @@ pub fn poly_mul_autoadj_fft<const ORDER: usize>(a: &mut [[fpr; ORDER]], b: &[[fp
     }
 }
 
-pub fn poly_div_autoadj_fft<const ORDER: usize>(a: &mut [[fpr; ORDER]], b: &[[fpr; ORDER]], logn: u32) {
+pub fn poly_div_autoadj_fft<const ORDER: usize>(a: &mut [[fpr; ORDER]], b: &[[fpr; ORDER]], logn: u32, rng: &mut RngBoth) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
     for u in 0..hn {
-        let ib = fpr_inv::<ORDER>(&b[u]);
+        let ib = fpr_inv::<ORDER>(&b[u], rng);
         a[u] = fpr_mul::<ORDER>(&a[u], &ib);
         a[u + hn] = fpr_mul::<ORDER>(&a[u + hn], &ib);
     }
 }
 
 #[allow(non_snake_case)]
-pub fn poly_LDL_fft<const ORDER: usize>(g00: &[[fpr; ORDER]], g01: &mut [[fpr; ORDER]], g11: &mut [[fpr; ORDER]], logn: u32) {
+pub fn poly_LDL_fft<const ORDER: usize>(g00: &[[fpr; ORDER]], g01: &mut [[fpr; ORDER]], g11: &mut [[fpr; ORDER]], logn: u32, rng: &mut RngBoth) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
@@ -361,7 +363,7 @@ pub fn poly_LDL_fft<const ORDER: usize>(g00: &[[fpr; ORDER]], g01: &mut [[fpr; O
         let mut g01_im = g01[u + hn];
         let g11_re = g11[u];
         let g11_im = g11[u + hn];
-        let (mu_re, mu_im) = fpc_div::<ORDER>(&g01_re, &g01_im, &g00_re, &g00_im);
+        let (mu_re, mu_im) = fpc_div::<ORDER>(&g01_re, &g01_im, &g00_re, &g00_im, rng);
         (g01_re, g01_im) = fpc_mul::<ORDER>(&mu_re, &mu_im, &g01_re, &fpr_neg::<ORDER>(&g01_im));
         (g11[u], g11[u + hn]) = fpc_sub::<ORDER>(&g11_re, &g11_im, &g01_re, &g01_im);
         g01[u] = mu_re;
@@ -370,7 +372,7 @@ pub fn poly_LDL_fft<const ORDER: usize>(g00: &[[fpr; ORDER]], g01: &mut [[fpr; O
 }
 
 #[allow(non_snake_case)]
-pub fn poly_LDLmv_fft<const ORDER: usize>(d11: &mut [[fpr; ORDER]], l10: &mut [[fpr; ORDER]], g00: &[[fpr; ORDER]], g01: &[[fpr; ORDER]], g11: &[[fpr; ORDER]], logn: u32) {
+pub fn poly_LDLmv_fft<const ORDER: usize>(d11: &mut [[fpr; ORDER]], l10: &mut [[fpr; ORDER]], g00: &[[fpr; ORDER]], g01: &[[fpr; ORDER]], g11: &[[fpr; ORDER]], logn: u32, rng: &mut RngBoth) {
     let (n, hn): (usize, usize);
     n = (1 as usize) << logn;
     hn = n >> 1;
@@ -381,7 +383,7 @@ pub fn poly_LDLmv_fft<const ORDER: usize>(d11: &mut [[fpr; ORDER]], l10: &mut [[
         let mut g01_im = g01[u + hn];
         let g11_re = g11[u];
         let g11_im = g11[u + hn];
-        let (mu_re, mu_im) = fpc_div::<ORDER>(&g01_re, &g01_im, &g00_re, &g00_im);
+        let (mu_re, mu_im) = fpc_div::<ORDER>(&g01_re, &g01_im, &g00_re, &g00_im, rng);
         (g01_re, g01_im) = fpc_mul::<ORDER>(&mu_re, &mu_im, &g01_re, &fpr_neg::<ORDER>(&g01_im));
         (d11[u], d11[u + hn]) = fpc_sub::<ORDER>(&g11_re, &g11_im, &g01_re, &g01_im);
         l10[u] = mu_re;

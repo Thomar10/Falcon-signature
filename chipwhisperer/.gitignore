@@ -1,0 +1,11 @@
+.dep/
+objdir/
+target/
+captured_traces/
+
+*.eep
+*.elf
+*.hex
+*.lss
+*.map
+*.sym

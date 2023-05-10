@@ -10,3 +10,4 @@ bytemuck = "1.13.0"
 float-cmp = "0.9.0"
 falcon = { path = "../falcon" }
 falcon_masked = { path = "../falcon_masked" }
+randomness = { path = "../randomness", features = ["withstd"] }

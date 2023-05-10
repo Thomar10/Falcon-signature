@@ -33,7 +33,7 @@ pub fn sampler<const ORDER: usize>(spc: &mut SamplerContext, mu: &[fpr; ORDER], 
     }
 }
 
-
+#[allow(non_snake_case)]
 pub fn BerExp<const ORDER: usize>(p: &mut Prng, x: &[fpr; ORDER], ccs: &[fpr]) -> i32 {
     let mut s: i32 = fpr_trunc(&fpr_mul_const::<ORDER>(x, FPR_INV_LOG2)) as i32;
     let r: [fpr; ORDER] = fpr_sub_const(x, mul(of(s as i64), FPR_LOG2));

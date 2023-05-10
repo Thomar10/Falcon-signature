@@ -12,6 +12,7 @@ mod tests {
     use falcon_c::keygen_c::falcon_inner_keygen;
     use falcon_c::shake_c::InnerShake256Context as InnerShake256ContextC;
     use falcon_c::sign_c::{BerExp_func as BerExpC, falcon_inner_expand_privkey, falcon_inner_gaussian0_sampler as gaussian0_sampler_c, falcon_inner_sampler as sampler_c, falcon_inner_sign_dyn, falcon_inner_sign_tree, ffLDL_binary_normalize_func as ffLDL_binary_normalize_c, ffLDL_fft_func as ffLDL_fft_c, ffLDL_fft_inner_func as ffLDL_fft_inner_c, ffLDL_treesize_func as ffLDL_treesize_c, ffSampling_fft_dyntree_func as ffSampling_fft_dyntree_c, SamplerContext as SamplerContextC, smallints_to_fpr_func as smallints_to_fpr_c};
+    use falcon::falcon_tmpsize_expanded_key_size;
 
     use crate::tests::keygen_test::tests::init_shake_with_random_context;
     use crate::tests::rng_test::tests::{create_random_prngs, init_prngs};
@@ -326,7 +327,8 @@ mod tests {
 
             let mut hm: [u16; 1024] = [0; 1024];
 
-            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
+            let mut msg: [u8; 128] = [0; 128];
+            i_shake256_extract(&mut rng_rust, &mut msg);
 
             let (mut rng_rust, rng_c) = init_shake_with_random_context();
 
@@ -377,7 +379,8 @@ mod tests {
             let mut tmp: Vec<u8> = vec![0; BUFFER_SIZE];
             let tmp_c: Vec<u8> = vec![0; BUFFER_SIZE];
 
-            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
+            let mut msg: [u8; 128] = [0; 128];
+            i_shake256_extract(&mut rng_rust, &mut msg);
 
             let (mut rng_rust, rng_c) = init_shake_with_random_context();
 
@@ -407,7 +410,7 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_sign_tree() {
         for _ in 0..100 {
-            const LOGN: usize = 4;
+            const LOGN: usize = 8;
             const N: usize = 1 << LOGN;
 
             const BUFFER_SIZE: usize = 8192 * 8;
@@ -420,7 +423,8 @@ mod tests {
 
             let mut hm: [u16; 1024] = [0; 1024];
 
-            let msg: [u8; 128] = <[u8; 128]>::try_from(i_shake256_extract(&mut rng_rust, 128)).unwrap();
+            let mut msg: [u8; 128] = [0; 128];
+            i_shake256_extract(&mut rng_rust, &mut msg);
 
             let (mut rng_rust, _) = init_shake_with_random_context();
 
@@ -441,11 +445,13 @@ mod tests {
             let mut tmp_keygen: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
             keygen(&mut rng_rust, &mut f, &mut g, &mut F, &mut G, &mut h, LOGN as u32, &mut tmp_keygen);
 
-            const EXKLENGTH: usize = (LOGN + 40) << LOGN;
+            const EXKLENGTH: usize = falcon_tmpsize_expanded_key_size!(LOGN) / 8; //((LOGN + 40) << LOGN) / 2;
             let mut expanded_key: [fpr; EXKLENGTH] = [0; EXKLENGTH];
 
             expand_privkey(&mut expanded_key, &mut f, &mut g, &mut F, &mut G, LOGN as u32, &mut tmp_key);
 
+            //println!("{:?}", expanded_key);
+            //assert_eq!(1, 0);
             //let mut expanded_key: [fpr; EXKLENGTH - 1] = [0; EXKLENGTH - 1];
             //expanded_key.clone_from(<&[fpr; 703]>::try_from(&expanded_key_extra[1..]).unwrap());
 

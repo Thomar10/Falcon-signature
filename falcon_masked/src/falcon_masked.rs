@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+#![allow(unused)]
 use falcon::{falcon_sig_ct_size, falcon_sig_padded_size, falcon_privatekey_size, falcon_tmpsize_expandprivate, falcon_tmpsize_signtree, falcon_tmpsize_signdyn, falcon_tmpsize_expanded_key_size, falcon_tmpsize_keygen};
 use falcon::codec::{comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, trim_i16_encode, trim_i8_decode};
 use falcon::common::{hash_to_point_ct, hash_to_point_vartime};
@@ -8,6 +10,7 @@ use falcon::shake::InnerShake256Context;
 use rand::{random, Rng};
 use falcon::sign::{expand_privkey};
 use falcon::vrfy::complete_private;
+use alloc::vec::Vec;
 
 use crate::sign_masked::{sign_dyn, sign_tree};
 use crate::sign_masked_mask_sample::sign_tree_sample;
@@ -232,8 +235,8 @@ pub fn falcon_sign_tree_masked<const ORDER: usize, const LOGN: usize>(mut rng: &
 }
 
 pub fn falcon_sign_tree_masked_sample<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                                                                             signature_type: i32, expanded_key: &[u8],
-                                                                             data: &[u8]) -> (i32, usize) {
+                                                                      signature_type: i32, expanded_key: &[u8],
+                                                                      data: &[u8]) -> (i32, usize) {
     let mut hd: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
         dptr: 0,
@@ -242,7 +245,7 @@ pub fn falcon_sign_tree_masked_sample<const ORDER: usize, const LOGN: usize>(mut
     falcon_sign_start(rng, &mut nonce, &mut hd);
     shake256_inject(&mut hd, data);
     falcon_sign_tree_finish_sample::<ORDER, LOGN>(&mut rng, signature, signature_len, signature_type, expanded_key,
-                                                  &mut hd, &mut nonce)
+                                           &mut hd, &mut nonce)
 }
 
 fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
@@ -253,9 +256,10 @@ fn falcon_sign_start(mut rng: &mut InnerShake256Context, nonce: &mut [u8],
 }
 
 fn falcon_sign_tree_finish_sample<const ORDER: usize, const LOGN: usize>(mut rng: &mut InnerShake256Context, signature: &mut [u8], signature_len: usize,
-                                                                         signature_type: i32, expanded_key: &[u8],
-                                                                         mut hash_data: &mut InnerShake256Context,
-                                                                         nonce: &mut [u8]) -> (i32, usize) {
+                                                                  signature_type: i32, expanded_key: &[u8],
+                                                                  mut hash_data: &mut InnerShake256Context,
+                                                                  nonce: &mut [u8]) -> (i32, usize) {
+
     let length = 1 << LOGN;
     let logn: u32 = expanded_key[0] as u32;
     if logn != LOGN as u32 {

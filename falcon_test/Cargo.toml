@@ -11,9 +11,11 @@ rand = "0.8.4"
 hex = "0.4.3"
 bytemuck = "1.13.0"
 criterion = "0.4.0"
+criterion-cycles-per-byte = "0.4.0"
 falcon = { path = "../falcon" }
 falcon_masked = { path = "../falcon_masked" }
 falcon_c = { path = "../falcon_c" }
+ntru_gen = { path = "../ntru_gen" }
 
 #[[bench]]
 #name = "keygen_bench"

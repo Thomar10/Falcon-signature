@@ -275,21 +275,13 @@ fn reconstruct_fpr<const ORDER: usize>(hm: &[[fpr; ORDER]], res: &mut [fpr]) {
     }
 }
 
-fn reconstruct_i8<const ORDER: usize>(hm: &[[i8; ORDER]], res: &mut [i8]) {
-    for i in 0..res.len() {
-        res[i] = hm[i][0].wrapping_add(hm[i][1]);
-    }
-}
-
-
 pub fn sign_tree<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
-                                                        expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32) {
-    let tmp_length: usize = falcon_tmpsize_signtree!(LOGN);
+                                                                  expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32) {
+    let tmp_length: usize = falcon_tmpsize_signtree!(LOGN) / 8;
     let mut ftmp = vec![[0; ORDER]; tmp_length];
     for i in 0..tmp_length {
         ftmp[i] = [0; ORDER];
     }
-
 
     loop {
         let mut spc: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[logn as usize] };
