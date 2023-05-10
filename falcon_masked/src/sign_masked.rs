@@ -330,15 +330,11 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     let (b01, inter) = inter.split_at_mut(n);
     let (b10, b11) = inter.split_at_mut(n);
 
-    let mut ff = vec![0; n];
-    let mut ff2 = vec![0; n];
-    let mut GG = vec![0; n];
 
     smallints_to_fpr(b01, f, logn);
     smallints_to_fpr(b00, g, logn);
     smallints_to_fpr(b11, F, logn);
     smallints_to_fpr(b10, G, logn);
-    reconstruct_fpr(b10, GG.as_mut_slice());
     fft(b01, logn);
     fft(b00, logn);
     fft(b11, logn);
