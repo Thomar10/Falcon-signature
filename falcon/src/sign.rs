@@ -464,14 +464,10 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     smallints_to_fpr(b00, g, logn);
     smallints_to_fpr(b11, F, logn);
     smallints_to_fpr(b10, G, logn);
-    let x2: Vec<f64> = b01.iter().map(|x| fpr_to_double(*x)).collect();
-    let x2: Vec<f64> = b10.iter().map(|x| fpr_to_double(*x)).collect();
     fft(b01, logn);
-    let x2: Vec<f64> = b01.iter().map(|x| fpr_to_double(*x)).collect();
     fft(b00, logn);
     fft(b11, logn);
     fft(b10, logn);
-    let x2: Vec<f64> = b10.iter().map(|x| fpr_to_double(*x)).collect();
     poly_neg(b01, logn);
     poly_neg(b11, logn);
 
@@ -519,7 +515,6 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let t0 = b11;
     let t1 = b01;
 
-    let x1: Vec<f64> = t0.iter().map(|x| fpr_to_double(*x)).collect();
     ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, interrest);
 
     let (b00, inter) = tmp.split_at_mut(n);

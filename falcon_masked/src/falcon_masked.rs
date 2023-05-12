@@ -9,7 +9,7 @@ use falcon::{falcon_privatekey_size, falcon_sig_ct_size, falcon_sig_padded_size,
 use falcon::codec::{comp_encode, max_fg_bits, max_FG_bits, max_sig_bits, trim_i16_encode, trim_i8_decode};
 use falcon::common::{hash_to_point_ct, hash_to_point_vartime};
 use falcon::falcon::{FALCON_SIG_CT, fpr, shake256_extract, shake256_flip, shake256_init, shake256_inject};
-use falcon::fpr::fpr_sub;
+use falcon::fpr::{fpr_of, fpr_sub};
 use falcon::keygen::keygen;
 use falcon::shake::InnerShake256Context;
 use falcon::sign::expand_privkey;
@@ -165,7 +165,7 @@ fn falcon_sign_dyn_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut I
     }
 }
 
-fn mask_all_secret_polynomials<const ORDER: usize>(f: &[i8], g: &[i8], F: &[i8], G: &[i8], logn: u32) -> (Vec<[i8; ORDER]>, Vec<[i8; ORDER]>, Vec<[i8; ORDER]>, Vec<[i8; ORDER]>) {
+fn mask_all_secret_polynomials<const ORDER: usize>(f: &[i8], g: &[i8], F: &[i8], G: &[i8], logn: u32) -> (Vec<[fpr; ORDER]>, Vec<[fpr; ORDER]>, Vec<[fpr; ORDER]>, Vec<[fpr; ORDER]>) {
     let mut rng: InnerShake256Context = InnerShake256Context {
         st: [0; 25],
         dptr: 0,
@@ -181,29 +181,29 @@ fn mask_all_secret_polynomials<const ORDER: usize>(f: &[i8], g: &[i8], F: &[i8],
     let tmp_size: usize = falcon_tmpsize_keygen!(logn);
     let mut tmp = vec![0; tmp_size];
     keygen(&mut rng, ff.as_mut_slice(), gg.as_mut_slice(), FF.as_mut_slice(), GG.as_mut_slice(), hh.as_mut_slice(), logn, tmp.as_mut_slice());
-    let mut fkey: Vec<[i8; ORDER]> = vec!([0; ORDER]; n);
-    let mut gkey: Vec<[i8; ORDER]> = vec!([0; ORDER]; n);
-    let mut Fkey: Vec<[i8; ORDER]> = vec!([0; ORDER]; n);
-    let mut Gkey: Vec<[i8; ORDER]> = vec!([0; ORDER]; n);
+    let mut fkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; n);
+    let mut gkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; n);
+    let mut Fkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; n);
+    let mut Gkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; n);
     for i in 0..n {
-        let mut fmask: [i8; ORDER] = [0; ORDER];
-        let mut gmask: [i8; ORDER] = [0; ORDER];
-        let mut Fmask: [i8; ORDER] = [0; ORDER];
-        let mut Gmask: [i8; ORDER] = [0; ORDER];
-        fmask[0] = ff[i];
-        fmask[1] = f[i].wrapping_sub(ff[i]);
+        let mut fmask: [fpr; ORDER] = [0; ORDER];
+        let mut gmask: [fpr; ORDER] = [0; ORDER];
+        let mut Fmask: [fpr; ORDER] = [0; ORDER];
+        let mut Gmask: [fpr; ORDER] = [0; ORDER];
+        fmask[0] = fpr_of(ff[i] as i64);
+        fmask[1] = fpr_sub(fpr_of(f[i] as i64), fpr_of(ff[i] as i64));
         fkey[i] = fmask;
 
-        gmask[0] = gg[i];
-        gmask[1] = g[i].wrapping_sub(gg[i]);
+        gmask[0] = fpr_of(gg[i] as i64);
+        gmask[1] = fpr_sub(fpr_of(g[i] as i64), fpr_of(gg[i] as i64));
         gkey[i] = gmask;
 
-        Fmask[0] = FF[i];
-        Fmask[1] = F[i].wrapping_sub(FF[i]);
+        Fmask[0] = fpr_of(FF[i] as i64);
+        Fmask[1] = fpr_sub(fpr_of(F[i] as i64), fpr_of(FF[i] as i64));
         Fkey[i] = Fmask;
 
-        Gmask[0] = GG[i];
-        Gmask[1] = G[i].wrapping_sub(GG[i]);
+        Gmask[0] = fpr_of(GG[i] as i64);
+        Gmask[1] = fpr_sub(fpr_of(G[i] as i64), fpr_of(GG[i] as i64));
         Gkey[i] = Gmask;
     }
     (fkey, gkey, Fkey, Gkey)
@@ -214,9 +214,9 @@ fn mask_polynomials<const ORDER: usize>(polynomial: &[i8], logn: u32, rng: &mut 
     let mut mkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; n);
     for i in 0..n {
         let mut mask: [fpr; ORDER] = [0; ORDER];
-        let random: fpr = fpr_of((rng.next_u32() % 2) as i64);
-        mask[1] = random;
-        mask[0] = fpr_sub(fpr_of(polynomial[i] as i64), (random));
+        let random: fpr = fpr_of(1);
+        mask[1] = fpr_sub(fpr_of(polynomial[i] as i64), random);
+        mask[0] = random;
         mkey[i] = mask;
     }
     mkey

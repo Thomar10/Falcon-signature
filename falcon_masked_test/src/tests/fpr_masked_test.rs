@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn fpr_inv_test() {
-        for _ in 0..100 {
+        for _ in 0..1000000 {
             let mut shares_x = [0; ORDER];
             let mut shares_y = [0; ORDER];
             let (x, _) = create_masked(&mut shares_x, &mut shares_y);
@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn fpr_sqrt_test() {
-        for _ in 0..100 {
+        for _ in 0..10000 {
             let mut shares_x = [0; ORDER];
             let mut shares_y = [0; ORDER];
             let (x, _) = create_masked(&mut shares_x, &mut shares_y);
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn fpr_div_test() {
-        for _ in 0..100 {
+        for _ in 0..1000000 {
             let mut shares_x = [0; ORDER];
             let mut shares_y = [0; ORDER];
             let (x, y) = create_masked(&mut shares_x, &mut shares_y);
@@ -193,7 +193,7 @@ mod tests {
     }
 
     pub fn check_eq_fpr(x: fpr, y: fpr) {
-        assert!(approx_eq!(f64, fpr_to_double(x), fpr_to_double(y), epsilon = 0.000000003));
+        assert!(approx_eq!(f64, fpr_to_double(x), fpr_to_double(y), epsilon = 0.000000003), "{} {}", fpr_to_double(x), fpr_to_double(y));
     }
 
     pub fn create_masked_positive(x: &mut [fpr], y: &mut [fpr]) -> (fpr, fpr) {

@@ -62,48 +62,50 @@ mod tests {
 
     #[test]
     fn ffSampling_fft_dyntree_test() {
-        const LOGN: usize = 2;
-        const N: usize = 1 << LOGN;
-        let mut rng_unmasked = InnerShake256Context { st: [0; 25], dptr: 0 };
-        let mut rng_masked = InnerShake256Context { st: [0; 25], dptr: 0 };
-        let samp: SamplerZ = sign::sampler;
-        let mut rngboth = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
-        let mut spc_unmasked: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[LOGN as usize] };
-        let mut spc_masked: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[LOGN as usize] };
-        prng_init(&mut spc_unmasked.p, &mut rng_unmasked);
-        prng_init(&mut spc_masked.p, &mut rng_masked);
-        let mut t0: [fpr; N] = [0; N];
-        create_random_polynomial(&mut t0);
-        let mut t1: [fpr; N] = [0; N];
-        create_random_polynomial(&mut t1);
-        let mut g00: [fpr; N] = [0; N];
-        create_random_polynomial(&mut g00);
-        let mut g01: [fpr; N] = [0; N];
-        create_random_polynomial(&mut g01);
-        let mut g11: [fpr; N] = [0; N];
-        create_random_polynomial(&mut g11);
-        let mut tmp: [fpr; N * 4] = [0; N * 4];
-        ffSampling_fft_dyntree(samp, &mut spc_unmasked, &mut t0, &mut t1, &mut g00, &mut g01, &mut g11, LOGN as u32, LOGN as u32, &mut tmp);
-        const ORDER: usize = 2;
-        let mut t0_masked = create_random_polynomial_shared(&t0);
-        let mut t1_masked = create_random_polynomial_shared(&t1);
-        let mut g00_masked = create_random_polynomial_shared(&g00);
-        let mut g01_masked = create_random_polynomial_shared(&g01);
-        let mut g11_masked = create_random_polynomial_shared(&g11);
-        let mut tmp_masked = [[0; ORDER]; N * 4];
-        ffSampling_masked(samp, &mut spc_masked, &mut t0_masked, &mut t1_masked, &mut g00_masked,
-                          &mut g01_masked, &mut g11_masked, LOGN as u32, LOGN as u32, &mut tmp_masked, &mut rngboth);
-        let binding = reconstruct(&t0_masked);
-        let x = binding.as_slice();
-        println!("got {}", fpr_to_double(x[0]));
-        println!("exp {}", fpr_to_double(t0[0]));
-        println!("got {}", fpr_to_double(x[1]));
-        println!("exp {}", fpr_to_double(t0[1]));
-        println!("got {}", fpr_to_double(x[2]));
-        println!("exp {}", fpr_to_double(t0[2]));
-        println!("got {}", fpr_to_double(x[3]));
-        println!("exp {}", fpr_to_double(t0[3]));
-        assert_eq!(t0, x)
+        for _ in 0..100 {
+            const LOGN: usize = 10;
+            const N: usize = 1 << LOGN;
+            let mut rng_unmasked = InnerShake256Context { st: [0; 25], dptr: 0 };
+            let mut rng_masked = InnerShake256Context { st: [0; 25], dptr: 0 };
+            let samp: SamplerZ = sign::sampler;
+            let mut rngboth = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+            let mut spc_unmasked: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[LOGN as usize] };
+            let mut spc_masked: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[LOGN as usize] };
+            prng_init(&mut spc_unmasked.p, &mut rng_unmasked);
+            prng_init(&mut spc_masked.p, &mut rng_masked);
+            let mut t0: [fpr; N] = [0; N];
+            create_random_polynomial(&mut t0);
+            let mut t1: [fpr; N] = [0; N];
+            create_random_polynomial(&mut t1);
+            let mut g00: [fpr; N] = [0; N];
+            create_random_polynomial(&mut g00);
+            let mut g01: [fpr; N] = [0; N];
+            create_random_polynomial(&mut g01);
+            let mut g11: [fpr; N] = [0; N];
+            create_random_polynomial(&mut g11);
+            let mut tmp: [fpr; N * 4] = [0; N * 4];
+            const ORDER: usize = 2;
+            let mut t0_masked = create_random_polynomial_shared(&t0);
+            let mut t1_masked = create_random_polynomial_shared(&t1);
+            let mut g00_masked = create_random_polynomial_shared(&g00);
+            let mut g01_masked = create_random_polynomial_shared(&g01);
+            let mut g11_masked = create_random_polynomial_shared(&g11);
+            let mut tmp_masked = [[0; ORDER]; N * 4];
+            ffSampling_masked(samp, &mut spc_masked, &mut t0_masked, &mut t1_masked, &mut g00_masked,
+                              &mut g01_masked, &mut g11_masked, LOGN as u32, LOGN as u32, &mut tmp_masked, &mut rngboth);
+            ffSampling_fft_dyntree(samp, &mut spc_unmasked, &mut t0, &mut t1, &mut g00, &mut g01, &mut g11, LOGN as u32, LOGN as u32, &mut tmp);
+            let binding = reconstruct(&t0_masked);
+            let x = binding.as_slice();
+            println!("got {}", fpr_to_double(x[0]));
+            println!("exp {}", fpr_to_double(t0[0]));
+            println!("got {}", fpr_to_double(x[1]));
+            println!("exp {}", fpr_to_double(t0[1]));
+            println!("got {}", fpr_to_double(x[2]));
+            println!("exp {}", fpr_to_double(t0[2]));
+            println!("got {}", fpr_to_double(x[3]));
+            println!("exp {}", fpr_to_double(t0[3]));
+            assert_eq!(t0, x)
+        }
     }
 
     fn create_random_polynomial(poly: &mut [fpr]) {
@@ -116,9 +118,9 @@ mod tests {
         let mut masked_poly: Vec<[fpr; ORDER]> = vec!([0; ORDER]; poly.len());
         for i in 0..poly.len() {
             let mut mask: [fpr; ORDER] = [0; ORDER];
-            let random_fpr = create_random_fpr();
-            mask[0] = fpr_sub(poly[i], random_fpr);
-            mask[1] = random_fpr;
+            let random_fpr = f64::to_bits(thread_rng().gen_range(-0.2f64..0.2f64));
+            mask[0] = random_fpr;
+            mask[1] = fpr_sub(poly[i], random_fpr);
             masked_poly[i] = mask;
         }
         masked_poly
@@ -135,7 +137,7 @@ mod tests {
     #[test]
     fn signature_verifies_dyn() {
         let mut rng = InnerShake256Context { st: [0; 25], dptr: 0 };
-        const LOGN: usize = 6;
+        const LOGN: usize = 7;
         const ORDER: usize = 2;
         let pk_len = falcon_publickey_size!(LOGN);
         let sk_len = falcon_privatekey_size!(LOGN);
@@ -164,23 +166,10 @@ mod tests {
                                  pk_len, "data".as_bytes(), tmp_ver.as_mut_slice(), tmp_vrfy_len), 0);
     }
 
-    fn mask_expanded_key<const ORDER: usize>(key: &mut [u8]) -> Vec<[fpr; ORDER]> {
-        let (_, expkey) = key.split_at(8); // alignment
-        let expkey = bytemuck::cast_slice(expkey);
-        let mut mkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; expkey.len());
-        for i in 0..expkey.len() {
-            let mut mask: [fpr; ORDER] = [0; ORDER];
-            let random_fpr = create_random_fpr();
-            mask[0] = fpr_sub(expkey[i], random_fpr);
-            mask[1] = random_fpr;
-            mkey[i] = mask;
-        }
-        mkey
-    }
 
     pub fn create_random_fpr() -> fpr {
         let mut rng = thread_rng();
-        let random: f64 = rng.gen_range(-100f64..100f64);
+        let random: f64 = rng.gen_range(-10f64..10f64);
         return f64::to_bits(random);
     }
 }
