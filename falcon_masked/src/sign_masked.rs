@@ -326,7 +326,7 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
 
     b01.copy_from_slice(&f);
     b00.copy_from_slice(&g);
-    b11[0..n].copy_from_slice(&F);
+    b11[..n].copy_from_slice(&F);
     b10.copy_from_slice(&G);
     fft(b01, logn);
     fft(b00, logn);
@@ -341,7 +341,6 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     t0.copy_from_slice(b01);
     poly_mulselfadj_fft(t0, logn);
     t1.copy_from_slice(b00);
-
     poly_muladj_fft(t1, b10, logn);
     poly_mulselfadj_fft(b00, logn);
     poly_add(b00, t0, logn);
@@ -379,6 +378,7 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
 
     let t0 = b11;
     let t1 = b01;
+
     ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, interrest, rng);
 
     let (b00, inter) = tmp.split_at_mut(n);
@@ -390,6 +390,7 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
 
     t1.copy_from_slice(t0);
     t0.copy_from_slice(b11);
+
     b01.copy_from_slice(&f);
     b00.copy_from_slice(&g);
     b11.copy_from_slice(&F);
@@ -400,8 +401,8 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     fft(b10, logn);
     poly_neg(b01, logn);
     poly_neg(b11, logn);
-    let (tx, rest) = inter.split_at_mut(n);
-    let (ty, _) = rest.split_at_mut(n);
+    let(tx, rest) = inter.split_at_mut(n);
+    let(ty, _) = rest.split_at_mut(n);
 
     tx.copy_from_slice(t0);
     ty.copy_from_slice(t1);
@@ -424,17 +425,20 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     let s1tmp: &mut [i16] = bytemuck::cast_slice_mut::<fpr, i16>(&mut tx_r);
     let mut sqn: u32 = 0;
     let mut ng: u32 = 0;
+
     let mut t0_r = vec![0; length];
     reconstruct_fpr::<ORDER>(t0, &mut t0_r);
     for u in 0..n {
         let z: i32 = hm[u] as i32 - rint(t0_r[u]) as i32;
-        sqn = sqn.wrapping_add((z * z) as u32);
+        sqn = sqn.wrapping_add(z.wrapping_mul(z) as u32);
         ng |= sqn;
         s1tmp[u] = z as i16;
     }
     sqn |= -((ng >> 31) as i32) as u32;
 
-    let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(&mut t0_r);
+    let mut b00_r = vec![0; length];
+    reconstruct_fpr::<ORDER>(b00, &mut b00_r);
+    let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(&mut b00_r);
     let mut t1_r = vec![0; length];
     reconstruct_fpr::<ORDER>(t1, &mut t1_r);
 
@@ -443,7 +447,8 @@ pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_c
     }
     if is_short_half(sqn, s2tmp, logn) > 0 {
         s2[..n].copy_from_slice(&s2tmp[..n]);
-        s2tmp[..n].copy_from_slice(&s1tmp[..n]);
+        let tmpi: &mut [i16] = bytemuck::cast_slice_mut(&mut b00_r);
+        tmpi[..n].copy_from_slice(&s1tmp[..n]);
         return true;
     }
     return false;
