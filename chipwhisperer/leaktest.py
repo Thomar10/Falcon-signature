@@ -4,6 +4,9 @@ from inspect import trace
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+mpl.rcParams["savefig.directory"] = "C:\\Users\\Malth\\OneDrive - Aarhus Universitet\\10. Semester\\Power Trace Graphs"
 
 def calc_welsh_t(filename):
     traces = {
@@ -120,44 +123,61 @@ def do_fpr_add_leak_test():
     # axis[3].grid()
     plt.show()
 
-def quick_test_please_no_snap():
-    traces = {
-        "masked": [],
-        "rand": []
-    }
+def do_graph(title, filename, alpha=4.892, limit=5000, ylim=42):
+    welsh = calc_welsh_t(filename)
 
-    welsh_t_arr = []
+    fig, ax = plt.subplots(figsize=(20, 7))
 
-    with open("captured_traces/sign_tree_masked_1000_masked.txt", "r") as filehandle:
-        decoded = json.load(filehandle)
+    ax.plot(welsh[:limit])
+    ax.set_title(title, fontsize=24)
+    ax.set_ylabel("T-value", fontsize=18)
+    ax.set_xlabel("# Power Trace Sample", fontsize=18)
+    ax.set_ylim([-ylim, ylim])
+    ax.axhline(y= alpha, color = 'r', linestyle = ':')
+    ax.axhline(y= -alpha, color = 'r', linestyle = ':')
+    ax.grid()
+    props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
+    ax.text(0.88, 0.95, "Threshold: " + str(alpha), transform=ax.transAxes, fontsize=18, verticalalignment="top", bbox=props)
+    fig.tight_layout()
+    #plt.show()
 
-        traces["fix"] = np.array(decoded["masked"])
+    filename = title
+    filename = filename.replace(",", "")
+    filename = filename.replace(".", "")
+    filename = filename.replace(" ", "_")
+    filename = filename.lower()
 
-    with open("captured_traces/sign_tree_masked_1000_random.txt", "r") as filehandle:
-        decoded = json.load(filehandle)
-
-        traces["rand"] = np.array(decoded["rand"])
-
-    for i in range(len(traces["fix"][0])):
-        Na = len(traces["fix"])
-        Nb = len(traces["rand"])
-        Xa = np.mean(traces["fix"][:, i])
-        Xb = np.mean(traces["rand"][:, i])
-        Sa = np.std(traces["fix"][:, i])
-        Sb = np.std(traces["rand"][:, i])
-
-        t = (Xa - Xb) / sqrt((Sa * Sa) / Na + (Sb * Sb) / Nb)
-
-        welsh_t_arr.append(t)
-
-    plt.plot(welsh_t_arr)
-    ax = plt.gca()
-    ax.set_ylim([-200, 200])
-    plt.grid()
+    plt.savefig("C:\\Users\\Malth\\OneDrive - Aarhus Universitet\\10. Semester\\Power Trace Graphs\\" + filename + ".png", dpi=400, format="png")
+    print("Plot saved as: " + filename)
     plt.show()
+
+
+# do_graph("Unmasked FPR Addition, 1,000 Traces", "fpr_add_traces_1000.txt", limit=600)
+# do_graph("Arithmetic Masking of FPR Addition, 1,000 Traces", "fpr_add_traces_masked_1000.txt", limit=1800)
+# do_graph("Boolean Masking of FPR Addition, 1,000 Traces", "fpr_add_traces_masked_deep_1000.txt", limit=2500)
+# do_graph("Unmasked FPR Addition, 10,000 Traces", "fpr_add_traces_10000.txt", alpha=5.327, limit=600, ylim=115)
+# do_graph("Arithmetic Masking of FPR Addition, 10,000 Traces", "fpr_add_traces_masked_10000.txt", alpha=5.327, limit=1800)
+# do_graph("Boolean Masking of FPR Addition, 10,000 Traces", "fpr_add_traces_masked_deep_10000.txt", alpha=5.327, limit=2500, ylim=135)
+#
+# do_graph("Unmasked FPR Multiplication, 1,000 Traces", "fpr_mul_traces_1000.txt", limit=400)
+# do_graph("Arithmetic Masking of FPR Multiplication, 1,000 Traces", "fpr_mul_traces_masked_1000.txt", limit=2500)
+# do_graph("Boolean Masking of FPR Multiplication, 1,000 Traces", "fpr_mul_traces_masked_deep_1000.txt", limit=4000)
+# do_graph("Unmasked FPR Multiplication, 10,000 Traces", "fpr_mul_traces_10000.txt", alpha=5.327, limit=400, ylim=115)
+# do_graph("Arithmetic Masking of FPR Multiplication, 10,000 Traces", "fpr_mul_traces_masked_10000.txt", alpha=5.327, limit=2500)
+# do_graph("Boolean Masking of FPR Multiplication, 10,000 Traces", "fpr_mul_traces_masked_deep_10000.txt", alpha=5.327, limit=4000, ylim=65)
+
+# do_graph("Secure Ursh Boolean Mask, 1,000 Traces", "secure_ursh_1000.txt")
+# do_graph("Unmasked Ursh, 1,000 Traces", "ursh_1000.txt")
+# do_graph("Secure Ursh Boolean Mask, 10,000 Traces", "secure_ursh_10000.txt", alpha=5.327)
+
+# do_graph("Unmasked Norm, 1,000 Traces", "norm_1000.txt")
+# do_graph("Secure Norm Boolean Mask, 1,000 Traces", "secure_norm_1000.txt")
+
+# do_graph("Unmasked FFT, 1,000 Traces", "fft_1000.txt")
+# do_graph("Masked FFT, 1,000 Traces", "fft_masked_1000.txt")
 
 #do_fpc_mul_leak_test()
 #do_fpr_mul_leak_test()
-do_fpr_add_leak_test()
+#do_fpr_add_leak_test()
 #do_fpr_mul_leak_test()
 #quick_test_please_no_snap()

@@ -27,6 +27,8 @@ except:
     target = cw.target(scope)
 
 print("INFO: Found ChipWhisperer")
+#scope.clock.clkgen_freq = 200000000
+#print(scope.clock.adc_rate)
 
 program = STM32FProgrammer
 
@@ -50,47 +52,6 @@ def write_float(f):
     data = bytearray(data_arr)
 
     target.write(data)
-
-def get_avg_fft_trace(iterations, first_fpr):
-    traces = []
-
-    for i in range(iterations):
-        scope.arm()
-        target.flush()
-
-        #write_fpr(first_fpr)
-        write_float(first_fpr)
-
-        time.sleep(1)
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
-        traces.append(trace)
-
-        returned_data = target.read()
-        returned_val = int.from_bytes(bytes(returned_data, 'latin1'), "little")
-
-        print("Iteration " + str(i) + " done. Result: " + str(returned_val))
-
-    return calc_avg_trace(traces)
-
-def do_fft_trace():
-    iterations = 400
-
-    #FPR_ONE = 4607182418800017408
-    #FPR_TWO = 4611686018427387904
-    FPR_ONE = float(1)
-    FPR_TWO = float(2)
-
-
-    one_trace = get_avg_fft_trace(iterations, FPR_ONE)
-    two_trace = get_avg_fft_trace(iterations, FPR_TWO)
-
-    #print(avg_trace)
-    plt.plot(one_trace)
-    plt.plot(two_trace)
-    plt.show()
 
 def calc_avg_trace(traces):
     avg_trace = []
@@ -277,7 +238,11 @@ def do_fpc_mul_masked_test():
     with open("captured_traces/fpc_mul_traces_masked.txt", "w") as filehandle:
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
-def do_fpr_mul_test():
+
+def do_sign_test():
+
+    scope.adc.samples = 20000
+
     traces = {
         "fix": [],
         "rand": []
@@ -285,8 +250,70 @@ def do_fpr_mul_test():
 
     iterations = 1000
 
-    fix_a_val = float(68.20750458284908)
-    fix_b_val = float(-92.93250079435525)
+    for i in range(iterations):
+        print("Iteration:", str(i))
+
+        # Fixed key
+
+        scope.arm()
+        target.flush()
+
+        type = 0
+        seed = os.urandom(8)
+        salt = os.urandom(40)
+        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
+        data = bytearray(data_arr)
+
+        target.write(data)
+
+        time.sleep(5)
+
+        ret = scope.capture()
+        trace = scope.get_last_trace()
+
+        traces["fix"].append(trace)
+
+        returned_data = target.read()
+        returned_bytes = bytearray(returned_data, "latin1")
+
+        print("Result:", str(returned_bytes))
+
+        # Random key
+        scope.arm()
+        target.flush()
+
+        type = 1
+        seed = os.urandom(8)
+        salt = os.urandom(40)
+        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
+        data = bytearray(data_arr)
+
+        target.write(data)
+
+        time.sleep(30)
+        #Falcon 8 needs 25 seconds to create a random key :O
+
+        ret = scope.capture()
+        trace = scope.get_last_trace()
+
+        traces["rand"].append(trace)
+
+        returned_data = target.read()
+        returned_bytes = bytearray(returned_data, "latin1")
+
+        print("Result:", str(returned_bytes))
+
+    #Write traces to file
+    with open("captured_traces/sign_tree_masked_1000.txt", "w") as filehandle:
+        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
+
+def do_fft_test(type=11, filename="fft", iterations=1000):
+    traces = {
+        "fix": [],
+        "rand": []
+    }
+
+    offset = 0
 
     for i in range(iterations):
         print("Iteration:", str(i))
@@ -295,16 +322,16 @@ def do_fpr_mul_test():
         scope.arm()
         target.flush()
 
-        val_bytes = bytearray(struct.pack("2d", fix_a_val, fix_b_val))
-        data_arr = [len(val_bytes)] + list(val_bytes)
+        data_arr = [type] + [2] + [0] + [offset]
         data = bytearray(data_arr)
 
         target.write(data)
 
-        time.sleep(1)
+        time.sleep(10)
 
         ret = scope.capture()
         trace = scope.get_last_trace()
+
         traces["fix"].append(trace)
 
         returned_data = target.read()
@@ -314,19 +341,15 @@ def do_fpr_mul_test():
         print("Fixed result: " + str(c))
 
         #Random test
-        rand_a_val = float(random.uniform(-100, 100))
-        rand_b_val = float(random.uniform(-100, 100))
-
         scope.arm()
         target.flush()
 
-        val_bytes = bytearray(struct.pack("2d", rand_a_val, rand_b_val))
-        data_arr = [len(val_bytes)] + list(val_bytes)
+        data_arr = [type] + [2] + [1] + [offset]
         data = bytearray(data_arr)
 
         target.write(data)
 
-        time.sleep(1)
+        time.sleep(10)
 
         ret = scope.capture()
         trace = scope.get_last_trace()
@@ -339,18 +362,19 @@ def do_fpr_mul_test():
         print("Random result: " + str(c))
 
     #Write traces to file
-    with open("captured_traces/fpr_mul_traces_1000.txt", "w") as filehandle:
+    with open("captured_traces/" + filename + "_" + str(iterations) + ".txt", "w") as filehandle:
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
-def do_fpr_mul_masked_test():
+
+    print("**********TEST DONE**********")
+
+def do_sub_test(type=7, filename="secure_ursh", iterations=1000):
     traces = {
         "fix": [],
         "rand": []
     }
 
-    iterations = 1000
-
     fix_a_val = float(68.20750458284908)
-    fix_b_val = float(-92.93250079435525)
+    fix_shift_val = 4
 
     for i in range(iterations):
         print("Iteration:", str(i))
@@ -359,19 +383,20 @@ def do_fpr_mul_masked_test():
         scope.arm()
         target.flush()
 
-        fix_a_rand = float(random.uniform(-100, 100))
-        fix_b_rand = float(random.uniform(-100, 100))
+        fix_a_rand = float(cryptogen.random() * 256 - 128)
+        fix_shift_rand = int(cryptogen.random() * 16)
 
-        val_bytes = bytearray(struct.pack("4d", fix_a_val, fix_b_val, fix_a_rand, fix_b_rand))
-        data_arr = [len(val_bytes)] + list(val_bytes)
+        val_bytes = bytearray(struct.pack("2d", fix_a_val, fix_a_rand))
+        data_arr = [type] + [len(val_bytes) + 2] + list(val_bytes) + [fix_shift_val] + [fix_shift_rand]
         data = bytearray(data_arr)
 
         target.write(data)
 
-        time.sleep(1)
+        time.sleep(0.1)
 
         ret = scope.capture()
         trace = scope.get_last_trace()
+
         traces["fix"].append(trace)
 
         returned_data = target.read()
@@ -381,21 +406,22 @@ def do_fpr_mul_masked_test():
         print("Fixed result: " + str(c))
 
         #Random test
-        rand_a_val = float(random.uniform(-100, 100))
-        rand_b_val = float(random.uniform(-100, 100))
-        rand_a_rand = float(random.uniform(-100, 100))
-        rand_b_rand = float(random.uniform(-100, 100))
-
         scope.arm()
         target.flush()
 
-        val_bytes = bytearray(struct.pack("4d", rand_a_val, rand_b_val, rand_a_rand, rand_b_rand))
-        data_arr = [len(val_bytes)] + list(val_bytes)
+        rand_a_val = float(cryptogen.random() * 256 - 128)
+        rand_a_rand = float(cryptogen.random() * 256 - 128)
+
+        rand_shift_val = int(cryptogen.random() * 16)
+        rand_shift_rand = int(cryptogen.random() * 16)
+
+        val_bytes = bytearray(struct.pack("2d", rand_a_val, rand_a_rand))
+        data_arr = [type] + [len(val_bytes) + 2] + list(val_bytes) + [rand_shift_val] + [rand_shift_rand]
         data = bytearray(data_arr)
 
         target.write(data)
 
-        time.sleep(1)
+        time.sleep(0.1)
 
         ret = scope.capture()
         trace = scope.get_last_trace()
@@ -408,16 +434,15 @@ def do_fpr_mul_masked_test():
         print("Random result: " + str(c))
 
     #Write traces to file
-    with open("captured_traces/fpr_mul_traces_masked_1000.txt", "w") as filehandle:
+    with open("captured_traces/" + filename + "_" + str(iterations) + ".txt", "w") as filehandle:
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
-def do_fpr_add_test():
+    print("**********TEST DONE**********")
+def do_simple_test(type, filename, iterations=1000):
     traces = {
         "fix": [],
         "rand": []
     }
-
-    iterations = 1000
 
     fix_a_val = float(68.20750458284908)
     fix_b_val = float(-92.93250079435525)
@@ -428,13 +453,12 @@ def do_fpr_add_test():
         #Fixed test
         scope.arm()
         target.flush()
-
 
         fix_a_rand = float(cryptogen.random() * 256 - 128)
         fix_b_rand = float(cryptogen.random() * 256 - 128)
 
         val_bytes = bytearray(struct.pack("4d", fix_a_val, fix_b_val, fix_a_rand, fix_b_rand))
-        data_arr = [len(val_bytes)] + list(val_bytes)
+        data_arr = [type] + [len(val_bytes)] + list(val_bytes)
         data = bytearray(data_arr)
 
         target.write(data)
@@ -461,7 +485,7 @@ def do_fpr_add_test():
         target.flush()
 
         val_bytes = bytearray(struct.pack("4d", rand_a_val, rand_b_val, rand_a_rand, rand_b_rand))
-        data_arr = [len(val_bytes)] + list(val_bytes)
+        data_arr = [type] + [len(val_bytes)] + list(val_bytes)
         data = bytearray(data_arr)
 
         target.write(data)
@@ -479,192 +503,54 @@ def do_fpr_add_test():
         print("Random result: " + str(c))
 
     #Write traces to file
-    with open("captured_traces/fpr_add_traces_masked_1000_increased_range.txt", "w") as filehandle:
+    with open("captured_traces/" + filename + "_" + str(iterations) + ".txt", "w") as filehandle:
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
-def do_sign_test():
-    traces = {
-        "fix": []
-    }
+    print("**********TEST DONE**********")
 
-    iterations = 1000
+def do_all_simple():
+    print("STARTING ALL SIMPLE TESTS")
+    do_simple_test(1, "fpr_add_traces", 1000)
+    time.sleep(10)
+    do_simple_test(2, "fpr_add_traces_masked", 1000)
+    time.sleep(10)
+    do_simple_test(3, "fpr_add_traces_masked_deep", 1000)
+    time.sleep(10)
+    do_simple_test(4, "fpr_mul_traces", 1000)
+    time.sleep(10)
+    do_simple_test(5, "fpr_mul_traces_masked", 1000)
+    time.sleep(10)
+    do_simple_test(6, "fpr_mul_traces_masked_deep", 1000)
+    time.sleep(10)
+    do_simple_test(1, "fpr_add_traces", 10000)
+    time.sleep(10)
+    do_simple_test(2, "fpr_add_traces_masked", 10000)
+    time.sleep(10)
+    do_simple_test(3, "fpr_add_traces_masked_deep", 10000)
+    time.sleep(10)
+    do_simple_test(4, "fpr_mul_traces", 10000)
+    time.sleep(10)
+    do_simple_test(5, "fpr_mul_traces_masked", 10000)
+    time.sleep(10)
+    do_simple_test(6, "fpr_mul_traces_masked_deep", 10000)
+    time.sleep(10)
 
-    for i in range(iterations):
-        print("Iteration:", str(i))
-
-        scope.arm()
-        target.flush()
-
-        type = 2
-        seed = os.urandom(8)
-        salt = os.urandom(40)
-        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(5)
-        #Falcon 8 needs 30 seconds to create a random key :O
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
-        traces["fix"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-
-        print("Result:", str(returned_bytes))
-
-    #Write traces to file
-    with open("captured_traces/sign_tree_1000.txt", "w") as filehandle:
-        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
-
-def do_sign_masked_test():
-    traces = {
-        "masked": [],
-        "rand": []
-    }
-
-    iterations = 100
-
-    for i in range(iterations):
-        print("Iteration:", str(i))
-
-        scope.arm()
-        target.flush()
-
-        type = 0
-        seed = os.urandom(8)
-        salt = os.urandom(40)
-        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(5)
-        #Falcon 8 needs 30 seconds to create a random key :O
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
-        traces["masked"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-
-        print("Result:", str(returned_bytes))
-
-        scope.arm()
-        target.flush()
-
-        type = 1
-        seed = os.urandom(8)
-        salt = os.urandom(40)
-        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(40)
-        #Falcon 8 needs 30 seconds to create a random key :O
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
-        traces["rand"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-
-        print("Result:", str(returned_bytes))
-
-    #Write traces to file
-    with open("captured_traces/sign_tree_masked_100.txt", "w") as filehandle:
-        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
-
-def do_sign_masked_test_masked():
-    traces = {
-        "masked": []
-    }
-
-    iterations = 1000
-
-    for i in range(iterations):
-        print("Iteration:", str(i))
-
-        scope.arm()
-        target.flush()
-
-        type = 0
-        seed = os.urandom(8)
-        salt = os.urandom(40)
-        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(5)
-        #Falcon 8 needs 30 seconds to create a random key :O
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
-        traces["masked"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-
-        print("Result:", str(returned_bytes))
-
-    #Write traces to file
-    with open("captured_traces/sign_tree_masked_1000_masked.txt", "w") as filehandle:
-        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
-
-def do_sign_masked_test_random():
-    traces = {
-        "rand": []
-    }
-
-    iterations = 1000
-
-    for i in range(iterations):
-        print("Iteration:", str(i))
-
-        scope.arm()
-        target.flush()
-
-        type = 1
-        seed = os.urandom(8)
-        salt = os.urandom(40)
-        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(40)
-        #Falcon 8 needs 30 seconds to create a random key :O
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
-        traces["rand"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-
-        print("Result:", str(returned_bytes))
-
-    #Write traces to file
-    with open("captured_traces/sign_tree_masked_1000_random.txt", "w") as filehandle:
-        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
-
+#do_all_simple()
 #do_write_test()
 #do_fft_trace()
 #do_fpc_mul_masked_test()
 #do_fpr_mul_test()
 #do_fpr_mul_masked_test()
-do_fpr_add_test()
-#do_sign_test()
+#do_fpr_add_test()
+#do_sub_test(type=7, filename="ursh", iterations=1000)
+#do_sub_test(type=8, filename="secure_ursh", iterations=1000)
+#do_sub_test(type=9, filename="norm", iterations=1000)
+#do_sub_test(type=10, filename="secure_norm", iterations=1000)
+
+#do_fft_test(type=11, filename="fft", iterations=1000)
+#do_fft_test(type=12, filename="fft_masked", iterations=1000)
+#do_fft_test(type=13, filename="fft_masked_deep", iterations=1000)
+
+do_sign_test()
 #do_sign_masked_test_masked()
 #do_sign_masked_test_random()
