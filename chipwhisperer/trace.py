@@ -239,6 +239,26 @@ def do_fpc_mul_masked_test():
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
 
+def capture_trace(data):
+    scope.arm()
+    target.flush()
+
+    target.write(data)
+
+    while True:
+        returned_data = target.read()
+        returned_bytes = bytearray(returned_data, "latin1")
+
+        if len(returned_bytes) != 0:
+            print("Result:", str(returned_bytes))
+
+            ret = scope.capture()
+            trace = scope.get_last_trace()
+
+            return trace
+
+        time.sleep(0.1)
+
 def do_sign_test():
 
     scope.adc.samples = 20000
@@ -248,15 +268,12 @@ def do_sign_test():
         "rand": []
     }
 
-    iterations = 1000
+    iterations = 270
 
     for i in range(iterations):
         print("Iteration:", str(i))
 
         # Fixed key
-
-        scope.arm()
-        target.flush()
 
         type = 0
         seed = os.urandom(8)
@@ -264,47 +281,21 @@ def do_sign_test():
         data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
         data = bytearray(data_arr)
 
-        target.write(data)
-
-        time.sleep(5)
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
+        trace = capture_trace(data)
         traces["fix"].append(trace)
 
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-
-        print("Result:", str(returned_bytes))
-
         # Random key
-        scope.arm()
-        target.flush()
-
         type = 1
         seed = os.urandom(8)
         salt = os.urandom(40)
         data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
         data = bytearray(data_arr)
 
-        target.write(data)
-
-        time.sleep(30)
-        #Falcon 8 needs 25 seconds to create a random key :O
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-
+        trace = capture_trace(data)
         traces["rand"].append(trace)
 
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-
-        print("Result:", str(returned_bytes))
-
     #Write traces to file
-    with open("captured_traces/sign_tree_masked_1000.txt", "w") as filehandle:
+    with open("captured_traces/sign_tree_masked_1000_rest.txt", "w") as filehandle:
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
 def do_fft_test(type=11, filename="fft", iterations=1000):

@@ -90,8 +90,8 @@ fn main() -> ! {
             read_buffer[i] = block!(rx.read()).unwrap();
         }
 
-        // let result_buffer = test_masked_sign(&mut trigger, &read_buffer, &mut rng);
         let result_buffer = test_masked_sign(cmd, &mut trigger, &read_buffer, &mut rng);
+        //let result_buffer = test_sign(cmd, &mut trigger, &read_buffer);
 
         // let mut result_buffer: [u8; 8] = [0; 8];
         //

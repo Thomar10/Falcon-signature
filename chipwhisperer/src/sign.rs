@@ -13,6 +13,8 @@ use falcon::keygen::keygen;
 use falcon::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
 use falcon::sign::{expand_privkey, sign_tree};
 use falcon_masked::sign_masked::{sign_tree_with_temp as sign_tree_masked};
+use crate::sign_mod::sign_tree_ffSampling_test;
+use crate::sign_mod_masked::sign_tree_masked_ffSampling_test;
 
 type TriggerPin = gpio::PA12<Output<PushPull>>;
 
@@ -45,12 +47,8 @@ pub fn test_sign(cmd: u8, trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 
     let mut hm: [u16; 1024] = [0; 1024];
     hash_to_point_vartime(&mut sc, &mut hm, LOGN as u32);
 
-    cortex_m::interrupt::free(|_| {
-        trigger.set_high();
-        //sig[0] = rng_rust.st[0] as i16 + hm[0] as i16;
-        sign_tree(&mut sig, &mut rng_rust, &mut expanded_key, &hm, LOGN as u32, &mut tmp_signtree);
-        trigger.set_low();
-    });
+
+    sign_tree_ffSampling_test(&mut sig, &mut rng_rust, &mut expanded_key, &hm, LOGN as u32, &mut tmp_signtree, trigger);
 
     //sig[0] += 3; //OK
 
@@ -170,7 +168,7 @@ pub fn test_masked_sign(cmd: u8, trigger: &mut TriggerPin, read_buffer: &[u8], r
 
     const TMP_LENGTH: usize = falcon_tmpsize_signtree!(LOGN) / 8;
     let mut tmp: [[fpr; 2]; TMP_LENGTH] = [[0; 2]; TMP_LENGTH];
-
+    //sign_tree_masked_ffSampling_test::<2, LOGN>(&mut sig, &mut rng_rust, &mut expanded_key, &hm, LOGN as u32, &mut tmp, trigger);
     cortex_m::interrupt::free(|_| {
         trigger.set_high();
         //sig[0] = rng_rust.st[0] as i16 + hm[0] as i16;
