@@ -17,6 +17,7 @@ use stm32f4xx_hal::pac::{Peripherals, RNG, USART1};
 use stm32f4xx_hal::prelude::*;
 use stm32f4xx_hal::rng::Rng;
 use stm32f4xx_hal::serial::{Config, Rx, Serial, Tx};
+use stm32f4xx_hal::time::U32Ext;
 
 use falcon::{falcon_sig_compressed_maxsize, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signtree};
 use falcon::common::hash_to_point_vartime;
@@ -32,7 +33,7 @@ use falcon_masked::fpr_masked::{fpr_add as fpr_add_masked, fpr_mul as fpr_mul_ma
 use falcon_masked::fpr_masked_deep::{secure_add, secure_fpr_add, secure_fpr_norm, secure_mul, secure_ursh};
 use falcon_masked::sign_masked::sign_tree_with_temp as sign_tree_masked;
 use randomness::random::RngBoth;
-use chipwhisperer::fft::{test_fft, test_fft_masked, test_secure_fft};
+use chipwhisperer::fft::{test_fft, test_fft_masked, test_poly_mul_fft, test_poly_mul_fft_masked, test_secure_fft};
 use chipwhisperer::fpr_add::{test_add, test_add_masked, test_add_masked_deep};
 use chipwhisperer::fpr_mul::{test_mul, test_mul_masked, test_mul_masked_deep};
 use chipwhisperer::norm::{test_norm, test_secure_norm};
@@ -63,7 +64,13 @@ fn main() -> ! {
     let mut trigger: TriggerPin = gpioa.pa12.into_push_pull_output();
     trigger.set_low();
 
-    let clocks = rcc.cfgr.require_pll48clk().freeze();
+    //let clocks = rcc.cfgr.require_pll48clk().freeze();
+    let clocks = rcc
+        .cfgr
+        .use_hse(7384609.Hz())
+        .sysclk(7384609.Hz())
+        .require_pll48clk()
+        .freeze();
 
     let mut rand_source: Rng = dp.RNG.constrain(&clocks);
     let mut rng: RngBoth = RngBoth { hal_rng: Some(rand_source), rust_rng: None };
@@ -90,8 +97,10 @@ fn main() -> ! {
             read_buffer[i] = block!(rx.read()).unwrap();
         }
 
-        let result_buffer = test_masked_sign(cmd, &mut trigger, &read_buffer, &mut rng);
-        //let result_buffer = test_sign(cmd, &mut trigger, &read_buffer);
+        let result_buffer = test_sign(cmd, &mut trigger, &read_buffer);
+
+        //let result_buffer = test_masked_sign(cmd, &mut trigger, &read_buffer, &mut rng);
+
 
         // let mut result_buffer: [u8; 8] = [0; 8];
         //
@@ -109,6 +118,8 @@ fn main() -> ! {
         //     11 => result_buffer = test_fft(&mut trigger, &read_buffer, &mut rng),
         //     12 => result_buffer = test_fft_masked(&mut trigger, &read_buffer, &mut rng),
         //     13 => result_buffer = test_secure_fft(&mut trigger, &read_buffer, &mut rng),
+        //     14 => result_buffer = test_poly_mul_fft(&mut trigger, &read_buffer, &mut rng),
+        //     15 => result_buffer = test_poly_mul_fft_masked(&mut trigger, &read_buffer, &mut rng),
         //     _ => result_buffer = [0; 8],
         // }
 

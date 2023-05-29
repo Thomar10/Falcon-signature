@@ -2,6 +2,7 @@
 objdir/
 target/
 captured_traces/
+new_traces/
 
 *.eep
 *.elf
