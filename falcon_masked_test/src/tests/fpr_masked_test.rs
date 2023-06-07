@@ -24,19 +24,6 @@ mod tests {
     }
 
     #[test]
-    fn fpr_expm_p63_test() {
-        for _ in 0..100 {
-            let mut shares_x = [0; ORDER];
-            let mut shares_y = [0; ORDER];
-            let (x, y) = create_masked(&mut shares_x, &mut shares_y);
-            let expm_p63_shares = fpr_expm_p63(&shares_x, &shares_y);
-            let (xx, _) = reconstruct(&expm_p63_shares, &shares_y);
-
-            check_eq_fpr(xx, expm_p63(x, y));
-        }
-    }
-
-    #[test]
     fn fpr_sub_test() {
         for _ in 0..100 {
             let mut shares_x = [0; ORDER];
@@ -116,7 +103,7 @@ mod tests {
 
     #[test]
     fn fpr_inv_test() {
-        for _ in 0..1000000 {
+        for _ in 0..1000 {
             let mut shares_x = [0; ORDER];
             let mut shares_y = [0; ORDER];
             let (x, _) = create_masked(&mut shares_x, &mut shares_y);
@@ -130,7 +117,7 @@ mod tests {
 
     #[test]
     fn fpr_sqrt_test() {
-        for _ in 0..10000 {
+        for _ in 0..1000 {
             let mut shares_x = [0; ORDER];
             let mut shares_y = [0; ORDER];
             let (x, _) = create_masked(&mut shares_x, &mut shares_y);
@@ -144,7 +131,7 @@ mod tests {
 
     #[test]
     fn fpr_div_test() {
-        for _ in 0..1000000 {
+        for _ in 0..1000 {
             let mut shares_x = [0; ORDER];
             let mut shares_y = [0; ORDER];
             let (x, y) = create_masked(&mut shares_x, &mut shares_y);

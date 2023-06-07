@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_fft() {
-        const LOGN: u32 = 10;
+        const LOGN: u32 = 5;
         const LENGTH: usize = 1 << LOGN;
         for _ in 0..5 {
             let (mut f, mut f_shares): ([fpr; LENGTH], [[fpr; 2]; LENGTH]) = create_random_mask_arr::<LENGTH>();

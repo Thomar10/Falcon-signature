@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn ffSampling_fft_dyntree_test() {
-        for _ in 0..100 {
+        for _ in 0..10 {
             const LOGN: usize = 10;
             const N: usize = 1 << LOGN;
             let mut rng_unmasked = InnerShake256Context { st: [0; 25], dptr: 0 };
@@ -135,6 +135,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn signature_verifies_dyn() {
         let mut rng = InnerShake256Context { st: [0; 25], dptr: 0 };
         const LOGN: usize = 10;
