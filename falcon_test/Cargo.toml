@@ -16,18 +16,19 @@ falcon = { path = "../falcon" }
 falcon_masked = { path = "../falcon_masked" }
 falcon_c = { path = "../falcon_c" }
 ntru_gen = { path = "../ntru_gen" }
+randomness = { path = "../randomness", features = ["withstd"] }
 
-#[[bench]]
-#name = "keygen_bench"
-#harness = false
+[[bench]]
+name = "keygen_bench"
+harness = false
 
 [[bench]]
 name = "sign_bench"
 harness = false
-#
-#[[bench]]
-#name = "vrfy_bench"
-#harness = false
+
+[[bench]]
+name = "vrfy_bench"
+harness = false
 
 [[bench]]
 name = "sign_masked_bench"
