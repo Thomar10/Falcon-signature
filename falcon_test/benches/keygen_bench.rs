@@ -4,7 +4,6 @@ use criterion::{Criterion, criterion_group, criterion_main};
 
 use falcon::{falcon_privatekey_size, falcon_publickey_size, falcon_tmpsize_keygen};
 use falcon::falcon::falcon_keygen_make;
-use falcon::keygen::keygen;
 use falcon::shake::InnerShake256Context;
 use ntru_gen::falcon_ntru::falcon_keygen;
 use ntru_gen::prng::{NtruPrngChacha8Context, prng_chacha8_out};

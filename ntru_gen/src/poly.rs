@@ -87,13 +87,13 @@ pub fn poly_big_to_fixed(logn: usize, d: &mut [fxr], f: &[u32], len: usize, sc: 
         let mut w1: u32 = 0;
         let mut w2: u32 = 0;
         for v in 0..len {
-            let w = f[(v << logn)];
+            let w = f[v << logn];
             let t = (v & 0xFFFFFF) as u32;
             w0 |= w & ((((t ^ t0).wrapping_sub(1)) >> 31) as u32).wrapping_neg();
             w1 |= w & ((((t ^ t1).wrapping_sub(1)) >> 31) as u32).wrapping_neg();
             w2 |= w & ((((t ^ t2).wrapping_sub(1)) >> 31) as u32).wrapping_neg();
         }
-        let ws = (f[((len - 1) << logn)] >> 30).wrapping_neg() >> 1;
+        let ws = (f[(len - 1) << logn] >> 30).wrapping_neg() >> 1;
         w0 |= ws & ((((len as u32).wrapping_sub(sch)) >> 31) as u32).wrapping_neg();
         w1 |= ws & (((len as u32).wrapping_sub(sch).wrapping_sub(1) as u32) >> 31).wrapping_neg();
         w2 |= ws & (((len as u32).wrapping_sub(sch).wrapping_sub(2) as u32) >> 31).wrapping_neg();
