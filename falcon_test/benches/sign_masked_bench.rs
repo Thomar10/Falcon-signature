@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use criterion::{black_box, Criterion, criterion_group, criterion_main};
+use rand::thread_rng;
 
 use falcon::{falcon_privatekey_size, falcon_publickey_size, falcon_sig_compressed_maxsize, falcon_sig_ct_size, falcon_tmpsize_expanded_key_size, falcon_tmpsize_expandprivate, falcon_tmpsize_keygen, falcon_tmpsize_signdyn, falcon_tmpsize_signtree, falcon_tmpsize_verify};
 use falcon::falcon::{falcon_expand_privatekey, falcon_keygen_make, FALCON_SIG_COMPRESS, FALCON_SIG_CT, falcon_sign_dyn, falcon_sign_tree, falcon_verify};
 use falcon::shake::InnerShake256Context;
 use falcon_masked::falcon_masked::{falcon_sign_tree_masked, falcon_sign_tree_masked_sample};
+use randomness::random::RngBoth;
 
 const ORDER: usize = 2;
 
@@ -27,10 +29,13 @@ pub fn sign_tree_9_sample(c: &mut Criterion) {
     falcon_keygen_make(&mut rng, LOGN as u32, sk.as_mut_slice(), sk_len,
                        pk.as_mut_slice(), pk_len, tmp.as_mut_slice(), tmp_len);
     falcon_expand_privatekey(exp_key.as_mut_slice(), exp_key_len, sk.as_mut_slice(), sk_len, tmp_exp.as_mut_slice(), exp_tmp_len);
+    let mut both = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
     c.bench_function("Sign tree LOGN = 9 masked sample", |b| b.iter(||
-        falcon_sign_tree_masked_sample::<ORDER, LOGN>(&mut rng, signature.as_mut_slice(), sig_len,
-                                                      FALCON_SIG_COMPRESS, exp_key.as_mut_slice(),
-                                                      "data".as_bytes())));
+        {
+            falcon_sign_tree_masked_sample::<ORDER, LOGN>(&mut rng, signature.as_mut_slice(), sig_len,
+                                                          FALCON_SIG_COMPRESS, exp_key.as_mut_slice(),
+                                                          "data".as_bytes(), &mut both)
+        }));
 }
 
 pub fn sign_tree_9(c: &mut Criterion) {
@@ -55,10 +60,12 @@ pub fn sign_tree_9(c: &mut Criterion) {
     falcon_keygen_make(&mut rng, LOGN as u32, sk.as_mut_slice(), sk_len,
                        pk.as_mut_slice(), pk_len, tmp.as_mut_slice(), tmp_len);
     falcon_expand_privatekey(exp_key.as_mut_slice(), exp_key_len, sk.as_mut_slice(), sk_len, tmp_exp.as_mut_slice(), exp_tmp_len);
+    let mut both = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
+
     c.bench_function("Sign tree LOGN = 9 masked", |b| b.iter(||
         black_box(falcon_sign_tree_masked::<ORDER, LOGN>(&mut rng, signature.as_mut_slice(), sig_len,
                                                          FALCON_SIG_COMPRESS, exp_key.as_mut_slice(),
-                                                         "data".as_bytes()))));
+                                                         "data".as_bytes(), &mut both))));
     falcon_verify(signature.as_mut_slice(), sig_len, FALCON_SIG_COMPRESS, pk.as_mut_slice(), pk_len, "data".as_bytes(), tmp_ver.as_mut_slice(), tmp_vrfy_len);
 }
 
