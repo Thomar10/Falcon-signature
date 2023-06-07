@@ -29,7 +29,7 @@ print("INFO: Found ChipWhisperer")
 program = STM32FProgrammer
 
 dir = os.path.dirname(os.path.realpath(__file__))
-program_hex_path = os.path.join(dir, r"unmasked.hex") #Update accordingly
+program_hex_path = os.path.join(dir, r"main.hex") #Update accordingly
 
 cw.program_target(scope, program, program_hex_path)
 
