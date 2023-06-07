@@ -1,6 +1,3 @@
-#![no_std]
-#![no_main]
-
 use randomness::random::RngBoth;
 use stm32f4xx_hal::gpio;
 use stm32f4xx_hal::gpio::{Output, PushPull};

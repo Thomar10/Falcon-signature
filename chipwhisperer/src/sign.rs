@@ -1,6 +1,3 @@
-#![no_std]
-#![no_main]
-
 use rand_core::RngCore;
 use randomness::random::RngBoth;
 use stm32f4xx_hal::gpio;
@@ -13,7 +10,9 @@ use falcon::keygen::keygen;
 use falcon::shake::{i_shake256_init, i_shake256_inject, InnerShake256Context};
 use falcon::sign::{expand_privkey, sign_tree};
 use falcon_masked::sign_masked::{sign_tree_with_temp as sign_tree_masked};
+#[allow(unused_imports)]
 use crate::sign_mod::sign_tree_ffSampling_test;
+#[allow(unused_imports)]
 use crate::sign_mod_masked::sign_tree_masked_ffSampling_test;
 
 type TriggerPin = gpio::PA12<Output<PushPull>>;
@@ -25,7 +24,6 @@ pub fn test_sign(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 8] {
     seed.copy_from_slice(&read_buffer[1..9]);
 
     const LOGN: usize = 8;
-    const N: usize = 1 << LOGN;
     const BUFFER_SIZE: usize = falcon_tmpsize_signtree!(LOGN);
 
     let mut tmp_signtree: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
@@ -41,7 +39,7 @@ pub fn test_sign(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 8] {
 
     let mut sig: [i16; 1024] = [0; 1024];
 
-    let mut salt: [u8; 40] = [2; 40];
+    let salt: [u8; 40] = [2; 40];
     //salt.copy_from_slice(&read_buffer[9..49]);
     let mut sc = gen_rng(&salt);
     i_shake256_inject(&mut sc, input);
@@ -63,6 +61,7 @@ pub fn test_sign(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 8] {
     return return_buffer;
 }
 
+#[allow(non_snake_case)]
 fn gen_random_key<const LEN: usize, const TMP_KEYGEN_SIZE: usize, const TMP_EXPAND_SIZE: usize>(seed: &[u8], logn: usize) -> [fpr; LEN] {
     let mut sc = gen_rng(seed);
     let mut expanded_key: [fpr; LEN] = [0; LEN];
@@ -107,15 +106,16 @@ fn gen_array(rng: &mut RngBoth) -> [i8; 1024] {
     return arr;
 }
 
+#[allow(non_snake_case)]
 fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut RngBoth) {
     const LOGN: usize = 8;
-    const exp_tmp_len: usize = falcon_tmpsize_expandprivate!(LOGN) / 8;
+    const EXP_TMP_LEN: usize = falcon_tmpsize_expandprivate!(LOGN) / 8;
 
-    let mut exp_tmp = [0; exp_tmp_len];
-    let mut f: [i8; 1024] = gen_array(rng);
-    let mut g: [i8; 1024] = gen_array(rng);
-    let mut F: [i8; 1024] = gen_array(rng);
-    let mut G: [i8; 1024] = gen_array(rng);
+    let mut exp_tmp = [0; EXP_TMP_LEN];
+    let f: [i8; 1024] = gen_array(rng);
+    let g: [i8; 1024] = gen_array(rng);
+    let F: [i8; 1024] = gen_array(rng);
+    let G: [i8; 1024] = gen_array(rng);
 
     expand_privkey(&mut exp_key, &f, &g, &F, &G, LOGN as u32, &mut exp_tmp);
 }
@@ -143,7 +143,6 @@ pub fn test_masked_sign(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut 
     seed.copy_from_slice(&read_buffer[1..9]);
 
     const LOGN: usize = 8;
-    const N: usize = 1 << LOGN;
 
     let mut rng_rust: InnerShake256Context = gen_rng(&seed);
     const EXKLENGTH: usize = falcon_tmpsize_expanded_key_size!(LOGN) / 8;
@@ -158,7 +157,7 @@ pub fn test_masked_sign(trigger: &mut TriggerPin, read_buffer: &[u8], rng: &mut 
     let mut expanded_key: [[fpr; 2]; EXKLENGTH] = mask_expanded_key(&expanded_key_start, rng);
     let mut sig: [i16; 1024] = [0; 1024];
 
-    let mut salt: [u8; 40] = [0; 40];
+    let salt: [u8; 40] = [0; 40];
     //salt.copy_from_slice(&read_buffer[9..49]);
     let mut sc = gen_rng(&salt);
     i_shake256_inject(&mut sc, input);
@@ -189,30 +188,29 @@ pub fn test_sign_endpoint(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 
     seed.copy_from_slice(&read_buffer[..8]);
 
     const LOGN: usize = 9;
-    const N: usize = 1 << LOGN;
     const BUFFER_SIZE: usize = falcon_tmpsize_signtree!(LOGN) + 1;
 
     let mut tmp_signtree: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
     let mut rng_rust: InnerShake256Context = gen_rng(&seed);
     const EXKLENGTH: usize = falcon_tmpsize_expanded_key_size!(LOGN) / 8;
-    let mut expanded_key: [fpr; EXKLENGTH] = EXPANDED_KEY_9;
+    let expanded_key: [fpr; EXKLENGTH] = EXPANDED_KEY_9;
 
     let mut sc = gen_rng(&seed);
     i_shake256_inject(&mut sc, input);
     let mut hm: [u16; 1024] = [0; 1024];
     hash_to_point_vartime(&mut sc, &mut hm, LOGN as u32);
 
-    const sig_len: usize = falcon_sig_compressed_maxsize!(LOGN as usize);
-    let mut sig: [u8; sig_len] = [0; sig_len];
+    const SIG_LEN: usize = falcon_sig_compressed_maxsize!(LOGN as usize);
+    let mut sig: [u8; SIG_LEN] = [0; SIG_LEN];
 
-    const key_u8_len: usize = falcon_tmpsize_expanded_key_size!(LOGN);
-    let mut exp_key_u8: [u8; key_u8_len] = [0; key_u8_len];
+    const KEY_U8_LEN: usize = falcon_tmpsize_expanded_key_size!(LOGN);
+    let mut exp_key_u8: [u8; KEY_U8_LEN] = [0; KEY_U8_LEN];
     let exp_key: &[u8] = bytemuck::cast_slice(&expanded_key);
     exp_key_u8.copy_from_slice(exp_key);
 
     cortex_m::interrupt::free(|_| {
         trigger.set_high();
-        falcon_sign_tree(&mut rng_rust, &mut sig, sig_len, 1, &exp_key_u8, input, &mut tmp_signtree, BUFFER_SIZE);
+        falcon_sign_tree(&mut rng_rust, &mut sig, SIG_LEN, 1, &exp_key_u8, input, &mut tmp_signtree, BUFFER_SIZE);
         trigger.set_low();
     });
 
@@ -221,7 +219,7 @@ pub fn test_sign_endpoint(trigger: &mut TriggerPin, read_buffer: &[u8]) -> [u8; 
     return return_buffer;
 }
 
-
+#[allow(dead_code)]
 const EXPANDED_KEY_2: [fpr; 29] = [4636401057209061596, 4637495737965276964, 4620636638361375828, 13834831737999151440, 4634479883870982268, 4627471047803059729, 4622386921280763586, 4634555253567832360, 13854118841076794817, 13846635104837363965, 4635615785683169748, 4622909863612805476, 4636397521001514530, 4636795586731047390, 4631875633619112355, 13838336324806449712, 4598738486860291468, 4586495533585044206, 4604992349275767326, 13822915343639405434, 13814106874906396423, 13814106874906396423, 4605871018401858719, 4605816205767871690, 4590734838051620629, 4590734838051620629, 4604226813994121062, 4604183712057890134, 0];
 
 

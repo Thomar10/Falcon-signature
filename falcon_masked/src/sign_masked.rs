@@ -295,6 +295,19 @@ pub fn sign_tree<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &m
     }
 }
 
+pub fn sign_tree_with_temp<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
+                                                        expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32, ftmp: &mut [[fpr; ORDER]]) {
+    loop {
+        let mut spc: SamplerContext = SamplerContext { p: Prng { buf: [0; 512], ptr: 0, state: State { d: [0; 256] }, typ: 0 }, sigma_min: FPR_SIGMA_MIN[logn as usize] };
+        prng_init(&mut spc.p, rng);
+        let samp: SamplerZ = samp;
+
+        if do_sign_tree::<ORDER, LOGN>(samp, &mut spc, sig, expanded_key, hm, logn, ftmp) {
+            break;
+        }
+    }
+}
+
 pub fn sign_dyn<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
                                                        f: &[[fpr; ORDER]], g: &[[fpr; ORDER]], F: &[[fpr; ORDER]], G: &[[fpr; ORDER]], hm: &[u16], logn: u32, mut rngboth: &mut RngBoth) {
     let tmp_length: usize = falcon_tmpsize_signdyn!(LOGN);
