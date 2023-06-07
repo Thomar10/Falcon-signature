@@ -430,34 +430,33 @@ fn falcon_sign_tree_finish<const ORDER: usize, const LOGN: usize>(mut rng: &mut 
     }
 }
 
-fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut RngBoth) {
-    const LOGN: usize = 10;
-    const EXP_TMP_LEN: usize = falcon_tmpsize_expandprivate!(LOGN);
-    let mut exp_tmp = [0; EXP_TMP_LEN];
+fn random_expanded_key(mut exp_key: &mut [fpr], rng: &mut RngBoth, logn: usize) {
+    let exp_tmp_len: usize = falcon_tmpsize_expandprivate!(logn);
+    let n: usize = 1 << logn;
+    let mut exp_tmp = vec![0; exp_tmp_len];
 
-    let mut f: [i8; 1024] = [0; 1024];
-    let mut g: [i8; 1024] = [0; 1024];
-    let mut F: [i8; 1024] = [0; 1024];
-    let mut G: [i8; 1024] = [0; 1024];
-    for i in 0..1024 {
+    let mut f = vec![0; n];
+    let mut g = vec![0; n];
+    let mut F = vec![0; n];
+    let mut G = vec![0; n];
+    for i in 0..n {
         f[i] = rng.next_u32() as i8;
         g[i] = rng.next_u32() as i8;
         F[i] = rng.next_u32() as i8;
         G[i] = rng.next_u32() as i8;
     }
 
-    expand_privkey(&mut exp_key, &f, &g, &F, &G, LOGN as u32, &mut exp_tmp);
+    expand_privkey(&mut exp_key, &f, &g, &F, &G, logn as u32, &mut exp_tmp);
 }
 
 
 fn mask_expanded_key<const ORDER: usize>(key: &[u8], logn: u32, mut rng: &mut RngBoth) -> Vec<[fpr; ORDER]> {
-    const LOGN: usize = 10;
-    const EXP_KEY_LEN: usize = falcon_tmpsize_expanded_key_size!(LOGN);
-    let mut random_key2 = [0u8; EXP_KEY_LEN];
+    let exp_key_len: usize = falcon_tmpsize_expanded_key_size!(logn as usize);
+    let mut random_key2 = vec![0u8; exp_key_len];
     let (_, random_key3) = random_key2.split_at_mut(8); // alignment
 
     let mut random_key = bytemuck::cast_slice_mut(random_key3);
-    random_expanded_key(&mut random_key, &mut rng);
+    random_expanded_key(&mut random_key, &mut rng, logn as usize);
     let (_, expkey) = key.split_at(8); // alignment
     let expkey: &[fpr] = bytemuck::cast_slice(expkey);
     let mut mkey: Vec<[fpr; ORDER]> = vec!([0; ORDER]; expkey.len());
