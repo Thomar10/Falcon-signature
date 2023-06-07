@@ -52,7 +52,6 @@ pub fn vrfy_9_ct(c: &mut Criterion) {
     let (_, sig_len) = falcon_sign_dyn(&mut rng, signature.as_mut_slice(), sig_len,
                                        FALCON_SIG_CT, sk.as_mut_slice(),
                                        sk_len, "data".as_bytes(), tmp_sig.as_mut_slice(), tmp_sig_len);
-    println!("sig len= {}", sig_len);
     c.bench_function("Verify CT logn = 9", |b| b.iter(||
         falcon_verify(signature.as_mut_slice(), sig_len, FALCON_SIG_CT,
                                 pk.as_mut_slice(), pk_len, "data".as_bytes(), tmp_ver.as_mut_slice(), tmpvv_len)

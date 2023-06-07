@@ -16,7 +16,7 @@ pub fn fft_unmasked(c: &mut Criterion) {
     const LOGN: usize = 10;
     const SIZE: usize = 1 << LOGN;
     let mut x: [fpr; SIZE] = create_random_fpr_array::<SIZE>();
-    c.bench_function("fft_unmasked unmasked add", |b| b.iter(|| fft(&mut x, LOGN as u32)));
+    c.bench_function("fft unmasked", |b| b.iter(|| fft(&mut x, LOGN as u32)));
 }
 
 pub fn fft_fpr_masked(c: &mut Criterion) {
@@ -24,7 +24,7 @@ pub fn fft_fpr_masked(c: &mut Criterion) {
     const SIZE: usize = 1 << LOGN;
     let mut x: [[fpr; 2]; SIZE] = create_random_masked_fpr_array::<SIZE, 2>();
     let mut both = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
-    c.bench_function("fft masked fpr", |b| b.iter(|| {
+    c.bench_function("fft masked Boolean", |b| b.iter(|| {
         secure_fft::<2>(&mut x, LOGN as u32, &mut both);
     }));
 }
@@ -33,7 +33,7 @@ pub fn better_fft_fpr_masked(c: &mut Criterion) {
     const LOGN: usize = 10;
     const SIZE: usize = 1 << LOGN;
     let mut x: [[fpr; 2]; SIZE] = create_random_masked_better_fpr_array::<SIZE, 2>();
-    c.bench_function("fft masked fpr better", |b| b.iter(|| {
+    c.bench_function("fft masked Arithmetic", |b| b.iter(|| {
         mfft(&mut x, LOGN as u32);
     }));
 }
@@ -41,7 +41,7 @@ pub fn better_fft_fpr_masked(c: &mut Criterion) {
 pub fn fpr_unmasked_add(c: &mut Criterion) {
     let x = create_random_fpr();
     let y = create_random_fpr();
-    c.bench_function("fpr unmasked add", |b| b.iter(|| fpr_add(x, y)));
+    c.bench_function("Add unmasked", |b| b.iter(|| fpr_add(x, y)));
 }
 
 pub fn fpr_masked_add(c: &mut Criterion) {
@@ -52,7 +52,7 @@ pub fn fpr_masked_add(c: &mut Criterion) {
     let x_mask: [fpr; 2] = [x ^ x_share, x_share];
     let y_mask: [fpr; 2] = [y ^ y_share, y_share];
     let mut both = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
-    c.bench_function("fpr masked add", |b| b.iter(|| {
+    c.bench_function("Add masked Boolean", |b| b.iter(|| {
         secure_fpr_add::<2>(&x_mask, &y_mask, &mut both);
     }));
 }
@@ -66,7 +66,7 @@ pub fn fpr_masked_add_better(c: &mut Criterion) {
     let x_mask: [fpr; 2] = [fpr_sub(x, x_share), x_share];
     let y_mask: [fpr; 2] = [fpr_sub(y, y_share), y_share];
 
-    c.bench_function("fpr masked add better", |b|
+    c.bench_function("Add masked Arithmetic", |b|
         b.iter(|| fpr_madd::<ORDER>(&x_mask, &y_mask)));
 }
 
@@ -75,7 +75,7 @@ pub fn fpr_unmasked_norm(c: &mut Criterion) {
     let mut rng = StdRng::seed_from_u64(42);
     let x: u64 = rng.next_u64();
     let e: i16 = (rng.next_u32() >> 16) as i16;
-    c.bench_function("fpr unmasked norm", |b| b.iter(|| fpr_norm64(x, e as i32)));
+    c.bench_function("Norm unmasked", |b| b.iter(|| fpr_norm64(x, e as i32)));
 }
 
 pub fn fpr_masked_norm(c: &mut Criterion) {
@@ -87,7 +87,7 @@ pub fn fpr_masked_norm(c: &mut Criterion) {
     let share_e: i16 = (rng.next_u32() >> 16) as i16;
     let e_share: [i16; 2] = [(e as i16).wrapping_sub(share_e), share_e];
     let mut both = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
-    c.bench_function("fpr masked norm", |b| b.iter(|| secure_fpr_norm::<2>(&x_share, &e_share, &mut both)));
+    c.bench_function("Norm masked Boolean", |b| b.iter(|| secure_fpr_norm::<2>(&x_share, &e_share, &mut both)));
 }
 
 pub fn fpr_masked_mul_better(c: &mut Criterion) {
@@ -98,7 +98,7 @@ pub fn fpr_masked_mul_better(c: &mut Criterion) {
     let x_mask: [fpr; 2] = [fpr_sub(x, x_share), x_share];
     let y_mask: [fpr; 2] = [fpr_sub(y, y_share), y_share];
     const ORDER: usize = 2;
-    c.bench_function("fpr masked mul better", |b|
+    c.bench_function("Mul masked Arithmetic", |b|
         b.iter(|| fpr_mmul::<ORDER>(&x_mask, &y_mask)));
 }
 
@@ -111,14 +111,14 @@ pub fn fpr_masked_mul(c: &mut Criterion) {
     let x_mask: [fpr; 2] = [x ^ x_share, x_share];
     let y_mask: [fpr; 2] = [y ^ y_share, y_share];
     let mut both = RngBoth { hal_rng: None, rust_rng: Some(thread_rng()) };
-    c.bench_function("fpr masked mul", |b|
+    c.bench_function("Mul masked Boolean", |b|
         b.iter(|| secure_mul::<2>(&x_mask, &y_mask, &mut both)));
 }
 
 pub fn fpr_unmasked_mul(c: &mut Criterion) {
     let x = create_random_fpr();
     let y = create_random_fpr();
-    c.bench_function("fpr unmasked mul", |b| b.iter(|| fpr_mul(x, y)));
+    c.bench_function("Mul unmasked", |b| b.iter(|| fpr_mul(x, y)));
 }
 
 pub fn create_random_fpr_array<const SIZE: usize>() -> [fpr; SIZE] {

@@ -19,6 +19,10 @@ ntru_gen = { path = "../ntru_gen" }
 randomness = { path = "../randomness", features = ["withstd"] }
 
 [[bench]]
+name = "fpr_bench"
+harness = false
+
+[[bench]]
 name = "keygen_bench"
 harness = false
 
