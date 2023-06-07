@@ -1,13 +1,14 @@
-use falcon::{falcon_tmpsize_signtree, MKN};
+use falcon::{falcon_tmpsize_signdyn, falcon_tmpsize_signtree, MKN};
 use falcon::common::is_short_half;
 use falcon::falcon::fpr;
-use falcon::fpr::{fpr_add as add, FPR_INVERSE_OF_Q, FPR_INVSQRT2, FPR_INVSQRT8, fpr_rint as rint, FPR_SIGMA_MIN};
+use falcon::fpr::{fpr_add as add, FPR_INV_SIGMA, FPR_INVERSE_OF_Q, FPR_INVSQRT2, FPR_INVSQRT8, fpr_neg, fpr_of as of, fpr_rint as rint, FPR_SIGMA_MIN};
 use falcon::rng::{Prng, prng_init, State};
 use falcon::shake::InnerShake256Context;
 use falcon::sign::{ffLDL_treesize, sampler as samp, SamplerContext, SamplerZ};
+use randomness::random::RngBoth;
 
-use crate::fft_masked::{fft, ifft, poly_add, poly_merge_fft, poly_mul_fft, poly_mulconst, poly_split_fft, poly_sub};
-use crate::fpr_masked::{fpr_add, fpr_half, fpr_mul, fpr_mul_const, fpr_neg_fpr, fpr_of_i, fpr_sub};
+use crate::fft_masked::{fft, ifft, poly_add, poly_LDL_fft, poly_merge_fft, poly_mul_fft, poly_muladj_fft, poly_mulconst, poly_mulselfadj_fft, poly_neg, poly_split_fft, poly_sub};
+use crate::fpr_masked::{fpr_add, fpr_half, fpr_mul, fpr_mul_const, fpr_neg_fpr, fpr_of_i, fpr_sqrt, fpr_sub};
 
 #[allow(non_snake_case)]
 pub fn ffSampling_fft<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut SamplerContext, z0: &mut [[fpr; ORDER]],
@@ -276,7 +277,7 @@ fn reconstruct_fpr<const ORDER: usize>(hm: &[[fpr; ORDER]], res: &mut [fpr]) {
 }
 
 pub fn sign_tree<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
-                                                                  expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32) {
+                                                        expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32) {
     let tmp_length: usize = falcon_tmpsize_signtree!(LOGN) / 8;
     let mut ftmp = vec![[0; ORDER]; tmp_length];
     for i in 0..tmp_length {
@@ -294,13 +295,13 @@ pub fn sign_tree<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &m
     }
 }
 
-pub fn sign_tree_with_temp<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
-                                                        expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32, tmp: &mut [[fpr; ORDER]]) {
-    //let tmp_length: usize = falcon_tmpsize_signtree!(LOGN) / 8;
-    //let mut ftmp = vec![[0; ORDER]; tmp_length];
-    //for i in 0..tmp_length {
-    //    ftmp[i] = [0; ORDER];
-    //}
+pub fn sign_dyn<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
+                                                       f: &[[fpr; ORDER]], g: &[[fpr; ORDER]], F: &[[fpr; ORDER]], G: &[[fpr; ORDER]], hm: &[u16], logn: u32, mut rngboth: &mut RngBoth) {
+    let tmp_length: usize = falcon_tmpsize_signdyn!(LOGN);
+    let mut ftmp = vec![[0; ORDER]; tmp_length];
+    for i in 0..tmp_length {
+        ftmp[i] = [0; ORDER];
+    }
 
 
     loop {
@@ -308,8 +309,219 @@ pub fn sign_tree_with_temp<const ORDER: usize, const LOGN: usize>(sig: &mut [i16
         prng_init(&mut spc.p, rng);
         let samp: SamplerZ = samp;
 
-        if do_sign_tree::<ORDER, LOGN>(samp, &mut spc, sig, expanded_key, hm, logn, tmp) {
+        if do_sign_dyn::<ORDER, LOGN>(samp, &mut spc, sig, f, g, F, G, hm, logn, ftmp.as_mut_slice(), rngboth) {
             break;
         }
     }
 }
+
+pub fn do_sign_dyn<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],
+                                                          f: &[[fpr; ORDER]], g: &[[fpr; ORDER]], F: &[[fpr; ORDER]], G: &[[fpr; ORDER]],
+                                                          hm: &[u16], logn: u32, tmp: &mut [[fpr; ORDER]], mut rng: &mut RngBoth) -> bool {
+    let n: usize = MKN!(logn);
+    let (b00, inter) = tmp.split_at_mut(n);
+    let (b01, inter) = inter.split_at_mut(n);
+    let (b10, b11) = inter.split_at_mut(n);
+
+
+    b01.copy_from_slice(&f);
+    b00.copy_from_slice(&g);
+    b11[..n].copy_from_slice(&F);
+    b10.copy_from_slice(&G);
+    fft(b01, logn);
+    fft(b00, logn);
+    fft(b11, logn);
+    fft(b10, logn);
+    poly_neg(b01, logn);
+    poly_neg(b11, logn);
+
+    let (b11, rest) = b11.split_at_mut(n);
+    let (t0, rest) = rest.split_at_mut(n);
+    let (t1, _) = rest.split_at_mut(n);
+    t0.copy_from_slice(b01);
+    poly_mulselfadj_fft(t0, logn);
+    t1.copy_from_slice(b00);
+    poly_muladj_fft(t1, b10, logn);
+    poly_mulselfadj_fft(b00, logn);
+    poly_add(b00, t0, logn);
+
+    t0.copy_from_slice(b01);
+    poly_muladj_fft(b01, b11, logn);
+    poly_add(b01, t1, logn);
+
+    poly_mulselfadj_fft(b10, logn);
+    t1.copy_from_slice(b11);
+    poly_mulselfadj_fft(t1, logn);
+    poly_add(b10, t1, logn);
+
+    let (g00, inter) = tmp.split_at_mut(n);
+    let (g01, inter) = inter.split_at_mut(n);
+    let (g11, inter) = inter.split_at_mut(n);
+    let (b11, inter) = inter.split_at_mut(n);
+    let (b01, interrest) = inter.split_at_mut(n);
+    let (t0, t1) = interrest.split_at_mut(n);
+
+    for u in 0..n {
+        t0[u] = fpr_of_i(hm[u] as i64);
+    }
+
+    fft(t0, logn);
+    let ni: u64 = FPR_INVERSE_OF_Q;
+    t1[..n].copy_from_slice(t0);
+    poly_mul_fft(t1, b01, logn);
+    poly_mulconst(t1, fpr_neg(ni), logn);
+    poly_mul_fft(t0, b11, logn);
+    poly_mulconst(t0, ni, logn);
+
+    b11.copy_from_slice(t0);
+    b01.copy_from_slice(&t1[..n]);
+
+    let t0 = b11;
+    let t1 = b01;
+
+    ffSampling_fft_dyntree(samp, samp_ctx, t0, t1, g00, g01, g11, logn, logn, interrest, rng);
+
+    let (b00, inter) = tmp.split_at_mut(n);
+    let (b01, inter) = inter.split_at_mut(n);
+    let (b10, inter) = inter.split_at_mut(n);
+    let (b11, inter) = inter.split_at_mut(n);
+    let (t0, inter) = inter.split_at_mut(n);
+    let (t1, inter) = inter.split_at_mut(n);
+
+    t1.copy_from_slice(t0);
+    t0.copy_from_slice(b11);
+
+    b01.copy_from_slice(&f);
+    b00.copy_from_slice(&g);
+    b11.copy_from_slice(&F);
+    b10.copy_from_slice(&G);
+    fft(b01, logn);
+    fft(b00, logn);
+    fft(b11, logn);
+    fft(b10, logn);
+    poly_neg(b01, logn);
+    poly_neg(b11, logn);
+    let(tx, rest) = inter.split_at_mut(n);
+    let(ty, _) = rest.split_at_mut(n);
+
+    tx.copy_from_slice(t0);
+    ty.copy_from_slice(t1);
+    poly_mul_fft(tx, b00, logn);
+    poly_mul_fft(ty, b10, logn);
+    poly_add(tx, ty, logn);
+    ty.copy_from_slice(t0);
+    poly_mul_fft(ty, b01, logn);
+
+    t0.copy_from_slice(tx);
+    poly_mul_fft(t1, b11, logn);
+    poly_add(t1, ty, logn);
+    ifft(t0, logn);
+    ifft(t1, logn);
+
+
+    let length = 1 << LOGN;
+    let mut tx_r = vec![0; length];
+    reconstruct_fpr::<ORDER>(tx, &mut tx_r);
+    let s1tmp: &mut [i16] = bytemuck::cast_slice_mut::<fpr, i16>(&mut tx_r);
+    let mut sqn: u32 = 0;
+    let mut ng: u32 = 0;
+
+    let mut t0_r = vec![0; length];
+    reconstruct_fpr::<ORDER>(t0, &mut t0_r);
+    for u in 0..n {
+        let z: i32 = hm[u] as i32 - rint(t0_r[u]) as i32;
+        sqn = sqn.wrapping_add(z.wrapping_mul(z) as u32);
+        ng |= sqn;
+        s1tmp[u] = z as i16;
+    }
+    sqn |= -((ng >> 31) as i32) as u32;
+
+    let mut b00_r = vec![0; length];
+    reconstruct_fpr::<ORDER>(b00, &mut b00_r);
+    let s2tmp: &mut [i16] = bytemuck::cast_slice_mut(&mut b00_r);
+    let mut t1_r = vec![0; length];
+    reconstruct_fpr::<ORDER>(t1, &mut t1_r);
+
+    for u in 0..n {
+        s2tmp[u] = -rint(t1_r[u]) as i16;
+    }
+    if is_short_half(sqn, s2tmp, logn) > 0 {
+        s2[..n].copy_from_slice(&s2tmp[..n]);
+        let tmpi: &mut [i16] = bytemuck::cast_slice_mut(&mut b00_r);
+        tmpi[..n].copy_from_slice(&s1tmp[..n]);
+        return true;
+    }
+    return false;
+}
+
+pub fn fpr_to_double(x: fpr) -> f64 {
+    return f64::from_bits(x);
+}
+
+pub fn smallints_to_fpr<const ORDER: usize>(r: &mut [[fpr; ORDER]], t: &[[i8; ORDER]], logn: u32) {
+    let n: usize = MKN!(logn);
+    for u in 0..n {
+        let mut ru = r[u];
+        let tu = t[u];
+        for i in 0..ORDER {
+            ru[i] = of(tu[i] as i64);
+        }
+        r[u] = ru;
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn ffSampling_fft_dyntree<const ORDER: usize>(samp: SamplerZ, samp_ctx: &mut SamplerContext, t0: &mut [[fpr; ORDER]],
+                                                  t1: &mut [[fpr; ORDER]], g00: &mut [[fpr; ORDER]], g01: &mut [[fpr; ORDER]], g11: &mut [[fpr; ORDER]],
+                                                  orig_logn: u32, logn: u32, tmp: &mut [[fpr; ORDER]], mut rng: &mut RngBoth) {
+    let n: usize = 1 << logn as usize;
+    let hn: usize = n >> 1;
+
+    if logn == 0 {
+        let mut leaf = g00[0];
+        leaf = fpr_mul(&fpr_sqrt::<ORDER>(&leaf, rng), &[FPR_INV_SIGMA[orig_logn as usize], 0]);
+        t0[0] = fpr_of_i(samp(samp_ctx, add(t0[0][0], t0[0][1]), add(leaf[0], leaf[1])) as i64);
+        t1[0] = fpr_of_i(samp(samp_ctx, add(t1[0][0], t1[0][1]), add(leaf[0], leaf[1])) as i64);
+        return;
+    }
+
+    poly_LDL_fft(g00, g01, g11, logn, &mut rng);
+
+    let (tmp0, tmp1) = tmp.split_at_mut(hn);
+    poly_split_fft(tmp0, tmp1, g00, logn);
+    g00[..hn].copy_from_slice(tmp0);
+    g00[hn..].copy_from_slice(&tmp1[..hn]);
+    poly_split_fft(tmp0, tmp1, g11, logn);
+    g11[..n].copy_from_slice(&tmp[..n]);
+    tmp[..n].copy_from_slice(&g01[..n]);
+    g01[..hn].copy_from_slice(&g00[..hn]);
+    g01[hn..2 * hn].copy_from_slice(&g11[..hn]);
+
+    let (_, inter) = tmp.split_at_mut(n);
+    let (z11, z1hn) = inter.split_at_mut(hn);
+    poly_split_fft(z11, z1hn, t1, logn);
+    let (g110, g111) = g11.split_at_mut(hn);
+    let (z1hn, z1n) = z1hn.split_at_mut(hn);
+    ffSampling_fft_dyntree(samp, samp_ctx, z11, z1hn, g110, g111,
+                           &mut g01[hn..], orig_logn, logn - 1, z1n, &mut rng);
+    poly_merge_fft(z1n, z11, z1hn, logn);
+
+    let (tmp0, inter) = tmp.split_at_mut(n);
+    let (z1, inter) = inter.split_at_mut(n);
+    let (tmpn1, _) = inter.split_at_mut(n);
+    z1.copy_from_slice(t1);
+    poly_sub(z1, tmpn1, logn);
+    t1.copy_from_slice(tmpn1);
+    poly_mul_fft(tmp0, z1, logn);
+    poly_add(t0, tmp0, logn);
+    let (z0, z0n) = tmp.split_at_mut(n);
+    let (z00, z01) = z0.split_at_mut(hn);
+
+    poly_split_fft(z00, z01, t0, logn);
+    let (g000, g001) = g00.split_at_mut(hn);
+    ffSampling_fft_dyntree(samp, samp_ctx, z00, z01, g000, g001,
+                           g01, orig_logn, logn - 1, z0n, &mut rng);
+    poly_merge_fft(t0, z00, z01, logn);
+}
+
+

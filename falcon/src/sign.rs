@@ -476,7 +476,6 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     let (t1, _) = rest.split_at_mut(n);
     t0.copy_from_slice(b01);
     poly_mulselfadj_fft(t0, logn);
-
     t1.copy_from_slice(b00);
     poly_muladj_fft(t1, b10, logn);
     poly_mulselfadj_fft(b00, logn);
@@ -582,6 +581,11 @@ pub fn do_sign_dyn(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16]
     }
     return false;
 }
+
+pub fn fpr_to_double(x: fpr) -> f64 {
+    return f64::from_bits(x);
+}
+
 
 #[allow(non_snake_case)]
 pub fn do_sign_dyn_same(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16],

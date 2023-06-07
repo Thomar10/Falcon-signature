@@ -1,9 +1,8 @@
 use rand_core::RngCore;
+
 use falcon::falcon::fpr;
-use falcon::fpr::{fpr_add as add, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of as of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
-
+use falcon::fpr::{fpr_add as add, fpr_div as div, fpr_double as double, fpr_expm_p63 as expm_p63, fpr_floor as floor, fpr_half as half, fpr_inv as inv, fpr_lt as lt, fpr_mul as mul, fpr_neg as neg, fpr_of as of, fpr_rint as rint, fpr_sqrt as sqrt, fpr_sub as sub, fpr_trunc as trunc};
 use randomness::random::RngBoth;
-
 
 pub static FPR_ZERO: fpr = 0;
 
@@ -58,11 +57,24 @@ pub fn fpr_mul_const<const ORDER: usize>(x: &[fpr], c: fpr) -> [fpr; ORDER] {
     d
 }
 
-pub fn fpr_sqrt(x: &[fpr]) -> [fpr; 2] {
-    let mut d = [0; 2];
-    d[0] = sqrt(x[0]);
-    d[1] = sqrt(x[1]);
-    d
+pub fn fpr_sqrt<const ORDER: usize>(x: &[fpr], mut rng: &mut RngBoth) -> [fpr; ORDER] {
+    let mut d = [0; ORDER];
+    d[0] = of(1);
+    d[1] = 0;
+    let negative = fpr_ltz::<ORDER>(&x);
+    let precession = 20;
+    if negative {
+        let xx = fpr_neg::<ORDER>(&x);
+        for _ in 0..precession {
+            d = fpr_half::<ORDER>(&fpr_add::<ORDER>(&d, &fpr_div::<ORDER>(&xx, &d, &mut rng)))
+        }
+        d
+    } else {
+        for _ in 0..precession {
+            d = fpr_half::<ORDER>(&fpr_add::<ORDER>(&d, &fpr_div::<ORDER>(&x, &d, &mut rng)))
+        }
+        d
+    }
 }
 
 #[inline(always)]
@@ -145,7 +157,7 @@ pub fn fpr_double<const ORDER: usize>(x: &[fpr]) -> [fpr; ORDER] {
 pub fn fpr_inv<const ORDER: usize>(x: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER] {
     let mut d = [0; ORDER];
     let r1: fpr = of(rng.next_u64() as i64);
-    let share_two: fpr = of(rng.next_u64() as i64);
+    let share_two: fpr = of(rng.next_u64()  as i64);
     let share_one = sub(r1, share_two);
     let y: [fpr; ORDER] = fpr_mul(&[share_one, share_two], x);
     let y_open_inv = inv(add(y[0], y[1]));
@@ -159,6 +171,25 @@ pub fn fpr_inv<const ORDER: usize>(x: &[fpr], rng: &mut RngBoth) -> [fpr; ORDER]
 pub fn fpr_lt(x: &[fpr], y: fpr) -> i32 {
     let xx = add(x[0], x[1]);
     lt(xx, y)
+}
+
+pub fn fpr_ltz<const ORDER: usize>(x: &[fpr]) -> bool {
+    let sign0 = x[0] >> 63;
+    let sign1 = x[1] >> 63;
+    if sign0 == 1 && sign1 == 1 {
+        return true;
+    } else if sign0 == 1 {
+        let x_neg = neg(x[0]);
+        if lt(x[1], x_neg) == 1 {
+            return true;
+        }
+    } else if sign1 == 1 {
+        let x_neg = neg(x[1]);
+        if lt(x[0], x_neg) == 1 {
+            return true;
+        }
+    }
+    false
 }
 
 #[inline(always)]

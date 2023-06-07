@@ -235,7 +235,7 @@ pub fn poly_sub<const ORDER: usize>(a: &mut [[fpr; ORDER]], b: &[[fpr; ORDER]], 
     }
 }
 
-pub fn poly_neg(a: &mut [[fpr; 2]], logn: u32) {
+pub fn poly_neg<const ORDER: usize>(a: &mut [[fpr; ORDER]], logn: u32) {
     let n: usize;
 
     n = (1 as usize) << logn;
