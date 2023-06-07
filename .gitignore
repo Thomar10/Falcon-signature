@@ -18,5 +18,5 @@ falcon_masked_test/target
 ntru_gen/target
 ntru_gen_c/target
 ntru_gen_test/target
-hawk/target
+randomness/target
 out
