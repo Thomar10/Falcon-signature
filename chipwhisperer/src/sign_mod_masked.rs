@@ -98,6 +98,7 @@ pub fn do_sign_tree<const ORDER: usize, const LOGN: usize>(samp: SamplerZ, samp_
     return false;
 }
 
+#[allow(non_snake_case)]
 pub fn sign_tree_masked_ffSampling_test<const ORDER: usize, const LOGN: usize>(sig: &mut [i16], rng: &mut InnerShake256Context,
                                                                   expanded_key: &[[fpr; ORDER]], hm: &[u16], logn: u32, tmp: &mut [[fpr; ORDER]], trigger: &mut TriggerPin) {
     loop {

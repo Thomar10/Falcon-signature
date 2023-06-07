@@ -86,6 +86,7 @@ pub fn do_sign_tree(samp: SamplerZ, samp_ctx: &mut SamplerContext, s2: &mut [i16
     return false;
 }
 
+#[allow(non_snake_case)]
 pub fn sign_tree_ffSampling_test(sig: &mut [i16], rng: &mut InnerShake256Context, expanded_key: &[fpr], hm: &[u16],
                  logn: u32, tmp: &mut [u8], trigger: &mut TriggerPin) {
 

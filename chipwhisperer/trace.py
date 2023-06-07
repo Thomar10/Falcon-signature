@@ -1,14 +1,11 @@
 import chipwhisperer as cw
 import os
 from chipwhisperer.capture.api.programmers import STM32FProgrammer
-import matplotlib.pyplot as plt
 import time
 import struct
-import random
 from random import SystemRandom
 import json
 import numpy as np
-import csv
 from json import JSONEncoder
 
 try:
@@ -28,8 +25,6 @@ except:
     target = cw.target(scope)
 
 print("INFO: Found ChipWhisperer")
-#scope.clock.clkgen_freq = 200000000
-#print(scope.clock.adc_rate)
 
 program = STM32FProgrammer
 
@@ -92,154 +87,6 @@ class NumpyArrayEncoder(JSONEncoder):
             return obj.tolist()
         return JSONEncoder.default(self, obj)
 
-def do_fpc_mul_test():
-    traces = {
-        "fix": [],
-        "rand": []
-    }
-
-    iterations = 10
-
-    fix_a_re = float(68.20750458284908)
-    fix_a_im = float(-57.48737600599283)
-    fix_b_re = float(-92.93250079435525)
-    fix_b_im = float(42.45470502022772)
-
-    for i in range(iterations):
-        print("Iteration:", str(i))
-
-        #Fixed test
-        scope.arm()
-        target.flush()
-
-        val_bytes = bytearray(struct.pack("4d", fix_a_re, fix_a_im, fix_b_re, fix_b_im))
-        data_arr = [len(val_bytes)] + list(val_bytes)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(1)
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-        traces["fix"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-        (a, b) = struct.unpack("2d", returned_bytes)
-
-        print("Fixed result: a: " + str(a) + " b: " + str(b))
-
-        #Random test
-        rand_a_re = float(random.uniform(-100, 100))
-        rand_a_im = float(random.uniform(-100, 100))
-        rand_b_re = float(random.uniform(-100, 100))
-        rand_b_im = float(random.uniform(-100, 100))
-
-        scope.arm()
-        target.flush()
-
-        val_bytes = bytearray(struct.pack("4d", rand_a_re, rand_a_im, rand_b_re, rand_b_im))
-        data_arr = [len(val_bytes)] + list(val_bytes)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(1)
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-        traces["rand"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-        (a, b) = struct.unpack("2d", returned_bytes)
-
-        print("Random result: a: " + str(a) + " b: " + str(b))
-
-    #Write traces to file
-    with open("captured_traces/fpc_mul_traces.txt", "w") as filehandle:
-        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
-
-def do_fpc_mul_masked_test():
-    traces = {
-        "fix": [],
-        "rand": []
-    }
-
-    iterations = 10
-
-    fix_a_re_val = float(68.20750458284908)
-    fix_a_im_val = float(-57.48737600599283)
-    fix_b_re_val = float(-92.93250079435525)
-    fix_b_im_val = float(42.45470502022772)
-
-    for i in range(iterations):
-        print("Iteration:", str(i))
-
-        #Fixed test
-        scope.arm()
-        target.flush()
-
-        fix_a_re_rand = float(random.uniform(-100, 100))
-        fix_a_im_rand = float(random.uniform(-100, 100))
-        fix_b_re_rand = float(random.uniform(-100, 100))
-        fix_b_im_rand = float(random.uniform(-100, 100))
-
-        val_bytes = bytearray(struct.pack("8d", fix_a_re_val, fix_a_im_val, fix_b_re_val, fix_b_im_val, fix_a_re_rand, fix_a_im_rand, fix_b_re_rand, fix_b_im_rand))
-        data_arr = [len(val_bytes)] + list(val_bytes)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(1)
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-        traces["fix"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-        (a, b) = struct.unpack("2d", returned_bytes)
-
-        print("Fixed result: a: " + str(a) + " b: " + str(b))
-
-        #Random test
-        rand_a_re_val = float(random.uniform(-100, 100))
-        rand_a_im_val = float(random.uniform(-100, 100))
-        rand_b_re_val = float(random.uniform(-100, 100))
-        rand_b_im_val = float(random.uniform(-100, 100))
-        rand_a_re_rand = float(random.uniform(-100, 100))
-        rand_a_im_rand = float(random.uniform(-100, 100))
-        rand_b_re_rand = float(random.uniform(-100, 100))
-        rand_b_im_rand = float(random.uniform(-100, 100))
-
-        scope.arm()
-        target.flush()
-
-        val_bytes = bytearray(struct.pack("8d", rand_a_re_val, rand_a_im_val, rand_b_re_val, rand_b_im_val, rand_a_re_rand, rand_a_im_rand, rand_b_re_rand, rand_b_im_rand))
-        data_arr = [len(val_bytes)] + list(val_bytes)
-        data = bytearray(data_arr)
-
-        target.write(data)
-
-        time.sleep(1)
-
-        ret = scope.capture()
-        trace = scope.get_last_trace()
-        traces["rand"].append(trace)
-
-        returned_data = target.read()
-        returned_bytes = bytearray(returned_data, "latin1")
-        (a, b) = struct.unpack("2d", returned_bytes)
-
-        print("Random result: a: " + str(a) + " b: " + str(b))
-
-    #Write traces to file
-    with open("captured_traces/fpc_mul_traces_masked.txt", "w") as filehandle:
-        json.dump(traces, filehandle, cls=NumpyArrayEncoder)
-
-
 def capture_trace(data):
     scope.arm()
     target.flush()
@@ -264,32 +111,18 @@ def capture_trace(data):
 
         time.sleep(0.1)
 
-def do_sign_test(filename="sign_tree", iterations=1000):
+def do_sign_test(cmd=16, filename="sign_tree", iterations=1000):
 
     scope.clock.adc_src = "clkgen_x4"
     scope.adc.decimate = 2
-    scope.adc.samples = 40000
+    scope.adc.samples = 95000
 
     traces = {
         "fix": [],
         "rand": []
     }
 
-    #scope.adc.stream_mode = True
-    #scope.adc.timeout = 20
-    #scope.clock.adc_src = "clkgen_x1"
-    #scope.adc.samples = 2_000_000 #3_500_000 is max
-    # scope.adc.samples = 95_000
-
-    #name = filename + "_" + str(iterations)
-    #os.chdir(r"F:\\Powertraces")
     time.sleep(1)
-    #scope.adc.samples = 95000
-    #scope.adc.decimate = 800
-
-    # with open(name + "_fix" + ".csv", "w", newline='') as fix_file, open(name + "_rand" + ".csv", "w", newline='') as rand_file:
-    #     fix_writer = csv.writer(fix_file)
-    #     rand_writer = csv.writer(rand_file)
 
     for i in range(iterations):
         print("Iteration:", str(i))
@@ -299,7 +132,7 @@ def do_sign_test(filename="sign_tree", iterations=1000):
         type = 0
         seed = os.urandom(8)
         salt = os.urandom(40)
-        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
+        data_arr = [cmd] + [type] + [len(seed) + len(salt) + 1] + list(seed) + list(salt)
         data = bytearray(data_arr)
 
         fix_trace = capture_trace(data)
@@ -309,17 +142,13 @@ def do_sign_test(filename="sign_tree", iterations=1000):
         type = 1
         seed = os.urandom(8)
         salt = os.urandom(40)
-        data_arr = [type] + [len(seed) + len(salt)] + list(seed) + list(salt)
+        data_arr = [cmd] + [type] + [len(seed) + len(salt) + 1] + list(seed) + list(salt)
         data = bytearray(data_arr)
 
         rand_trace = capture_trace(data)
         traces["rand"].append(rand_trace)
 
-            #fix_writer.writerow(fix_trace)
-            #rand_writer.writerow(rand_trace)
-
     print("**********TEST DONE**********")
-    #normalize_trace_length(traces)
 
     #Write traces to file
     with open("new_traces/" + filename + "_" + str(iterations) + ".txt", "w") as filehandle:
@@ -412,6 +241,7 @@ def do_sub_test(type=7, filename="secure_ursh", iterations=1000):
         json.dump(traces, filehandle, cls=NumpyArrayEncoder)
 
     print("**********TEST DONE**********")
+
 def do_simple_test(type, filename, iterations=1000):
     scope.clock.adc_src = "clkgen_x4"
     scope.adc.decimate = 2
@@ -495,13 +325,13 @@ def test_clock():
     adc_src = scope.clock.adc_src
     print("Current adc src", adc_src)
 
-#do_all_simple()
-#do_write_test()
-#do_fft_trace()
-#do_fpc_mul_masked_test()
-#do_fpr_mul_test()
-#do_fpr_mul_masked_test()
-#do_fpr_add_test()
+# do_all_simple()
+# do_write_test()
+# do_fft_trace()
+# do_fpc_mul_masked_test()
+# do_fpr_mul_test()
+# do_fpr_mul_masked_test()
+# do_fpr_add_test()
 # do_sub_test(type=7, filename="ursh", iterations=1000)
 # do_sub_test(type=8, filename="secure_ursh", iterations=1000)
 # do_sub_test(type=9, filename="norm", iterations=1000)
@@ -517,11 +347,5 @@ def test_clock():
 
 # do_fft_test(type=14, filename="poly_mul_fft", iterations=1000, samples=20000)
 # do_fft_test(type=15, filename="poly_mul_fft_masked", iterations=1000, samples=30000)
-program_hex_path = os.path.join(dir, r"ffSamp.hex")
-cw.program_target(scope, program, program_hex_path)
-do_sign_test(filename="ffSamplingLOGN8", iterations=1000)
-program_hex_path = os.path.join(dir, r"ffSampMasked.hex")
-cw.program_target(scope, program, program_hex_path)
-do_sign_test(filename="ffSamplingLOGN8_masked", iterations=1000)
-#do_sign_masked_test_masked()
-#do_sign_masked_test_random()
+# do_sign_test(cmd=16, filename="ffSamplingLOGN8", iterations=1000)
+# do_sign_test(cmd=17, filename="ffSamplingLOGN8_masked", iterations=1000)
